@@ -1,0 +1,33 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "morrow",
+	"compatibility_date": "2026-08-30",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"main": "vinext/server/fetch-handler",
+	"assets": {
+		"directory": "dist/client",
+		"not_found_handling": "none",
+		"binding": "ASSETS"
+	},
+	"cache": {
+		"enabled": true
+	},
+	"images": {
+		"binding": "IMAGES"
+	},
+	"kv_namespaces": [
+		{
+			"binding": "VINEXT_KV_CACHE",
+			"id": "9206491c516844ff9629227ccaf7221a"
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "morrow-db",
+			"database_id": "56acc343-2968-47c8-8dfe-2bf8fb18cd45"
+		}
+	]
+}

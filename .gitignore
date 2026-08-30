@@ -49,3 +49,8 @@ node_modules/
 /playwright/.auth/
 
 /roadmap.txt
+/design.md
+/dist/
+.vinext/
+.wrangler/
+.agents/
