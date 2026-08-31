@@ -14,6 +14,7 @@ interface Competitor {
   id: string;
   name: string;
   domain: string;
+  favicon_url: string | null;
   status: string;
 }
 
@@ -32,6 +33,7 @@ export default async function CompetitorsPage() {
         competitors.id,
         competitors.name,
         competitors.domain,
+        competitors.favicon_url,
         competitors.status
       FROM competitors
       INNER JOIN workspace_members
@@ -84,6 +86,14 @@ export default async function CompetitorsPage() {
           <ul>
             {competitors.map((competitor) => (
               <li key={competitor.id}>
+                {competitor.favicon_url && (
+                <img
+                    src={competitor.favicon_url}
+                    alt={`${competitor.name} favicon`}
+                    width={32}
+                    height={32}
+                />
+                )}
                 <strong>{competitor.name}</strong>
 
                 <div>{competitor.domain}</div>

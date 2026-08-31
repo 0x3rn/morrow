@@ -359,3 +359,126 @@ export async function removeMonitoredPage(
     `/dashboard/competitors/${competitorId}`
   );
 }
+
+export async function updateMonitoredPage(
+  formData: FormData
+) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const monitoredPageId = String(
+    formData.get("monitoredPageId") || ""
+  ).trim();
+
+  const competitorId = String(
+    formData.get("competitorId") || ""
+  ).trim();
+
+  const rawUrl = String(
+    formData.get("url") || ""
+  ).trim();
+
+  const label = String(
+    formData.get("label") || ""
+  ).trim();
+
+  if (
+    !monitoredPageId ||
+    !competitorId ||
+    !rawUrl
+  ) {
+    throw new Error(
+      "Monitored page, competitor, and URL are required."
+    );
+  }
+
+  let url: string;
+
+  try {
+    url = normalizeMonitoredUrl(rawUrl);
+  } catch {
+    throw new Error(
+      "Enter a valid website URL."
+    );
+  }
+
+  const monitoredPage = await env.DB.prepare(
+    `
+      SELECT monitored_pages.id
+      FROM monitored_pages
+      INNER JOIN competitors
+        ON competitors.id =
+           monitored_pages.competitor_id
+      INNER JOIN workspace_members
+        ON workspace_members.workspace_id =
+           competitors.workspace_id
+      WHERE monitored_pages.id = ?
+        AND competitors.id = ?
+        AND workspace_members.user_id = ?
+      LIMIT 1
+    `
+  )
+    .bind(
+      monitoredPageId,
+      competitorId,
+      session.user.id
+    )
+    .first<{ id: string }>();
+
+  if (!monitoredPage) {
+    throw new Error(
+      "Monitored page not found or access denied."
+    );
+  }
+
+  const duplicatePage = await env.DB.prepare(
+    `
+      SELECT id
+      FROM monitored_pages
+      WHERE competitor_id = ?
+        AND url = ?
+        AND id != ?
+      LIMIT 1
+    `
+  )
+    .bind(
+      competitorId,
+      url,
+      monitoredPageId
+    )
+    .first<{ id: string }>();
+
+  if (duplicatePage) {
+    throw new Error(
+      "This page is already being monitored."
+    );
+  }
+
+  await env.DB.prepare(
+    `
+      UPDATE monitored_pages
+      SET
+        url = ?,
+        label = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+        AND competitor_id = ?
+    `
+  )
+    .bind(
+      url,
+      label || null,
+      monitoredPageId,
+      competitorId
+    )
+    .run();
+
+  revalidatePath(
+    `/dashboard/competitors/${competitorId}`
+  );
+}

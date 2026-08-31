@@ -7,6 +7,7 @@ import {
   toggleMonitoredPageStatus,
   updateMonitoredPageFrequency,
   removeMonitoredPage,
+  updateMonitoredPage
 } from "./actions";
 
 interface Competitor {
@@ -158,6 +159,55 @@ export default async function CompetitorPage({
                     {page.url}
                   </a>
                 </div>
+
+                <form action={updateMonitoredPage}>
+                  <input
+                    type="hidden"
+                    name="monitoredPageId"
+                    value={page.id}
+                  />
+
+                  <input
+                    type="hidden"
+                    name="competitorId"
+                    value={competitor.id}
+                  />
+
+                  <div>
+                    <label
+                      htmlFor={`label-${page.id}`}
+                    >
+                      Label
+                    </label>
+
+                    <input
+                      id={`label-${page.id}`}
+                      name="label"
+                      type="text"
+                      defaultValue={page.label || ""}
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor={`url-${page.id}`}
+                    >
+                      Page URL
+                    </label>
+
+                    <input
+                      id={`url-${page.id}`}
+                      name="url"
+                      type="text"
+                      defaultValue={page.url}
+                      required
+                    />
+                  </div>
+
+                  <button type="submit">
+                    Save page details
+                  </button>
+                </form>
 
                 <div>
                   Status: {page.status}

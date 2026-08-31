@@ -5,7 +5,16 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
-	"main": "vinext/server/fetch-handler",
+	"main": "./worker/index.ts",
+	"triggers": {
+		"crons": [
+			"*/5 * * * *"
+		]
+	},
+	"browser": {
+		"binding": "BROWSER",
+		"remote": true
+	},
 	"assets": {
 		"directory": "dist/client",
 		"not_found_handling": "none",
@@ -28,6 +37,12 @@
 			"binding": "DB",
 			"database_name": "morrow-db",
 			"database_id": "56acc343-2968-47c8-8dfe-2bf8fb18cd45"
+		}
+	],
+	"r2_buckets": [
+		{
+			"bucket_name": "morrow-snapshots",
+			"binding": "morrow_snapshots"
 		}
 	]
 }

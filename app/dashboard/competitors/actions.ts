@@ -17,6 +17,69 @@ function normalizeDomain(value: string) {
   return domain;
 }
 
+async function findFaviconUrl(domain: string) {
+  const homepageUrl = `https://${domain}`;
+  const fallbackUrl = `${homepageUrl}/favicon.ico`;
+
+  try {
+    const response = await fetch(homepageUrl, {
+      redirect: "follow",
+      headers: {
+        "User-Agent": "Morrow favicon fetcher",
+      },
+    });
+
+    if (!response.ok) {
+      return fallbackUrl;
+    }
+
+    const html = await response.text();
+
+    const linkTags =
+      html.match(/<link\b[^>]*>/gi) || [];
+
+    for (const tag of linkTags) {
+      const relMatch = tag.match(
+        /\brel=["']([^"']+)["']/i
+      );
+
+      if (
+        !relMatch ||
+        !relMatch[1]
+          .toLowerCase()
+          .includes("icon")
+      ) {
+        continue;
+      }
+
+      const hrefMatch = tag.match(
+        /\bhref=["']([^"']+)["']/i
+      );
+
+      if (!hrefMatch) {
+        continue;
+      }
+
+      const faviconUrl = new URL(
+        hrefMatch[1],
+        response.url
+      );
+
+      if (
+        faviconUrl.protocol === "http:" ||
+        faviconUrl.protocol === "https:"
+      ) {
+        return faviconUrl.toString();
+      }
+    }
+  } catch {
+    // Favicon discovery should never prevent
+    // competitor creation or editing.
+  }
+
+  return fallbackUrl;
+}
+
 export async function createCompetitor(formData: FormData) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -34,6 +97,8 @@ export async function createCompetitor(formData: FormData) {
   if (!name || !domain) {
     throw new Error("Name and domain are required.");
   }
+  const faviconUrl =
+  await findFaviconUrl(domain);
 
   const workspace = await env.DB.prepare(
     `
@@ -59,16 +124,18 @@ export async function createCompetitor(formData: FormData) {
         workspace_id,
         name,
         domain,
+        favicon_url,
         status
       )
-      VALUES (?, ?, ?, ?, 'active')
+      VALUES (?, ?, ?, ?, ?, 'active')
     `
   )
     .bind(
       randomUUID(),
       workspace.id,
       name,
-      domain
+      domain,
+      faviconUrl
     )
     .run();
 };
@@ -158,12 +225,16 @@ export async function updateCompetitor(formData: FormData) {
     );
   }
 
+  const faviconUrl =
+  await findFaviconUrl(domain);
+
   const result = await env.DB.prepare(
     `
       UPDATE competitors
       SET
         name = ?,
         domain = ?,
+        favicon_url = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
         AND workspace_id IN (
@@ -176,6 +247,7 @@ export async function updateCompetitor(formData: FormData) {
     .bind(
       name,
       domain,
+      faviconUrl,
       competitorId,
       session.user.id
     )
