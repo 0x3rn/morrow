@@ -23,6 +23,9 @@
 	"cache": {
 		"enabled": true
 	},
+	"ai": {
+		"binding": "AI"
+	},
 	"images": {
 		"binding": "IMAGES"
 	},

@@ -54,3 +54,4 @@ node_modules/
 .vinext/
 .wrangler/
 .agents/
+/scripts/
