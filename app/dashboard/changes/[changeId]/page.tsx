@@ -131,7 +131,7 @@ export default async function ChangeDetailPage({
     });
 
   if (!session) {
-    redirect("/sign-in");
+    redirect("/login");
   }
 
   const { changeId } = await params;

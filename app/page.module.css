@@ -874,24 +874,85 @@
 }
 
 .footer {
+  padding: 74px max(24px, calc((100vw - 1320px) / 2)) 28px;
+  background: var(--night);
+  color: #f5f3ed;
+}
+
+.footerMain {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  width: min(100% - 48px, 1320px);
-  min-height: 100px;
-  margin: 0 auto;
+  grid-template-columns: 1fr auto;
+  gap: clamp(70px, 12vw, 190px);
+  padding-bottom: 70px;
 }
 
-.footer > p {
-  margin: 0;
-  color: #717a75;
-  font-size: 12px;
+.footerIdentity > p {
+  max-width: 390px;
+  margin: 24px 0 0;
+  color: #8f9994;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(22px, 2.2vw, 31px);
+  letter-spacing: -0.025em;
+  line-height: 1.25;
 }
 
-.footer > div {
+.footerNav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: clamp(50px, 8vw, 110px);
+}
+
+.footerNav > div {
   display: flex;
-  justify-content: flex-end;
-  gap: 25px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 15px;
+}
+
+.footerNav p {
+  margin: 0 0 8px;
+  color: #68736e;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  font-weight: 640;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.footer a {
+  color: #c9cecb;
+}
+
+.footerBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  padding-top: 25px;
+  border-top: 1px solid rgba(255, 255, 255, 0.11);
+}
+
+.footerBottom p {
+  margin: 0;
+  color: #68736e;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.footerBottom p:last-child {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.footerBottom p:last-child span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 0 4px rgba(200, 238, 121, 0.08);
 }
 
 .page a:focus-visible {
@@ -961,8 +1022,7 @@
   .header,
   .hero,
   .statement,
-  .capabilities,
-  .footer {
+  .capabilities {
     width: min(100% - 32px, 1320px);
   }
 
@@ -1092,12 +1152,23 @@
   }
 
   .footer {
-    grid-template-columns: 1fr auto;
-    gap: 20px;
+    padding: 62px 16px 26px;
   }
 
-  .footer > p {
-    display: none;
+  .footerMain {
+    grid-template-columns: 1fr;
+    gap: 50px;
+    padding-bottom: 55px;
+  }
+
+  .footerNav {
+    gap: 40px;
+  }
+
+  .footerBottom {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
   }
 }
 

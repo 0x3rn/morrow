@@ -146,7 +146,7 @@ export default async function ChangeHistoryPage({
     });
 
   if (!session) {
-    redirect("/sign-in");
+    redirect("/login");
   }
 
   const params = await searchParams;

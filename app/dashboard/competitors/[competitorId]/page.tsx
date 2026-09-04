@@ -313,7 +313,7 @@ export default async function CompetitorPage({
     });
 
   if (!session) {
-    redirect("/sign-in");
+    redirect("/login");
   }
 
   const { competitorId } = await params;

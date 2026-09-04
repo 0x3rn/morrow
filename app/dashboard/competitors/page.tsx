@@ -270,7 +270,7 @@ export default async function CompetitorsPage() {
 
   if (!session) {
     redirect(
-      "/sign-in"
+      "/login"
     );
   }
 

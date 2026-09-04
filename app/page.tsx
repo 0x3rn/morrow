@@ -82,10 +82,10 @@ export default function Home() {
         </nav>
 
         <div className={styles.headerActions}>
-          <Link className={styles.signIn} href="/sign-in">
+          <Link className={styles.signIn} href="/login">
             Sign in
           </Link>
-          <Link className={styles.navCta} href="/sign-up">
+          <Link className={styles.navCta} href="/register">
             Start monitoring
             <ArrowIcon />
           </Link>
@@ -111,7 +111,7 @@ export default function Home() {
               act on.
             </p>
             <div className={styles.heroActions}>
-              <Link className={styles.primaryCta} href="/sign-up">
+              <Link className={styles.primaryCta} href="/register">
                 Start monitoring
                 <ArrowIcon />
               </Link>
@@ -278,7 +278,7 @@ export default function Home() {
             Build your watchlist and turn competitor pages into an intelligence
             feed.
           </p>
-          <Link className={styles.primaryCta} href="/sign-up">
+          <Link className={styles.primaryCta} href="/register">
             Create your Morrow workspace
             <ArrowIcon />
           </Link>
@@ -286,14 +286,38 @@ export default function Home() {
       </main>
 
       <footer className={styles.footer}>
-        <Link className={styles.brand} href="/" aria-label="Morrow home">
-          <SignalMark />
-          <span>Morrow</span>
-        </Link>
-        <p>Competitive intelligence for the next move.</p>
-        <div>
-          <Link href="/sign-in">Sign in</Link>
-          <Link href="/sign-up">Create account</Link>
+        <div className={styles.footerMain}>
+          <div className={styles.footerIdentity}>
+            <Link className={styles.brand} href="/" aria-label="Morrow home">
+              <SignalMark />
+              <span>Morrow</span>
+            </Link>
+            <p>
+              Competitive intelligence that keeps your team ready for the next
+              move.
+            </p>
+          </div>
+
+          <nav className={styles.footerNav} aria-label="Footer navigation">
+            <div>
+              <p>Explore</p>
+              <a href="#how-it-works">How it works</a>
+              <a href="#capabilities">Capabilities</a>
+            </div>
+            <div>
+              <p>Account</p>
+              <Link href="/login">Log in</Link>
+              <Link href="/register">Register</Link>
+            </div>
+          </nav>
+        </div>
+
+        <div className={styles.footerBottom}>
+          <p>© 2026 Morrow</p>
+          <p>
+            <span aria-hidden="true" />
+            Built for teams that watch the market closely
+          </p>
         </div>
       </footer>
     </div>
