@@ -3,6 +3,17 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { AuthShell, SubmitArrow } from "@/components/auth-shell";
+import styles from "@/components/auth-shell.module.css";
+
+function ErrorIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20">
+      <circle cx="10" cy="10" r="7" />
+      <path d="M10 6.5v4.5M10 14h.01" />
+    </svg>
+  );
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -30,10 +41,9 @@ export default function RegisterPage() {
   }
 
   return (
-    <main>
-      <h1>Create your Morrow account</h1>
-      <form onSubmit={handleSubmit}>
-        <div>
+    <AuthShell mode="register">
+      <form className={styles.form} onSubmit={handleSubmit}>
+        <div className={styles.field}>
           <label htmlFor="name">Name</label>
           <input
             id="name"
@@ -42,9 +52,10 @@ export default function RegisterPage() {
             onChange={(event) => setName(event.target.value)}
             required
             autoComplete="name"
+            placeholder="Your name"
           />
         </div>
-        <div>
+        <div className={styles.field}>
           <label htmlFor="email">Email</label>
           <input
             id="email"
@@ -53,9 +64,10 @@ export default function RegisterPage() {
             onChange={(event) => setEmail(event.target.value)}
             required
             autoComplete="email"
+            placeholder="you@company.com"
           />
         </div>
-        <div>
+        <div className={styles.field}>
           <label htmlFor="password">Password</label>
           <input
             id="password"
@@ -65,13 +77,21 @@ export default function RegisterPage() {
             required
             minLength={8}
             autoComplete="new-password"
+            placeholder="Create a secure password"
           />
+          <p className={styles.fieldHint}>Use at least 8 characters.</p>
         </div>
-        {error && <p>{error}</p>}
-        <button type="submit" disabled={isLoading}>
-          {isLoading ? "Creating account..." : "Register"}
+        {error && (
+          <p className={styles.error} role="alert">
+            <ErrorIcon />
+            <span>{error}</span>
+          </p>
+        )}
+        <button className={styles.submit} type="submit" disabled={isLoading}>
+          <span>{isLoading ? "Creating workspace..." : "Create workspace"}</span>
+          <SubmitArrow />
         </button>
       </form>
-    </main>
+    </AuthShell>
   );
 }
