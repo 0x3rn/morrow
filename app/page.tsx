@@ -57,6 +57,31 @@ function ArrowIcon() {
   );
 }
 
+function ArrowUpRightIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20">
+      <path d="M5 15 15 5M7 5h8v8" />
+    </svg>
+  );
+}
+
+function DownIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20">
+      <path d="M10 4v11M5.5 10.5 10 15l4.5-4.5" />
+    </svg>
+  );
+}
+
+function InsightIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 32 32">
+      <path d="M15.5 4.5C16.3 10.8 19.7 14.2 26 15c-6.3.8-9.7 4.2-10.5 10.5C14.7 19.2 11.3 15.8 5 15c6.3-.8 9.7-4.2 10.5-10.5Z" />
+      <path d="M25 3v6M22 6h6" />
+    </svg>
+  );
+}
+
 function SignalMark() {
   return (
     <span className={styles.signalMark} aria-hidden="true">
@@ -117,7 +142,7 @@ export default function Home() {
               </Link>
               <a className={styles.textLink} href="#how-it-works">
                 See how it works
-                <span aria-hidden="true">↓</span>
+                <DownIcon />
               </a>
             </div>
             <ul className={styles.proofList} aria-label="Product capabilities">
@@ -164,7 +189,7 @@ export default function Home() {
                   <h3>{signal.title}</h3>
                   <p>{signal.detail}</p>
                   <span className={styles.signalArrow} aria-hidden="true">
-                    ↗
+                    <ArrowUpRightIcon />
                   </span>
                 </article>
               ))}
@@ -226,7 +251,9 @@ export default function Home() {
             <li>
               <span className={styles.stepNumber}>03</span>
               <div className={styles.stepIcon} aria-hidden="true">
-                <span className={styles.sparkIcon}>✦</span>
+                <span className={styles.sparkIcon}>
+                  <InsightIcon />
+                </span>
               </div>
               <h3>Read what matters</h3>
               <p>
@@ -259,7 +286,7 @@ export default function Home() {
                   <p>{capability.description}</p>
                 </div>
                 <span className={styles.capabilityArrow} aria-hidden="true">
-                  ↗
+                  <ArrowUpRightIcon />
                 </span>
               </article>
             ))}

@@ -275,11 +275,17 @@
   text-decoration: none;
 }
 
-.textLink span {
+.textLink svg {
+  width: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
   transition: transform 180ms ease;
 }
 
-.textLink:hover span {
+.textLink:hover svg {
   transform: translateY(3px);
 }
 
@@ -540,7 +546,15 @@
   right: 17px;
   bottom: 16px;
   color: #77817d;
-  font-size: 17px;
+}
+
+.signalArrow svg {
+  width: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
 }
 
 .panelFoot {
@@ -700,7 +714,15 @@
 
 .sparkIcon {
   color: var(--lime);
-  font-size: 29px;
+}
+
+.sparkIcon svg {
+  width: 32px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.2;
 }
 
 .processRail h3 {
@@ -788,10 +810,18 @@
 
 .capabilityArrow {
   color: #a1a8a4;
-  font-size: 22px;
   transition:
     color 180ms ease,
     transform 180ms ease;
+}
+
+.capabilityArrow svg {
+  width: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.4;
 }
 
 .capabilityList article:hover .capabilityArrow {
