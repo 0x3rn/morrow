@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { ArrowLeftIcon } from "@/components/morrow-icons";
 import { env } from "cloudflare:workers";
 import { headers } from "next/headers";
 import {
@@ -263,9 +264,10 @@ export default async function ChangeDetailPage({
         <nav className="mb-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
           <a
             href="/dashboard/changes"
-            className="font-medium text-slate-500 hover:text-slate-950"
+            className="inline-flex items-center gap-2 font-medium text-slate-500 hover:text-slate-950"
           >
-            ← Change history
+            <ArrowLeftIcon />
+            <span>Change history</span>
           </a>
 
           <span className="text-slate-300">

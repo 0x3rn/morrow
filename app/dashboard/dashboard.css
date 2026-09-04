@@ -1,0 +1,394 @@
+.morrow-dashboard {
+  --morrow-paper: #f4f0e8;
+  --morrow-paper-deep: #e8e1d4;
+  --morrow-surface: #faf8f3;
+  --morrow-ink: #17201d;
+  --morrow-ink-soft: #5f6964;
+  --morrow-night: #101815;
+  --morrow-line: rgba(23, 32, 29, 0.16);
+  --morrow-signal: #6764e8;
+  --morrow-signal-soft: #aaa8ff;
+  --morrow-lime: #c8ee79;
+  --morrow-coral: #ff8b73;
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  background: var(--morrow-paper);
+  color: var(--morrow-ink);
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+}
+
+.morrow-dashboard::before {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  opacity: 0.2;
+  background-image:
+    linear-gradient(rgba(23, 32, 29, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 32, 29, 0.07) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(circle at 90% 5%, #000 0%, transparent 34%);
+  content: "";
+  pointer-events: none;
+}
+
+.morrow-dashboard::after {
+  position: fixed;
+  z-index: 30;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: linear-gradient(
+    to bottom,
+    var(--morrow-signal) 0 33%,
+    var(--morrow-lime) 33% 66%,
+    var(--morrow-coral) 66%
+  );
+  content: "";
+}
+
+.morrow-dashboard main {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+  color: var(--morrow-ink) !important;
+}
+
+.morrow-dashboard main > div {
+  max-width: 1320px !important;
+}
+
+.morrow-dashboard h1,
+.morrow-dashboard h2 {
+  color: var(--morrow-ink) !important;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400 !important;
+}
+
+.morrow-dashboard h1 {
+  letter-spacing: -0.05em !important;
+  line-height: 1 !important;
+}
+
+.morrow-dashboard h2 {
+  letter-spacing: -0.035em !important;
+}
+
+.morrow-dashboard .uppercase[class*="tracking-"] {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px !important;
+  letter-spacing: 0.16em !important;
+}
+
+.morrow-dashboard [class~="text-3xl"][class~="font-semibold"] {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400 !important;
+  letter-spacing: -0.04em !important;
+}
+
+.morrow-dashboard [class~="bg-white"] {
+  background-color: var(--morrow-surface) !important;
+}
+
+.morrow-dashboard [class~="bg-slate-50"],
+.morrow-dashboard [class~="bg-slate-100"] {
+  background-color: var(--morrow-paper-deep) !important;
+}
+
+.morrow-dashboard [class~="bg-slate-950"] {
+  background-color: var(--morrow-night) !important;
+}
+
+.morrow-dashboard [class~="bg-indigo-600"],
+.morrow-dashboard [class~="bg-indigo-500"] {
+  background-color: var(--morrow-signal) !important;
+}
+
+.morrow-dashboard [class~="bg-indigo-50"],
+.morrow-dashboard [class*="bg-indigo-50/"] {
+  background-color: #e8e5ff !important;
+}
+
+.morrow-dashboard [class~="bg-emerald-50"] {
+  background-color: rgba(200, 238, 121, 0.2) !important;
+}
+
+.morrow-dashboard [class~="bg-emerald-500"] {
+  background-color: #79a92f !important;
+}
+
+.morrow-dashboard [class~="bg-amber-50"] {
+  background-color: rgba(245, 183, 82, 0.16) !important;
+}
+
+.morrow-dashboard [class~="bg-red-50"],
+.morrow-dashboard [class*="bg-red-50/"] {
+  background-color: rgba(255, 139, 115, 0.13) !important;
+}
+
+.morrow-dashboard [class~="text-slate-950"],
+.morrow-dashboard [class~="text-slate-900"] {
+  color: var(--morrow-ink) !important;
+}
+
+.morrow-dashboard [class~="text-slate-800"],
+.morrow-dashboard [class~="text-slate-700"] {
+  color: #36413c !important;
+}
+
+.morrow-dashboard [class~="text-slate-600"],
+.morrow-dashboard [class~="text-slate-500"] {
+  color: var(--morrow-ink-soft) !important;
+}
+
+.morrow-dashboard [class~="text-slate-400"] {
+  color: #89918d !important;
+}
+
+.morrow-dashboard [class~="text-slate-300"] {
+  color: #b4b9b6 !important;
+}
+
+.morrow-dashboard [class~="text-indigo-500"],
+.morrow-dashboard [class~="text-indigo-600"],
+.morrow-dashboard [class~="text-indigo-700"] {
+  color: #5753cf !important;
+}
+
+.morrow-dashboard [class~="text-emerald-700"] {
+  color: #477218 !important;
+}
+
+.morrow-dashboard [class~="text-amber-700"] {
+  color: #936014 !important;
+}
+
+.morrow-dashboard [class~="text-red-600"],
+.morrow-dashboard [class~="text-red-700"] {
+  color: #a64c3c !important;
+}
+
+.morrow-dashboard [class~="border-slate-100"],
+.morrow-dashboard [class~="border-slate-200"],
+.morrow-dashboard [class~="border-slate-300"] {
+  border-color: var(--morrow-line) !important;
+}
+
+.morrow-dashboard [class~="border-indigo-100"],
+.morrow-dashboard [class~="border-indigo-200"],
+.morrow-dashboard [class~="border-indigo-400"] {
+  border-color: rgba(103, 100, 232, 0.35) !important;
+}
+
+.morrow-dashboard [class~="border-emerald-200"] {
+  border-color: rgba(91, 132, 37, 0.34) !important;
+}
+
+.morrow-dashboard [class~="border-amber-200"] {
+  border-color: rgba(147, 96, 20, 0.3) !important;
+}
+
+.morrow-dashboard [class~="border-red-200"] {
+  border-color: rgba(166, 76, 60, 0.32) !important;
+}
+
+.morrow-dashboard [class~="rounded-3xl"],
+.morrow-dashboard [class~="rounded-2xl"],
+.morrow-dashboard [class~="rounded-xl"],
+.morrow-dashboard [class~="rounded-lg"] {
+  border-radius: 2px !important;
+}
+
+.morrow-dashboard [class~="shadow-sm"] {
+  box-shadow: none !important;
+}
+
+.morrow-dashboard [class~="rounded-2xl"][class~="border"][class~="bg-white"],
+.morrow-dashboard [class~="rounded-3xl"][class~="border"][class~="bg-white"] {
+  border-color: var(--morrow-line) !important;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.55), transparent 42%),
+    var(--morrow-surface) !important;
+}
+
+.morrow-dashboard main > div > header:not([class*="rounded-"]) {
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--morrow-line);
+}
+
+.morrow-dashboard main > div > nav[class*="border-b"] {
+  gap: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.morrow-dashboard main > div > nav[class*="border-b"] a {
+  min-height: 48px !important;
+  padding-right: 20px !important;
+  padding-left: 20px !important;
+  border-bottom: 0 !important;
+  border-radius: 0 !important;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px !important;
+  font-weight: 650 !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.morrow-dashboard a {
+  text-underline-offset: 4px;
+}
+
+.morrow-dashboard a svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+
+.morrow-dashboard a[class*="text-indigo"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.morrow-dashboard a[class*="text-indigo"] svg {
+  transition: transform 180ms ease;
+}
+
+.morrow-dashboard a[class*="text-indigo"]:hover svg {
+  transform: translate(3px, -3px);
+}
+
+.morrow-dashboard input,
+.morrow-dashboard select,
+.morrow-dashboard textarea {
+  min-height: 46px;
+  border-radius: 0 !important;
+  border-color: var(--morrow-line) !important;
+  background-color: rgba(255, 255, 255, 0.48) !important;
+  color: var(--morrow-ink) !important;
+  font: inherit;
+}
+
+.morrow-dashboard input:focus,
+.morrow-dashboard select:focus,
+.morrow-dashboard textarea:focus {
+  border-color: var(--morrow-signal) !important;
+  box-shadow: 0 0 0 3px rgba(103, 100, 232, 0.12) !important;
+}
+
+.morrow-dashboard label {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px !important;
+  font-weight: 650 !important;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.morrow-dashboard button,
+.morrow-dashboard a[class*="bg-indigo-600"] {
+  border-radius: 0 !important;
+}
+
+.morrow-dashboard button:not(.morrow-signout) {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.morrow-dashboard button:not(.morrow-signout):hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.morrow-dashboard .morrow-signout {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--morrow-line);
+  background: transparent;
+  color: var(--morrow-ink);
+  cursor: pointer;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition:
+    border-color 180ms ease,
+    color 180ms ease,
+    background 180ms ease;
+}
+
+.morrow-dashboard .morrow-signout:hover {
+  border-color: var(--morrow-night);
+  background: var(--morrow-night);
+  color: #fff;
+}
+
+.morrow-dashboard table {
+  border-collapse: collapse;
+}
+
+.morrow-dashboard th {
+  color: #7f8883 !important;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px !important;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.morrow-dashboard tr {
+  border-color: var(--morrow-line) !important;
+}
+
+.morrow-dashboard [class~="rounded-full"] {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px !important;
+  letter-spacing: 0.04em;
+}
+
+.morrow-dashboard :is(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid var(--morrow-coral) !important;
+  outline-offset: 3px !important;
+}
+
+@media (max-width: 640px) {
+  .morrow-dashboard::after {
+    width: 3px;
+  }
+
+  .morrow-dashboard main > div {
+    padding-right: 18px !important;
+    padding-left: 18px !important;
+  }
+
+  .morrow-dashboard h1 {
+    font-size: 2.65rem !important;
+  }
+
+  .morrow-dashboard main > div > nav[class*="border-b"] {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .morrow-dashboard main > div > nav[class*="border-b"] a {
+    justify-content: center;
+    min-width: 0;
+    padding-right: 8px !important;
+    padding-left: 8px !important;
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .morrow-dashboard *,
+  .morrow-dashboard *::before,
+  .morrow-dashboard *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

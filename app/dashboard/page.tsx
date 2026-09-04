@@ -1,4 +1,5 @@
 import { SignOutButton } from "@/components/sign-out-button";
+import { ArrowUpRightIcon } from "@/components/morrow-icons";
 import { auth } from "@/lib/auth";
 import { MORROW_MVP_USAGE_LIMITS } from "@/lib/usage-limits";
 import { env } from "cloudflare:workers";
@@ -1209,7 +1210,8 @@ export default async function DashboardPage() {
                 href="/dashboard/competitors"
                 className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
               >
-                Manage competitors →
+                <span>Manage competitors</span>
+                <ArrowUpRightIcon />
               </a>
             </div>
 
@@ -1376,7 +1378,8 @@ export default async function DashboardPage() {
                 href="/dashboard/changes"
                 className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
               >
-                View all →
+                <span>View all</span>
+                <ArrowUpRightIcon />
               </a>
             </div>
 
@@ -1454,7 +1457,8 @@ export default async function DashboardPage() {
                           href={`/dashboard/changes/${change.id}`}
                           className="mt-3 inline-flex text-sm font-medium text-indigo-600 hover:text-indigo-500"
                         >
-                          View change →
+                          <span>View change</span>
+                          <ArrowUpRightIcon />
                         </a>
                       </div>
                     </article>

@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { ArrowLeftIcon } from "@/components/morrow-icons";
 import { env } from "cloudflare:workers";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -472,12 +473,16 @@ export default async function ChangeHistoryPage({
         <header className="mb-8">
           <a
             href="/dashboard"
-            className="text-sm font-medium text-slate-500 hover:text-slate-950"
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-950"
           >
-            ← Dashboard
+            <ArrowLeftIcon />
+            <span>Dashboard</span>
           </a>
 
           <div className="mt-6">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
+              Intelligence archive
+            </div>
             <h1 className="text-3xl font-semibold tracking-tight">
               Change history
             </h1>
