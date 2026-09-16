@@ -1,4 +1,8 @@
-import * as cheerio from "cheerio/slim";
+import {
+  extractMonitoringScope,
+  extractReadableText,
+  parseSelectorListJson,
+} from "./monitoring-scope";
 import handler from "vinext/server/fetch-handler";
 import { launch } from "@cloudflare/playwright";
 import { diffLines } from "diff";
@@ -56,6 +60,8 @@ interface MonitoredPageRow {
   frequency_minutes: number;
   last_checked_at: string | null;
   next_check_at: string | null;
+  include_selectors_json: string;
+  ignore_selectors_json: string;
 }
 
 interface SnapshotRow {
@@ -239,80 +245,6 @@ function countChangedLines(
  * HTML → readable text
  * ------------------------------------------------------
  */
-
-function extractReadableText(
-  html: string
-) {
-  const $ =
-    cheerio.load(html);
-
-  /*
-   * These elements do not represent readable competitor
-   * content and create unnecessary diff noise.
-   */
-  $(
-    "script, style, noscript, template, svg, canvas, iframe"
-  ).remove();
-
-  /*
-   * Insert line boundaries for common block elements before
-   * reading the body's text.
-   *
-   * This keeps line-level comparison useful instead of
-   * collapsing an entire page into one enormous string.
-   */
-  $("br").replaceWith("\n");
-
-  $(
-    [
-      "address",
-      "article",
-      "aside",
-      "blockquote",
-      "dd",
-      "div",
-      "dl",
-      "dt",
-      "fieldset",
-      "figcaption",
-      "figure",
-      "footer",
-      "form",
-      "h1",
-      "h2",
-      "h3",
-      "h4",
-      "h5",
-      "h6",
-      "header",
-      "hr",
-      "li",
-      "main",
-      "nav",
-      "ol",
-      "p",
-      "pre",
-      "section",
-      "table",
-      "tbody",
-      "td",
-      "tfoot",
-      "th",
-      "thead",
-      "tr",
-      "ul",
-    ].join(",")
-  ).each((_, element) => {
-    $(element).append("\n");
-  });
-
-  const rawText =
-    $("body").text();
-
-  return splitNormalizedLines(
-    rawText
-  ).join("\n");
-}
 
 /*
  * ------------------------------------------------------
@@ -568,6 +500,26 @@ async function readSnapshotText(
   return object.text();
 }
 
+async function readSnapshotHtml(
+  env: Env,
+  objectKey: string | null
+) {
+  if (!objectKey) {
+    return null;
+  }
+
+  const object =
+    await env.morrow_snapshots.get(
+      objectKey
+    );
+
+  if (!object) {
+    return null;
+  }
+
+  return object.text();
+}
+
 async function storeSnapshotObjects(
   env: Env,
   monitoredPageId: string,
@@ -678,7 +630,9 @@ async function getHistoricalVolatileLines(
   env: Env,
   monitoredPageId: string,
   currentSnapshotId: string,
-  currentStaticLines: string[]
+  currentStaticLines: string[],
+  includeSelectors: string[],
+  ignoreSelectors: string[]
 ) {
   const historicalResult =
     await env.DB.prepare(
@@ -699,9 +653,6 @@ async function getHistoricalVolatileLines(
 
           AND id != ?
 
-          AND text_object_key
-              IS NOT NULL
-
         ORDER BY
           captured_at DESC
 
@@ -720,25 +671,46 @@ async function getHistoricalVolatileLines(
     historicalResult.results ??
     [];
 
-  /*
-   * Convert DESC DB order to chronological order.
-   */
   historicalRows.reverse();
 
   const lineSets:
     Set<string>[] = [];
 
+  const hasConfiguredScope =
+    includeSelectors.length > 0 ||
+    ignoreSelectors.length > 0;
+
   for (
     const snapshot
     of historicalRows
   ) {
-    const text =
-      await readSnapshotText(
-        env,
-        snapshot.text_object_key
-      );
+    let text:
+      string | null = null;
 
-    if (!text) {
+    if (hasConfiguredScope) {
+      const html =
+        await readSnapshotHtml(
+          env,
+          snapshot.html_object_key
+        );
+
+      if (html !== null) {
+        text =
+          extractMonitoringScope(
+            html,
+            includeSelectors,
+            ignoreSelectors
+          ).text;
+      }
+    } else {
+      text =
+        await readSnapshotText(
+          env,
+          snapshot.text_object_key
+        );
+    }
+
+    if (text === null) {
       continue;
     }
 
@@ -754,9 +726,6 @@ async function getHistoricalVolatileLines(
     );
   }
 
-  /*
-   * Include the current snapshot as the newest observation.
-   */
   lineSets.push(
     new Set(
       currentStaticLines
@@ -1050,6 +1019,32 @@ async function processCapturedPage(
   const capturedAt =
     new Date().toISOString();
 
+  const includeConfiguration =
+    parseSelectorListJson(
+      pageToCapture
+        .include_selectors_json
+    );
+
+  const ignoreConfiguration =
+    parseSelectorListJson(
+      pageToCapture
+        .ignore_selectors_json
+    );
+
+  const monitoringConfigurationValid =
+    includeConfiguration.valid &&
+    ignoreConfiguration.valid;
+
+  const includeSelectors =
+    includeConfiguration.selectors;
+
+  const ignoreSelectors =
+    ignoreConfiguration.selectors;
+
+  const hasConfiguredScope =
+    includeSelectors.length > 0 ||
+    ignoreSelectors.length > 0;
+
   const readableText =
     extractReadableText(
       capture.html
@@ -1150,6 +1145,7 @@ async function processCapturedPage(
         snapshotId,
       }
     );
+  
 
     await updateCaptureSchedule(
       env,
@@ -1159,6 +1155,31 @@ async function processCapturedPage(
 
     return;
   }
+  if (
+  !monitoringConfigurationValid
+) {
+  console.warn(
+    "Morrow monitoring selector configuration invalid",
+    {
+      monitoredPageId:
+        pageToCapture.id,
+
+      includeError:
+        includeConfiguration.error,
+
+      ignoreError:
+        ignoreConfiguration.error,
+    }
+  );
+
+  await updateCaptureSchedule(
+    env,
+    pageToCapture,
+    capturedAt
+  );
+
+  return;
+}
 
   const contentChanged =
     previousSnapshot.content_hash !==
@@ -1216,14 +1237,88 @@ async function processCapturedPage(
     return;
   }
 
-  const previousReadableText =
-    await readSnapshotText(
+  const currentMonitoringScope =
+  extractMonitoringScope(
+    capture.html,
+    includeSelectors,
+    ignoreSelectors
+  );
+
+const currentComparisonText =
+  currentMonitoringScope.text;
+
+let previousComparisonText:
+  string | null = null;
+
+if (hasConfiguredScope) {
+  const previousHtml =
+    await readSnapshotHtml(
       env,
-      previousSnapshot.text_object_key
+      previousSnapshot
+        .html_object_key
     );
 
-  console.log(
-    "Morrow previous snapshot text loaded",
+  if (previousHtml !== null) {
+    previousComparisonText =
+      extractMonitoringScope(
+        previousHtml,
+        includeSelectors,
+        ignoreSelectors
+      ).text;
+  }
+} else {
+  previousComparisonText =
+    await readSnapshotText(
+      env,
+      previousSnapshot
+        .text_object_key
+    );
+}
+
+console.log(
+  "Morrow monitoring scope applied",
+  {
+    monitoredPageId:
+      pageToCapture.id,
+
+    mode:
+      currentMonitoringScope.mode,
+
+    includeSelectors,
+    ignoreSelectors,
+
+    matchedIncludeSelectors:
+      currentMonitoringScope
+        .matchedIncludeSelectors,
+
+    unmatchedIncludeSelectors:
+      currentMonitoringScope
+        .unmatchedIncludeSelectors,
+
+    invalidIncludeSelectors:
+      currentMonitoringScope
+        .invalidIncludeSelectors,
+
+    matchedIgnoreSelectors:
+      currentMonitoringScope
+        .matchedIgnoreSelectors,
+
+    unmatchedIgnoreSelectors:
+      currentMonitoringScope
+        .unmatchedIgnoreSelectors,
+
+    invalidIgnoreSelectors:
+      currentMonitoringScope
+        .invalidIgnoreSelectors,
+  }
+);
+
+if (
+  previousComparisonText ===
+  null
+) {
+  console.warn(
+    "Morrow previous snapshot comparison evidence unavailable",
     {
       monitoredPageId:
         pageToCapture.id,
@@ -1231,49 +1326,18 @@ async function processCapturedPage(
       previousSnapshotId:
         previousSnapshot.id,
 
-      loaded:
-        Boolean(
-          previousReadableText
-        ),
-
-      previousTextLength:
-        previousReadableText?.length ??
-        0,
+      hasConfiguredScope,
     }
   );
 
-  if (
-    previousReadableText ===
-    null
-  ) {
-    /*
-     * Snapshot evidence is incomplete.
-     *
-     * We still preserve the current snapshot, but we do
-     * not invent a diff against missing previous text.
-     */
-    console.warn(
-      "Morrow previous snapshot text unavailable",
-      {
-        monitoredPageId:
-          pageToCapture.id,
+  await updateCaptureSchedule(
+    env,
+    pageToCapture,
+    capturedAt
+  );
 
-        previousSnapshotId:
-          previousSnapshot.id,
-
-        textObjectKey:
-          previousSnapshot.text_object_key,
-      }
-    );
-
-    await updateCaptureSchedule(
-      env,
-      pageToCapture,
-      capturedAt
-    );
-
-    return;
-  }
+  return;
+}
 
   /*
    * ----------------------------------------------------
@@ -1282,23 +1346,23 @@ async function processCapturedPage(
    */
 
   const previousRawLines =
-    splitNormalizedLines(
-      previousReadableText
-    );
+  splitNormalizedLines(
+    previousComparisonText
+  );
 
   const currentRawLines =
     splitNormalizedLines(
-      readableText
+      currentComparisonText
     );
 
   const previousStaticLines =
     filterStaticNoise(
-      previousReadableText
+      previousComparisonText
     );
 
   const currentStaticLines =
     filterStaticNoise(
-      readableText
+      currentComparisonText
     );
 
   console.log(
@@ -1336,12 +1400,14 @@ async function processCapturedPage(
    */
 
   const volatileLines =
-    await getHistoricalVolatileLines(
-      env,
-      pageToCapture.id,
-      snapshotId,
-      currentStaticLines
-    );
+  await getHistoricalVolatileLines(
+    env,
+    pageToCapture.id,
+    snapshotId,
+    currentStaticLines,
+    includeSelectors,
+    ignoreSelectors
+  );
 
   const previousMeaningfulLines =
     removeVolatileLines(
@@ -1799,7 +1865,9 @@ async function getDueMonitoredPages(
           monitored_pages.url,
           monitored_pages.frequency_minutes,
           monitored_pages.last_checked_at,
-          monitored_pages.next_check_at
+          monitored_pages.next_check_at,
+          monitored_pages.include_selectors_json,
+          monitored_pages.ignore_selectors_json
 
         FROM monitored_pages
 
