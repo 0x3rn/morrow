@@ -1,5 +1,5 @@
 "use server";
-
+import { parseMonitoringSelectorInput } from "@/lib/monitoring-selectors";
 import { auth } from "@/lib/auth";
 import { MORROW_MVP_USAGE_LIMITS } from "@/lib/usage-limits";
 import { env } from "cloudflare:workers";
@@ -609,6 +609,128 @@ export async function updateMonitoredPageFrequency(
     )
       .bind(
         frequencyMinutes,
+        monitoredPageId,
+        competitorId,
+        session.user.id
+      )
+      .run();
+
+  if (
+    (
+      result.meta?.changes ??
+      0
+    ) === 0
+  ) {
+    throw new Error(
+      "Monitored page not found or access denied."
+    );
+  }
+
+  revalidateCompetitorViews(
+    competitorId
+  );
+}
+
+export async function updateMonitoredPageMonitoringScope(
+  formData: FormData
+) {
+  const session =
+    await auth.api.getSession({
+      headers:
+        await headers(),
+    });
+
+  if (!session) {
+    throw new Error(
+      "Unauthorized"
+    );
+  }
+
+  const monitoredPageId =
+    String(
+      formData.get(
+        "monitoredPageId"
+      ) || ""
+    ).trim();
+
+  const competitorId =
+    String(
+      formData.get(
+        "competitorId"
+      ) || ""
+    ).trim();
+
+  const includeSelectorsInput =
+    String(
+      formData.get(
+        "includeSelectors"
+      ) || ""
+    );
+
+  const ignoreSelectorsInput =
+    String(
+      formData.get(
+        "ignoreSelectors"
+      ) || ""
+    );
+
+  if (
+    !monitoredPageId ||
+    !competitorId
+  ) {
+    throw new Error(
+      "Monitored page and competitor are required."
+    );
+  }
+
+  const includeSelectors =
+    parseMonitoringSelectorInput(
+      includeSelectorsInput
+    );
+
+  const ignoreSelectors =
+    parseMonitoringSelectorInput(
+      ignoreSelectorsInput
+    );
+
+  const result =
+    await env.DB.prepare(
+      `
+        UPDATE monitored_pages
+
+        SET
+          include_selectors_json = ?,
+          ignore_selectors_json = ?,
+
+          updated_at =
+            CURRENT_TIMESTAMP
+
+        WHERE id = ?
+          AND competitor_id = ?
+
+          AND competitor_id IN (
+            SELECT
+              competitors.id
+
+            FROM competitors
+
+            INNER JOIN workspace_members
+              ON workspace_members.workspace_id =
+                 competitors.workspace_id
+
+            WHERE workspace_members.user_id = ?
+          )
+      `
+    )
+      .bind(
+        JSON.stringify(
+          includeSelectors
+        ),
+
+        JSON.stringify(
+          ignoreSelectors
+        ),
+
         monitoredPageId,
         competitorId,
         session.user.id
