@@ -1,5 +1,9 @@
 "use server";
-import { parseMonitoringSelectorInput } from "@/lib/monitoring-selectors";
+import {
+  analyzeMonitoringSelectors,
+  normalizeMonitoringSelectorInput,
+  parseMonitoringSelectorInput,
+} from "@/lib/monitoring-selectors";
 import { auth } from "@/lib/auth";
 import { MORROW_MVP_USAGE_LIMITS } from "@/lib/usage-limits";
 import { env } from "cloudflare:workers";
@@ -751,6 +755,217 @@ export async function updateMonitoredPageMonitoringScope(
   revalidateCompetitorViews(
     competitorId
   );
+}
+
+export async function previewMonitoredPageMonitoringScope(
+  formData: FormData
+) {
+  const session =
+    await auth.api.getSession({
+      headers:
+        await headers(),
+    });
+
+  if (!session) {
+    throw new Error(
+      "Unauthorized"
+    );
+  }
+
+  const monitoredPageId =
+    String(
+      formData.get(
+        "monitoredPageId"
+      ) || ""
+    ).trim();
+
+  const competitorId =
+    String(
+      formData.get(
+        "competitorId"
+      ) || ""
+    ).trim();
+
+  const includeSelectorsInput =
+    String(
+      formData.get(
+        "includeSelectors"
+      ) || ""
+    );
+
+  const ignoreSelectorsInput =
+    String(
+      formData.get(
+        "ignoreSelectors"
+      ) || ""
+    );
+
+  if (
+    !monitoredPageId ||
+    !competitorId
+  ) {
+    return {
+      ok: false,
+      message:
+        "Monitored page and competitor are required.",
+      capturedAt: null,
+      includeMatches: [],
+      ignoreMatches: [],
+    };
+  }
+
+  let includeSelectors:
+    string[];
+
+  let ignoreSelectors:
+    string[];
+
+  try {
+    includeSelectors =
+      normalizeMonitoringSelectorInput(
+        includeSelectorsInput
+      );
+
+    ignoreSelectors =
+      normalizeMonitoringSelectorInput(
+        ignoreSelectorsInput
+      );
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Invalid selector input.",
+      capturedAt: null,
+      includeMatches: [],
+      ignoreMatches: [],
+    };
+  }
+
+  const monitoredPage =
+    await env.DB.prepare(
+      `
+        SELECT
+          monitored_pages.id
+
+        FROM monitored_pages
+
+        INNER JOIN competitors
+          ON competitors.id =
+             monitored_pages.competitor_id
+
+        INNER JOIN workspace_members
+          ON workspace_members.workspace_id =
+             competitors.workspace_id
+
+        WHERE monitored_pages.id = ?
+          AND monitored_pages.competitor_id = ?
+          AND workspace_members.user_id = ?
+
+        LIMIT 1
+      `
+    )
+      .bind(
+        monitoredPageId,
+        competitorId,
+        session.user.id
+      )
+      .first<{
+        id: string;
+      }>();
+
+  if (!monitoredPage) {
+    throw new Error(
+      "Monitored page not found or access denied."
+    );
+  }
+
+  const latestSnapshot =
+    await env.DB.prepare(
+      `
+        SELECT
+          html_object_key,
+          captured_at
+
+        FROM snapshots
+
+        WHERE monitored_page_id = ?
+          AND html_object_key IS NOT NULL
+
+        ORDER BY
+          datetime(
+            captured_at
+          ) DESC
+
+        LIMIT 1
+      `
+    )
+      .bind(
+        monitoredPageId
+      )
+      .first<{
+        html_object_key:
+          string | null;
+
+        captured_at:
+          string;
+      }>();
+
+  if (
+    !latestSnapshot
+      ?.html_object_key
+  ) {
+    return {
+      ok: false,
+      message:
+        "No captured snapshot is available yet. Run the monitor once before testing selectors.",
+      capturedAt: null,
+      includeMatches: [],
+      ignoreMatches: [],
+    };
+  }
+
+  const snapshotObject =
+    await env.morrow_snapshots.get(
+      latestSnapshot
+        .html_object_key
+    );
+
+  if (!snapshotObject) {
+    return {
+      ok: false,
+      message:
+        "The latest captured HTML could not be loaded.",
+      capturedAt:
+        latestSnapshot
+          .captured_at,
+      includeMatches: [],
+      ignoreMatches: [],
+    };
+  }
+
+  const html =
+    await snapshotObject.text();
+
+  const analysis =
+    analyzeMonitoringSelectors(
+      html,
+      includeSelectors,
+      ignoreSelectors
+    );
+
+  return {
+    ok: true,
+    message: null,
+    capturedAt:
+      latestSnapshot
+        .captured_at,
+    includeMatches:
+      analysis.includeMatches,
+    ignoreMatches:
+      analysis.ignoreMatches,
+  };
 }
 
 export async function removeMonitoredPage(

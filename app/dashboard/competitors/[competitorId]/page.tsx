@@ -2,15 +2,16 @@ import { auth } from "@/lib/auth";
 import { env } from "cloudflare:workers";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-
 import {
   createMonitoredPage,
   removeMonitoredPage,
   toggleMonitoredPageStatus,
   updateMonitoredPage,
   updateMonitoredPageFrequency,
-  updateMonitoredPageMonitoringScope,
 } from "./actions";
+import {
+  MonitoringScopeForm,
+} from "./monitoring-scope-form";
 
 interface Competitor {
   id: string;
@@ -1625,131 +1626,24 @@ export default async function CompetitorPage({
                               </div>
                             </div>
                           </div>
-                          <form
-                            action={
-                              updateMonitoredPageMonitoringScope
+                          <MonitoringScopeForm
+                            monitoredPageId={
+                              page.id
                             }
-                            className="mt-6 border-t border-slate-200 pt-5"
-                          >
-                            <input
-                              type="hidden"
-                              name="monitoredPageId"
-                              value={page.id}
-                            />
-
-                            <input
-                              type="hidden"
-                              name="competitorId"
-                              value={competitor.id}
-                            />
-
-                            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                              <div>
-                                <h4 className="text-sm font-semibold text-slate-900">
-                                  Monitoring scope
-                                </h4>
-
-                                <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
-                                  Limit comparison to specific
-                                  sections or exclude regions that
-                                  change frequently.
-                                </p>
-                              </div>
-
-                              <span className="inline-flex w-fit rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
-                                {formatSelectorConfiguration(
-                                  page.include_selectors_json
-                                )
-                                  ? "Selected sections"
-                                  : "Whole page"}
-                              </span>
-                            </div>
-
-                            <div className="mt-5 grid gap-5 lg:grid-cols-2">
-                              <div>
-                                <label
-                                  htmlFor={`include-selectors-${page.id}`}
-                                  className="mb-1.5 block text-xs font-medium text-slate-600"
-                                >
-                                  Sections to monitor
-                                </label>
-
-                                <textarea
-                                  id={`include-selectors-${page.id}`}
-                                  name="includeSelectors"
-                                  defaultValue={
-                                    formatSelectorConfiguration(
-                                      page.include_selectors_json
-                                    )
-                                  }
-                                  placeholder={
-                                    [
-                                      ".pricing",
-                                      "#features",
-                                      "[data-section='plans']",
-                                    ].join("\n")
-                                  }
-                                  rows={6}
-                                  className={`${inputClasses} resize-y font-mono text-xs leading-5`}
-                                />
-
-                                <p className="mt-2 text-xs leading-5 text-slate-400">
-                                  One CSS selector per line.
-                                  Leave this empty to monitor the
-                                  entire page.
-                                </p>
-                              </div>
-
-                              <div>
-                                <label
-                                  htmlFor={`ignore-selectors-${page.id}`}
-                                  className="mb-1.5 block text-xs font-medium text-slate-600"
-                                >
-                                  Regions to ignore
-                                </label>
-
-                                <textarea
-                                  id={`ignore-selectors-${page.id}`}
-                                  name="ignoreSelectors"
-                                  defaultValue={
-                                    formatSelectorConfiguration(
-                                      page.ignore_selectors_json
-                                    )
-                                  }
-                                  placeholder={
-                                    [
-                                      ".live-counter",
-                                      ".rotating-reviews",
-                                      "[data-dynamic]",
-                                    ].join("\n")
-                                  }
-                                  rows={6}
-                                  className={`${inputClasses} resize-y font-mono text-xs leading-5`}
-                                />
-
-                                <p className="mt-2 text-xs leading-5 text-slate-400">
-                                  These regions are removed before
-                                  comparison, including when they
-                                  appear inside monitored sections.
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                              <p className="text-xs leading-5 text-slate-400">
-                                Maximum 20 selectors per list.
-                              </p>
-
-                              <button
-                                type="submit"
-                                className={
-                                  subtleButtonClasses
-                                }
-                              >
-                                Save monitoring scope
-                              </button>
-                            </div>
-                          </form>
+                            competitorId={
+                              competitor.id
+                            }
+                            initialIncludeSelectors={
+                              formatSelectorConfiguration(
+                                page.include_selectors_json
+                              )
+                            }
+                            initialIgnoreSelectors={
+                              formatSelectorConfiguration(
+                                page.ignore_selectors_json
+                              )
+                            }
+                          />
                         </details>
                       </div>
                     </div>
