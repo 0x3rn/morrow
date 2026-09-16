@@ -55,4 +55,3 @@ node_modules/
 .wrangler/
 .agents/
 /scripts/
-/migrations/
