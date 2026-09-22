@@ -3,17 +3,9 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { AuthShell, SubmitArrow } from "@/components/auth-shell";
+import { AuthShell } from "@/components/auth-shell";
+import { PasswordField } from "@/components/password-field";
 import styles from "@/components/auth-shell.module.css";
-
-function ErrorIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 20 20">
-      <circle cx="10" cy="10" r="7" />
-      <path d="M10 6.5v4.5M10 14h.01" />
-    </svg>
-  );
-}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -32,7 +24,7 @@ export default function RegisterPage() {
     setIsLoading(false);
 
     if (error) {
-      setError(error.message || "Unable to create account.");
+      setError("We couldn't create your account with those details.");
       return;
     }
 
@@ -69,27 +61,23 @@ export default function RegisterPage() {
         </div>
         <div className={styles.field}>
           <label htmlFor="password">Password</label>
-          <input
+          <PasswordField
             id="password"
-            type="password"
+            minLength={8}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            required
-            minLength={8}
             autoComplete="new-password"
-            placeholder="Create a secure password"
+            placeholder="Create a password"
           />
-          <p className={styles.fieldHint}>Use at least 8 characters.</p>
+          <p className={styles.fieldHint}>At least 8 characters.</p>
         </div>
         {error && (
           <p className={styles.error} role="alert">
-            <ErrorIcon />
             <span>{error}</span>
           </p>
         )}
         <button className={styles.submit} type="submit" disabled={isLoading}>
-          <span>{isLoading ? "Creating workspace..." : "Create workspace"}</span>
-          <SubmitArrow />
+          {isLoading ? "Creating account…" : "Create account"}
         </button>
       </form>
     </AuthShell>

@@ -3,17 +3,9 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { AuthShell, SubmitArrow } from "@/components/auth-shell";
+import { AuthShell } from "@/components/auth-shell";
+import { PasswordField } from "@/components/password-field";
 import styles from "@/components/auth-shell.module.css";
-
-function ErrorIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 20 20">
-      <circle cx="10" cy="10" r="7" />
-      <path d="M10 6.5v4.5M10 14h.01" />
-    </svg>
-  );
-}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,7 +23,7 @@ export default function LoginPage() {
     setIsLoading(false);
 
     if (error) {
-      setError(error.message || "Unable to log in.");
+      setError("We couldn't log you in with those details.");
       return;
     }
 
@@ -56,25 +48,21 @@ export default function LoginPage() {
         </div>
         <div className={styles.field}>
           <label htmlFor="password">Password</label>
-          <input
+          <PasswordField
             id="password"
-            type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            required
             autoComplete="current-password"
             placeholder="Enter your password"
           />
         </div>
         {error && (
           <p className={styles.error} role="alert">
-            <ErrorIcon />
             <span>{error}</span>
           </p>
         )}
         <button className={styles.submit} type="submit" disabled={isLoading}>
-          <span>{isLoading ? "Opening workspace..." : "Open workspace"}</span>
-          <SubmitArrow />
+          {isLoading ? "Logging in…" : "Log in"}
         </button>
       </form>
     </AuthShell>

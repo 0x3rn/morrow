@@ -13,9 +13,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Morrow — Competitor website monitoring",
+  title: "Morrow — Competitor Website Monitoring",
   description:
-    "Monitor competitor pages, detect meaningful changes, and understand why they matter.",
+    "Monitor competitor pages, track meaningful website changes, review the evidence behind each change, and keep a reliable history with Morrow.",
+  icons: {
+    icon: [{ type: "image/png", url: "/logo.png" }],
+    apple: [{ type: "image/png", url: "/logo.png" }],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

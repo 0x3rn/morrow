@@ -1,29 +1,12 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import styles from "./auth-shell.module.css";
+import { BrandLogo } from "./marketing/brand-logo";
 
 type AuthShellProps = {
   children: ReactNode;
   mode: "login" | "register";
 };
-
-function SignalMark() {
-  return (
-    <span className={styles.signalMark} aria-hidden="true">
-      <span />
-      <span />
-      <span />
-    </span>
-  );
-}
-
-function ArrowIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 20 20">
-      <path d="M4 10h11M11 5l5 5-5 5" />
-    </svg>
-  );
-}
 
 function BackIcon() {
   return (
@@ -38,111 +21,71 @@ export function AuthShell({ children, mode }: AuthShellProps) {
 
   return (
     <main className={styles.shell}>
-      <section className={styles.story} aria-label="Morrow product overview">
-        <div className={styles.grid} aria-hidden="true" />
+      <section className={styles.brandPanel} aria-label="Morrow product overview">
         <Link className={styles.brand} href="/" aria-label="Morrow home">
-          <SignalMark />
+          <BrandLogo className={styles.brandLogo} />
           <span>Morrow</span>
         </Link>
 
-        <div className={styles.storyCopy}>
-          <p className={styles.eyebrow}>
-            <span />
-            {isLogin ? "Your market, on watch" : "Build your watchlist"}
-          </p>
+        <div className={styles.brandCopy}>
+          <p className={styles.eyebrow}>COMPETITOR WEBSITE MONITORING</p>
           <h1>
-            {isLogin ? (
-              <>
-                Return to
-                <br />
-                <em>the signal.</em>
-              </>
-            ) : (
-              <>
-                See the move
-                <br />
-                <em>before the meeting.</em>
-              </>
-            )}
+            Keep the pages
+            <br />
+            <em>that matter in view.</em>
           </h1>
-          <p className={styles.storyDescription}>
-            {isLogin
-              ? "Continue where your watchlist left off and catch up on the changes that deserve your attention."
-              : "Turn the competitor pages that matter into a focused, searchable stream of market intelligence."}
-          </p>
+          <p>Morrow records meaningful changes across the competitor pages you choose.</p>
         </div>
 
-        <div className={styles.signalPanel} aria-hidden="true">
-          <div className={styles.panelHeading}>
-            <span>MORROW / SIGNAL PREVIEW</span>
-            <span className={styles.liveState}>
-              <i />
-              Monitoring
-            </span>
+        <div className={styles.changePanel} aria-label="Example change detected">
+          <div className={styles.changeMeta}>
+            <span>CHANGE DETECTED</span>
+            <span>12 MIN AGO</span>
           </div>
-          <div className={styles.panelBody}>
-            <div className={styles.radar}>
-              <span />
-              <span />
-              <span />
-              <i />
-            </div>
-            <div className={styles.panelSignal}>
-              <span>POSITIONING</span>
-              <strong>Homepage message shifted</strong>
-              <p>Primary audience moved from teams to operators</p>
-            </div>
+          <p>Pricing</p>
+          <strong>Starter plan</strong>
+          <div className={styles.changeValue}>
+            $49 <span aria-hidden="true">→</span> $79 / month
           </div>
         </div>
       </section>
 
-      <section className={styles.formSide}>
-        <div className={styles.formTopline}>
+      <section className={styles.authPanel}>
+        <header className={styles.authHeader}>
+          <Link className={styles.mobileBrand} href="/" aria-label="Morrow home">
+            <BrandLogo className={styles.brandLogo} />
+            <span>Morrow</span>
+          </Link>
           <Link className={styles.backLink} href="/">
             <BackIcon />
-            Back to Morrow
+            <span className={styles.desktopBack}>Back to Morrow</span>
+            <span className={styles.mobileHome}>Home</span>
           </Link>
-          <p>
-            {isLogin ? "New to Morrow?" : "Already have an account?"}
-            <Link href={isLogin ? "/register" : "/login"}>
-              {isLogin ? "Register" : "Log in"}
-            </Link>
-          </p>
-        </div>
+        </header>
 
-        <div className={styles.formWrap}>
+        <div className={styles.authContent}>
           <header className={styles.formHeader}>
             <p className={styles.formKicker}>
-              {isLogin ? "WELCOME BACK" : "START MONITORING"}
+              {isLogin ? "WELCOME BACK" : "CREATE ACCOUNT"}
             </p>
-            <h2>{isLogin ? "Log in to Morrow." : "Create your account."}</h2>
+            <h1>{isLogin ? "Log in to Morrow." : "Create your Morrow account."}</h1>
             <p>
               {isLogin
-                ? "Enter your details to open your intelligence workspace."
+                ? "Open your workspace and continue monitoring."
                 : "Set up your workspace and add your first competitor."}
             </p>
           </header>
 
           {children}
 
-          <p className={styles.mobileSwitch}>
+          <p className={styles.accountSwitch}>
             {isLogin ? "New to Morrow?" : "Already have an account?"}
             <Link href={isLogin ? "/register" : "/login"}>
-              {isLogin ? "Register" : "Log in"}
+              {isLogin ? "Create an account" : "Log in"}
             </Link>
           </p>
-        </div>
-
-        <div className={styles.formFooter}>
-          <span>Focused monitoring</span>
-          <span>Meaningful changes</span>
-          <span>Searchable history</span>
         </div>
       </section>
     </main>
   );
-}
-
-export function SubmitArrow() {
-  return <ArrowIcon />;
 }
