@@ -888,17 +888,15 @@ export default async function DashboardPage() {
         <header className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
-              Morrow
+              Workspace
             </div>
 
             <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
-              Intelligence dashboard
+              Monitoring Overview
             </h1>
 
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-[15px]">
-              Monitor competitor activity,
-              review meaningful changes, and
-              see which pages need attention.
+              Track your competitors, monitored pages, recent changes, and workspace usage.
             </p>
           </div>
 
