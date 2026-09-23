@@ -783,7 +783,7 @@ export default async function CompetitorPage({
                   <div className="mt-2 text-base font-semibold text-slate-950">
                     {competitor.status ===
                     "active"
-                      ? "Watching for changes"
+                      ? "Monitoring active"
                       : "Monitoring paused"}
                   </div>
                 </div>
@@ -854,7 +854,7 @@ export default async function CompetitorPage({
                 </span>
 
                 <span className="text-xs text-slate-400">
-                  changes
+                  recorded
                 </span>
               </div>
             </div>
@@ -1029,7 +1029,7 @@ export default async function CompetitorPage({
                           <details className="group mt-4">
                             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25 motion-reduce:transition-none">
                               <span>
-                                View change evidence
+                                View before and after
                               </span>
 
                               <ChevronIcon />

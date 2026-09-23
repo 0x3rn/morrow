@@ -1974,12 +1974,6 @@ async function claimMonitoredPages(
   return claimed;
 }
 
-/*
- * ------------------------------------------------------
- * Scheduled capture loop
- * ------------------------------------------------------
- */
-
 async function runMorrowScheduler(
   env: Env,
   controller:

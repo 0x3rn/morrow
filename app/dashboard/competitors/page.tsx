@@ -766,12 +766,9 @@ export default async function CompetitorsPage() {
         <section className="mt-8 grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
-                Add competitor
-              </div>
 
               <h2 className="mt-2 text-xl font-semibold text-slate-950">
-                Start monitoring a company
+                Add a competitor
               </h2>
 
               <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
@@ -968,9 +965,6 @@ export default async function CompetitorsPage() {
         <section className="mt-10">
           <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
-                Watch list
-              </div>
 
               <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-slate-950">
                 Your competitors
@@ -1116,12 +1110,12 @@ export default async function CompetitorsPage() {
 
                               <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-500">
                                 {competitor.description ||
-                                  `Tracking ${monitoredPageCount} ${
+                                  `Monitoring ${monitoredPageCount} ${
                                     monitoredPageCount ===
                                     1
                                       ? "page"
                                       : "pages"
-                                  } for meaningful competitor changes.`}
+                                  } for changes.`}
                               </p>
 
                               <div className="mt-4 text-xs text-slate-400">
@@ -1357,12 +1351,7 @@ export default async function CompetitorsPage() {
                                 </div>
 
                                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                                  This removes the
-                                  competitor, its
-                                  monitored pages,
-                                  snapshots, changes,
-                                  and related delivery
-                                  history.
+                                  This permanently removes the competitor and its monitored pages, captures, changes, and delivery history.
                                 </p>
 
                                 <form

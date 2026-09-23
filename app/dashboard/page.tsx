@@ -1381,13 +1381,11 @@ export default async function DashboardPage() {
             0 ? (
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900">
-                  No meaningful changes yet
+                  No changes yet
                 </h3>
 
                 <p className="mt-2 text-sm leading-6 text-slate-500">
-                  Monitoring is running, but no
-                  persisted meaningful competitor
-                  changes are currently available.
+                  Monitoring is running, but no changes have been recorded yet.
                 </p>
               </div>
             ) : (
@@ -1478,7 +1476,7 @@ export default async function DashboardPage() {
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="text-xs font-medium text-slate-400">
-              Latest meaningful change
+              Latest change
             </div>
 
             <div className="mt-2 text-sm font-semibold leading-6 text-slate-900">

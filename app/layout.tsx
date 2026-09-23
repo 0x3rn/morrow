@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Morrow — Competitor Website Monitoring",
   description:
-    "Monitor competitor pages, track meaningful website changes, review the evidence behind each change, and keep a reliable history with Morrow.",
+    "Monitor competitor pages, review recorded changes and source captures, and keep a reliable history with Morrow.",
   icons: {
     icon: [{ type: "image/png", url: "/logo.png" }],
     apple: [{ type: "image/png", url: "/logo.png" }],
