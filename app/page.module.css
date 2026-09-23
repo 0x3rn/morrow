@@ -167,3 +167,86 @@
 }
 
 @media (prefers-reduced-motion: reduce) { .page *, .page *::before, .page *::after { animation-duration: 0.01ms !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; } }
+
+/* Product-led refinement: the examples use the same controls and terms as Manage. */
+.previewTop strong { font-family: var(--font-geist-sans), Arial, sans-serif; font-size: 15px; letter-spacing: 0; text-transform: none; }
+.previewTop span:last-child { border: 1px solid var(--line-light); color: var(--ink-soft); font-family: var(--font-geist-sans), Arial, sans-serif; font-size: 11px; letter-spacing: 0; padding: 6px 9px; text-transform: none; }
+.previewDescription { color: var(--ink-soft); font-size: 12px; line-height: 1.5; margin: 14px 0 0; max-width: 390px; }
+.scopeColumns { gap: 14px; margin-top: 22px; }
+.scopeColumns > div { gap: 0; }
+.scopeColumns p { color: var(--ink); font-family: var(--font-geist-sans), Arial, sans-serif; font-size: 12px; letter-spacing: 0; margin-bottom: 8px; text-transform: none; }
+.selectorField { background: #fffdfa; border: 1px solid var(--line-light); color: var(--ink); font-family: var(--font-geist-mono), monospace; font-size: 12px; min-height: 64px; padding: 12px; }
+.scopeColumns small { color: var(--ink-soft); font-size: 10px; line-height: 1.45; margin-top: 8px; }
+.scopeTestBar { align-items: center; border-top: 1px solid var(--line-light); display: flex; gap: 12px; justify-content: space-between; margin-top: 20px; padding-top: 17px; }
+.scopeTestBar > span:first-child { color: var(--ink-soft); font-size: 11px; line-height: 1.4; }
+.scopeTestButton { background: var(--ink); color: #fff; flex: 0 0 auto; font-size: 11px; font-weight: 650; padding: 10px 12px; }
+.scopeResults { background: #fffdfa; border: 1px solid var(--line-light); margin-top: 16px; padding: 15px; }
+.scopeResults > p { font-size: 12px; font-weight: 650; margin: 0 0 11px; }
+.scopeResults > p span { color: var(--ink-soft); display: block; font-size: 10px; font-weight: 400; margin-top: 3px; }
+.scopeResults > div { align-items: center; border-top: 1px solid var(--line-light); display: grid; gap: 4px 10px; grid-template-columns: minmax(0, 1fr) auto; padding: 10px 0; }
+.scopeResults > div:last-child { padding-bottom: 0; }
+.scopeResults code { font-family: var(--font-geist-mono), monospace; font-size: 11px; overflow-wrap: anywhere; }
+.scopeResults strong { color: #3d6755; font-size: 10px; font-weight: 650; }
+.scopeResults > div span { color: var(--ink-soft); font-size: 11px; grid-column: 1 / -1; }
+
+.centerHeading h2 { font-size: clamp(43px, 3.75vw, 55px); }
+.capabilityGrid { gap: 12px; grid-template-columns: repeat(12, minmax(0, 1fr)); }
+.capabilityCard { display: flex; flex-direction: column; min-height: 220px; padding: 28px; }
+.capabilityCard.featured { background: var(--night); color: #f7f4ec; grid-column: span 8; min-height: 292px; }
+.capabilityCard.side { grid-column: span 4; }
+.capabilityCard.compact { grid-column: span 4; }
+.capabilityCard.evidence { grid-column: span 8; }
+.capabilityCard.medium { grid-column: span 7; }
+.capabilityCard.last { grid-column: span 5; }
+.capabilityCard h3 { max-width: 470px; }
+.capabilityCard.featured h3 { font-size: 30px; }
+.capabilityCard p { margin: 16px 0 auto; max-width: 490px; }
+.capabilityCard.featured p { color: #b6bfba; }
+.capabilityDetail { border-top: 1px solid var(--line-light); color: var(--ink-soft); font-family: var(--font-geist-mono), monospace; font-size: 11px; line-height: 1.45; margin-top: 30px; padding-top: 13px; }
+.capabilityCard.featured .capabilityDetail { border-color: var(--line-dark); color: var(--signal-soft); }
+
+.comparisonHeading { max-width: 660px; text-align: left; }
+.comparisonHeading h2 { font-size: clamp(45px, 3.9vw, 58px); }
+.comparisonGrid { border-top: 1px solid var(--line-light); margin: 48px 0 0; max-width: none; }
+.comparisonList { min-height: 0; padding: 30px 48px 0 0; }
+.comparisonList + .comparisonList { border-left: 2px solid var(--ink); padding-left: 48px; }
+
+.faqInner { display: block; margin-inline: auto; max-width: 900px; }
+.faqHeading { margin-bottom: 38px; max-width: 550px; }
+.faqList { text-align: left; }
+.finalCta { align-items: center; display: flex; min-height: 440px; padding: 70px 0; }
+.finalCta h2 { font-size: clamp(51px, 4.8vw, 68px); }
+.footer { padding-top: 58px; }
+.footerMain { gap: clamp(80px, 12vw, 160px); justify-content: flex-start; padding-bottom: 56px; }
+.footerNav { gap: 84px; margin-left: 0; }
+
+@media (max-width: 1279px) {
+  .capabilityCard.featured, .capabilityCard.side, .capabilityCard.compact, .capabilityCard.evidence, .capabilityCard.medium, .capabilityCard.last { grid-column: span 6; }
+  .capabilityCard.featured { min-height: 270px; }
+  .footerMain { gap: 40px; }
+}
+
+@media (max-width: 849px) {
+  .faqInner { gap: 36px; grid-template-columns: 1fr; }
+  .comparisonList { padding-right: 30px; }
+  .comparisonList + .comparisonList { padding-left: 30px; }
+}
+
+@media (max-width: 767px) {
+  .capabilityGrid { grid-template-columns: 1fr; }
+  .capabilityCard.featured, .capabilityCard.side, .capabilityCard.compact, .capabilityCard.evidence, .capabilityCard.medium, .capabilityCard.last { grid-column: auto; min-height: 0; }
+  .capabilityCard.featured h3 { font-size: 24px; }
+  .capabilityDetail { margin-top: 28px; }
+  .changeExample { min-height: 0; }
+  .comparisonList { padding: 24px 0 0; }
+  .comparisonList + .comparisonList { border-left: 0; border-top: 2px solid var(--ink); margin-top: 28px; padding: 24px 0 0; }
+  .finalCta { min-height: 0; padding: 76px 0; }
+  .footerMain { gap: 42px; padding-bottom: 46px; }
+  .footerNav { margin-left: 0; }
+}
+
+@media (max-width: 479px) {
+  .scopeColumns { grid-template-columns: 1fr; }
+  .scopeTestBar { align-items: flex-start; flex-direction: column; }
+  .capabilityCard { padding: 23px; }
+}

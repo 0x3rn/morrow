@@ -9,6 +9,6 @@ function ComparisonList({ label, items }: { label: string; items: string[] }) {
 
 export function ComparisonSection() {
   return (
-    <section className={styles.comparisonSection}><div className={styles.container}><div className={styles.comparisonHeading}><p className={styles.sectionLabel}>The working difference</p><h2>Stop rebuilding the history by hand.</h2></div><div className={styles.comparisonGrid}><ComparisonList label="Without Morrow" items={withoutMorrow} /><ComparisonList label="With Morrow" items={withMorrow} /></div></div></section>
+    <section className={styles.comparisonSection}><div className={styles.container}><div className={styles.comparisonHeading}><h2>Stop rebuilding the history by hand.</h2></div><div className={styles.comparisonGrid}><ComparisonList label="Without Morrow" items={withoutMorrow} /><ComparisonList label="With Morrow" items={withMorrow} /></div></div></section>
   );
 }

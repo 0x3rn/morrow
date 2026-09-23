@@ -10,6 +10,6 @@ const questions = [
 
 export function Faq() {
   return (
-    <section className={styles.faqSection} id="faq"><div className={`${styles.container} ${styles.faqInner}`}><div className={styles.faqHeading}><p className={styles.sectionLabel}>Questions</p><h2>A few things worth knowing.</h2></div><div className={styles.faqList}>{questions.map((item) => <details key={item.question}><summary>{item.question}<span aria-hidden="true">+</span></summary><p>{item.answer}</p></details>)}</div></div></section>
+    <section className={styles.faqSection} id="faq"><div className={`${styles.container} ${styles.faqInner}`}><div className={styles.faqHeading}><h2>A few things worth knowing.</h2></div><div className={styles.faqList}>{questions.map((item) => <details key={item.question}><summary>{item.question}<span aria-hidden="true">+</span></summary><p>{item.answer}</p></details>)}</div></div></section>
   );
 }

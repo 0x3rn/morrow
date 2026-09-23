@@ -29,11 +29,11 @@ export function AuthShell({ children, mode }: AuthShellProps) {
 
         <div className={styles.brandCopy}>
           <p className={styles.eyebrow}>COMPETITOR WEBSITE MONITORING</p>
-          <h1>
+          <h2>
             Keep the pages
             <br />
             <em>that matter in view.</em>
-          </h1>
+          </h2>
           <p>Morrow records meaningful changes across the competitor pages you choose.</p>
         </div>
 
@@ -68,7 +68,11 @@ export function AuthShell({ children, mode }: AuthShellProps) {
             <p className={styles.formKicker}>
               {isLogin ? "WELCOME BACK" : "CREATE ACCOUNT"}
             </p>
-            <h1>{isLogin ? "Log in to Morrow." : "Create your Morrow account."}</h1>
+            <h1>
+              {isLogin ? "Log in to " : "Create your "}
+              <br className={styles.mobileTitleBreak} />
+              {isLogin ? "Morrow." : "Morrow account."}
+            </h1>
             <p>
               {isLogin
                 ? "Open your workspace and continue monitoring."

@@ -8,11 +8,18 @@ export function MonitoringScopePreview() {
       <div className={`${styles.container} ${styles.scopeGrid}`}>
         <div className={styles.scopeCopy}><p className={styles.sectionLabel}>Control the scope</p><h2>Watch the part of the page you actually care about.</h2><p>A changing footer, rotating testimonial or live counter should not become a strategy alert.</p><p>Monitor specific sections and tell Morrow which regions to ignore.</p><ul>{supportingPoints.map((point) => <li key={point}>{point}</li>)}</ul></div>
         <div className={styles.scopePreview} aria-label="Illustrative monitoring scope interface">
-          <div className={styles.previewTop}><span>Monitoring scope</span><span>Example</span></div>
-          <p className={styles.previewQuestion}>What should Morrow monitor?</p>
-          <div className={styles.radioRows}><div><i aria-hidden="true" />Whole page</div><div className={styles.selected}><i aria-hidden="true" />Selected sections</div></div>
-          <div className={styles.scopeColumns}><div><p>Sections to monitor</p><span>Pricing table</span><span>Plan comparison</span><span>Enterprise features</span></div><div><p>Regions to ignore</p><span>Customer counter</span><span>Rotating testimonial</span></div></div>
-          <div className={styles.scopeFoot}><span>1 selector matched</span><span>2 ignored regions matched</span></div>
+          <div className={styles.previewTop}><strong>Monitoring scope</strong><span>Selected sections</span></div>
+          <p className={styles.previewDescription}>Limit comparison to specific sections or exclude regions that change frequently.</p>
+          <div className={styles.scopeColumns}>
+            <div><p>Sections to monitor</p><div className={styles.selectorField}>.pricing-table</div><small>One CSS selector per line. Leave empty to monitor the whole page.</small></div>
+            <div><p>Regions to ignore</p><div className={styles.selectorField}>.live-counter</div><small>Removed before comparison, including inside monitored sections.</small></div>
+          </div>
+          <div className={styles.scopeTestBar}><span>Test against the latest captured page.</span><span className={styles.scopeTestButton}>Test selectors</span></div>
+          <div className={styles.scopeResults}>
+            <p>Selector test results <span>Latest rendered snapshot</span></p>
+            <div><code>.pricing-table</code><strong>1 match</strong><span>Pricing table · Enterprise plan</span></div>
+            <div><code>.live-counter</code><strong>1 match</strong><span>Live customer counter</span></div>
+          </div>
         </div>
       </div>
     </section>

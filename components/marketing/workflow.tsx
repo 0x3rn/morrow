@@ -16,7 +16,7 @@ export function Workflow() {
   return (
     <section className={styles.workflow} id="how-it-works">
       <div className={styles.container}>
-        <div className={styles.darkHeading}><p className={styles.sectionLabel}>How it works</p><h2>Set the pages once.<br />Morrow keeps checking.</h2><p>Choose what deserves attention and leave the repeated checking to Morrow.</p></div>
+        <div className={styles.darkHeading}><h2>Set the pages once.<br />Morrow keeps checking.</h2><p>Choose what deserves attention and leave the repeated checking to Morrow.</p></div>
         <div className={styles.workflowStages}>
           {stages.map((stage) => (
             <article className={styles.workflowStage} key={stage.verb}>
