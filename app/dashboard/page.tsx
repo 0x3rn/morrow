@@ -1223,7 +1223,7 @@ export default async function DashboardPage() {
                 <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
                   Add a competitor and monitored
                   page to start building your
-                  intelligence feed.
+                  monitoring feed.
                 </p>
 
                 <a
@@ -1363,10 +1363,6 @@ export default async function DashboardPage() {
           <aside className="min-w-0">
             <div className="mb-5 flex items-end justify-between gap-4">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
-                  Intelligence
-                </div>
-
                 <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em]">
                   Recent changes
                 </h2>

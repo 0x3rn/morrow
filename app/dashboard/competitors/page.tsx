@@ -634,7 +634,7 @@ export default async function CompetitorsPage() {
 
             <div className="mt-5">
               <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
-                Workspace
+                Monitoring
               </div>
 
               <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
@@ -642,10 +642,7 @@ export default async function CompetitorsPage() {
               </h1>
 
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-[15px]">
-                Manage the companies Morrow
-                monitors and open each profile
-                to configure individual pages,
-                schedules, and change history.
+                Add competitors, choose which pages to monitor, and manage their schedules and history.
               </p>
             </div>
           </div>
@@ -728,7 +725,7 @@ export default async function CompetitorsPage() {
 
           <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="text-xs font-medium text-slate-500">
-              Meaningful changes
+              Changes
             </div>
 
             <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
@@ -738,7 +735,7 @@ export default async function CompetitorsPage() {
             </div>
 
             <div className="mt-2 text-xs text-slate-400">
-              detected historically
+              recorded
             </div>
           </article>
 
@@ -761,7 +758,7 @@ export default async function CompetitorsPage() {
             </div>
 
             <div className="mt-2 text-xs text-slate-400">
-              high-impact events
+              recorded as major
             </div>
           </article>
         </section>
@@ -778,31 +775,22 @@ export default async function CompetitorsPage() {
               </h2>
 
               <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
-                Add the competitor first,
-                then open its profile to add
-                the exact pricing, product,
-                policy, landing, or content
-                pages you want Morrow to watch.
+                Enter the company name and domain. You can choose which pages to monitor after it’s added.
               </p>
             </div>
 
             {competitorLimitReached ? (
               <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
                 <div className="text-sm font-semibold text-amber-800">
-                  Workspace competitor
-                  capacity reached
+                  Competitor limit reached
                 </div>
 
                 <p className="mt-1 text-sm leading-6 text-amber-700">
-                  This workspace already
-                  contains the MVP maximum
-                  of{" "}
+                  This workspace has reached its limit of{" "}
                   {
                     usage.competitorLimit
                   }{" "}
-                  competitors. Remove an
-                  existing competitor before
-                  adding another one.
+                  competitors. Remove one before adding another.
                 </p>
               </div>
             ) : (
@@ -870,7 +858,7 @@ export default async function CompetitorsPage() {
 
           <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-              MVP capacity
+              Workspace limits
             </div>
 
             <h2 className="mt-2 text-lg font-semibold text-slate-950">
@@ -971,9 +959,7 @@ export default async function CompetitorsPage() {
               </div>
 
               <p className="mt-2 text-xs leading-5 text-slate-500">
-                Paused competitors and
-                paused pages still consume
-                launch capacity.
+                Paused competitors and pages still count toward these limits.
               </p>
             </div>
           </aside>
@@ -991,10 +977,7 @@ export default async function CompetitorsPage() {
               </h2>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                Each competitor profile
-                contains its monitored pages,
-                schedules, latest capture
-                health, and detected changes.
+                Open a competitor to manage its monitored pages and review recent changes.
               </p>
             </div>
 
@@ -1017,10 +1000,7 @@ export default async function CompetitorsPage() {
               </h3>
 
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-                Add your first competitor
-                above, then open the profile
-                and choose which website
-                pages Morrow should monitor.
+                Add a competitor to start choosing pages to monitor.
               </p>
             </div>
           ) : (

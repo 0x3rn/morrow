@@ -759,12 +759,11 @@ export default async function CompetitorPage({
 
                   <p className="mt-5 max-w-2xl text-sm leading-6 text-slate-600 sm:text-[15px]">
                     {competitor.description ||
-                      `Tracking ${
-                        metrics.monitoredPages ===
-                        1
-                          ? "1 competitor page"
-                          : `${metrics.monitoredPages} competitor pages`
-                      } for meaningful pricing, product, positioning, policy, and content changes.`}
+                      `Monitoring ${
+                        metrics.monitoredPages === 1
+                          ? "1 page"
+                          : `${metrics.monitoredPages} pages`
+                      } for changes.`}
                   </p>
                 </div>
               </div>
@@ -777,7 +776,7 @@ export default async function CompetitorPage({
                     <PulseIcon />
 
                     <span className="text-xs font-semibold uppercase tracking-[0.12em]">
-                      Live monitoring
+                      Monitoring status
                     </span>
                   </div>
 
@@ -855,7 +854,7 @@ export default async function CompetitorPage({
                 </span>
 
                 <span className="text-xs text-slate-400">
-                  meaningful
+                  changes
                 </span>
               </div>
             </div>
@@ -871,7 +870,7 @@ export default async function CompetitorPage({
                 </span>
 
                 <span className="text-xs font-medium text-red-600">
-                  high impact
+                  recorded as major
                 </span>
               </div>
             </div>
@@ -907,37 +906,34 @@ export default async function CompetitorPage({
             <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
-                  Intelligence
+                  Activity
                 </div>
 
                 <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-slate-950">
-                  Recent activity
+                  Recent changes
                 </h2>
 
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                  Important changes detected
-                  across this competitor&apos;s
+                  Changes recorded across this competitor&apos;s
                   monitored pages.
                 </p>
               </div>
 
               <div className="text-xs text-slate-400">
-                Latest {recentChanges.length}
+                Showing {recentChanges.length}
               </div>
             </div>
 
             {recentChanges.length === 0 ? (
               <div className="rounded-2xl border border-slate-200 bg-white px-5 py-8 shadow-sm sm:px-6">
                 <h3 className="text-base font-semibold text-slate-900">
-                  No meaningful changes yet
+                  No changes yet
                 </h3>
 
                 <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
-                  Morrow will surface
-                  classified competitor
-                  changes here once a monitored
-                  page changes in a meaningful
-                  way.
+                  Changes Morrow records will
+                  appear here after a monitored
+                  page changes.
                 </p>
               </div>
             ) : (
@@ -987,7 +983,7 @@ export default async function CompetitorPage({
 
                         <h3 className="mt-5 max-w-3xl text-lg font-semibold leading-7 tracking-[-0.01em] text-slate-950">
                           {change.summary ||
-                            "A meaningful competitor change was detected."}
+                            "Change detected."}
                         </h3>
 
                         {change.why_it_matters ? (
@@ -1047,7 +1043,7 @@ export default async function CompetitorPage({
 
                                 <pre className="mt-3 whitespace-pre-wrap break-words font-mono text-xs leading-6 text-slate-700">
                                   {change.previous_text ||
-                                    "No previous text evidence."}
+                                    "No previous text available."}
                                 </pre>
                               </div>
 
@@ -1058,7 +1054,7 @@ export default async function CompetitorPage({
 
                                 <pre className="mt-3 whitespace-pre-wrap break-words font-mono text-xs leading-6 text-slate-700">
                                   {change.current_text ||
-                                    "No current text evidence."}
+                                    "No current text available."}
                                 </pre>
                               </div>
                             </div>
@@ -1075,11 +1071,11 @@ export default async function CompetitorPage({
           <aside className="space-y-5">
             <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                Monitoring health
+                Monitoring
               </div>
 
               <h2 className="mt-2 text-lg font-semibold text-slate-950">
-                Watch status
+                Status
               </h2>
 
               <dl className="mt-5 space-y-4">
@@ -1125,7 +1121,7 @@ export default async function CompetitorPage({
 
                 <div className="border-t border-slate-100 pt-4">
                   <dt className="text-xs text-slate-400">
-                    Latest successful capture
+                    Latest successful check
                   </dt>
 
                   <dd className="mt-1 text-sm font-medium leading-6 text-slate-800">
@@ -1152,7 +1148,7 @@ export default async function CompetitorPage({
                     </div>
 
                     <div className="mt-0.5 text-xs text-slate-500">
-                      Expand the watch list
+                      Enter a page URL to monitor
                     </div>
                   </div>
                 </div>
@@ -1220,7 +1216,7 @@ export default async function CompetitorPage({
           <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Watch list
+                Pages
               </div>
 
               <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-slate-950">
@@ -1228,9 +1224,7 @@ export default async function CompetitorPage({
               </h2>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                URLs Morrow captures,
-                compares, and evaluates for
-                meaningful competitor changes.
+                Pages Morrow checks on the schedule you set.
               </p>
             </div>
 
@@ -1249,8 +1243,8 @@ export default async function CompetitorPage({
               </div>
 
               <p className="mt-1 text-sm text-slate-500">
-                Add the first competitor URL
-                using the form above.
+                Add a page URL to start
+                monitoring this competitor.
               </p>
             </div>
           ) : (
@@ -1380,11 +1374,11 @@ export default async function CompetitorPage({
                           200 &&
                         page.latest_http_status <
                           400
-                          ? "Latest capture is healthy."
+                          ? "Last check succeeded."
                           : page.latest_http_status !==
                               null
-                            ? "Latest capture returned an error status."
-                            : "No capture status available yet."}
+                            ? "Last check returned an error."
+                            : "No checks have completed yet."}
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
@@ -1438,8 +1432,7 @@ export default async function CompetitorPage({
                                 </h4>
 
                                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                                  Update the label or URL
-                                  Morrow monitors.
+                                  Update this page's label or URL.
                                 </p>
                               </div>
 
@@ -1519,12 +1512,11 @@ export default async function CompetitorPage({
                               >
                                 <div>
                                   <h4 className="text-sm font-semibold text-slate-900">
-                                    Monitoring cadence
+                                    Check frequency
                                   </h4>
 
                                   <p className="mt-1 text-xs leading-5 text-slate-500">
-                                    Choose how often this
-                                    page should be checked.
+                                    Choose how often Morrow checks this page.
                                   </p>
                                 </div>
 
@@ -1591,9 +1583,7 @@ export default async function CompetitorPage({
                                 </h4>
 
                                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                                  This removes the page and
-                                  its stored monitoring
-                                  history.
+                                  This permanently removes the page and its saved history.
                                 </p>
 
                                 <form
