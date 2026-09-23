@@ -30,11 +30,11 @@ export function AuthShell({ children, mode }: AuthShellProps) {
         <div className={styles.brandCopy}>
           <p className={styles.eyebrow}>COMPETITOR WEBSITE MONITORING</p>
           <h2>
-            Keep the pages
+            Monitor the competitor pages
             <br />
-            <em>that matter in view.</em>
+            <em>you care about.</em>
           </h2>
-          <p>Morrow records meaningful changes across the competitor pages you choose.</p>
+          <p>Morrow checks the pages you choose and keeps a record when they change.</p>
         </div>
 
         <div className={styles.changePanel} aria-label="Example change detected">

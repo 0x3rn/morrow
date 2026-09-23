@@ -17,7 +17,7 @@ export function Hero() {
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>Competitor website monitoring</p>
             <h1>Know when a competitor page changes and what changed.</h1>
-            <p className={styles.heroDescription}>Morrow checks the pages you choose on a schedule, filters out configured noise, and keeps the evidence behind every change worth reviewing.</p>
+            <p className={styles.heroDescription}>Morrow checks the pages you choose on a schedule, ignores the regions you exclude, and keeps the evidence behind each recorded change.</p>
             <div className={styles.heroActions}>
               <Link className={styles.primaryCta} href="/register">Start monitoring</Link>
               <a className={styles.secondaryCta} href="#change-record">See an example change</a>
@@ -31,7 +31,7 @@ export function Hero() {
               <span>MORROW</span>
               <span className={styles.feedLiveState}><i aria-hidden="true" /> Monitoring</span>
             </div>
-            <div className={styles.feedHeading}><p>Live monitoring</p><h2>Changes worth reviewing</h2></div>
+            <div className={styles.feedHeading}><p>Monitoring activity</p><h2>Recent changes</h2></div>
             <div className={styles.feedRows}>
               {signals.map((signal) => (
                 <article className={styles.feedRow} key={signal.category}>

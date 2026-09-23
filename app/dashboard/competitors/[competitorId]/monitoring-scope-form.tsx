@@ -325,7 +325,7 @@ export function MonitoringScopeForm({
           setPreview({
             ok: false,
             message:
-              "Selector preview could not be completed.",
+              "Morrow couldn't test these selectors.",
             capturedAt:
               null,
             includeMatches:
@@ -373,10 +373,9 @@ export function MonitoringScopeForm({
           </h4>
 
           <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
-            Limit comparison to
-            specific sections or
-            exclude regions that
-            change frequently.
+            Choose which parts of this page
+            Morrow should compare and which
+            parts to ignore.
           </p>
         </div>
 
@@ -467,11 +466,10 @@ export function MonitoringScopeForm({
           />
 
           <p className="mt-2 text-xs leading-5 text-slate-400">
-            These regions are
-            removed before
-            comparison, including
-            when they appear inside
-            monitored sections.
+            Changes inside these
+            regions will be ignored,
+            even when they are inside
+            a monitored section.
           </p>
         </div>
       </div>
@@ -500,9 +498,8 @@ export function MonitoringScopeForm({
                 </p>
 
                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                  Based on the
-                  latest rendered
-                  snapshot
+                  Using the latest
+                  captured version
                   {preview.capturedAt
                     ? ` from ${formatCapturedAt(
                         preview.capturedAt
@@ -524,12 +521,9 @@ export function MonitoringScopeForm({
                     </p>
 
                     <p className="mt-1 text-xs leading-5 text-slate-500">
-                      No section
-                      selectors are
-                      configured, so
-                      Morrow will
-                      compare the
-                      whole page.
+                      No section selectors are set,
+                      so Morrow will compare the whole
+                      page.
                     </p>
                   </div>
                 ) : (
@@ -557,9 +551,9 @@ export function MonitoringScopeForm({
 
       <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs leading-5 text-slate-400">
-          Test selectors against
-          the latest captured page
-          before saving. Maximum 20
+          Test these selectors
+          against the latest capture
+          before saving. Up to 20
           selectors per list.
         </p>
 

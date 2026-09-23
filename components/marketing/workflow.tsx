@@ -2,8 +2,8 @@ import styles from "@/app/page.module.css";
 
 const stages = [
   { verb: "Choose", title: "Choose what to monitor", text: "Add a competitor page, monitor the whole page or narrow the watch to specific sections. Mark regions that should be ignored.", detail: "Whole page  /  Selected sections", icon: "crosshair" },
-  { verb: "Watch", title: "Morrow runs the checks", text: "Scheduled captures preserve the rendered page and compare it with the previous snapshot.", detail: "Last checked  09:42", icon: "scan" },
-  { verb: "Review", title: "Review the change", text: "Open the summary, significance, changed text and source evidence from one change record.", detail: "Pricing · Major", icon: "compare" },
+  { verb: "Watch", title: "Morrow runs the checks", text: "Morrow captures the page on schedule and compares it with the previous capture.", detail: "Last checked  09:42", icon: "scan" },
+  { verb: "Review", title: "Review the change", text: "Open the summary, significance, changed text and source capture from one change record.", detail: "Pricing · Major", icon: "compare" },
 ] as const;
 
 function WorkflowIcon({ type }: { type: (typeof stages)[number]["icon"] }) {
@@ -16,7 +16,7 @@ export function Workflow() {
   return (
     <section className={styles.workflow} id="how-it-works">
       <div className={styles.container}>
-        <div className={styles.darkHeading}><h2>Set the pages once.<br />Morrow keeps checking.</h2><p>Choose what deserves attention and leave the repeated checking to Morrow.</p></div>
+        <div className={styles.darkHeading}><h2>Set the pages once.<br />Morrow keeps checking.</h2><p>Choose the pages and sections to monitor. Morrow handles the scheduled checks.</p></div>
         <div className={styles.workflowStages}>
           {stages.map((stage) => (
             <article className={styles.workflowStage} key={stage.verb}>

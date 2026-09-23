@@ -9,6 +9,6 @@ const useCases = [
 
 export function WatchlistUseCases() {
   return (
-    <section className={styles.useCases} id="use-cases"><div className={styles.container}><div className={styles.useCaseHeading}><p className={styles.sectionLabel}>Common watchlists</p><h2>Keep an eye on the pages that tell you where a competitor is going.</h2></div><div className={styles.useCaseGrid}>{useCases.map((useCase) => <article key={useCase.title}><h3>{useCase.title}</h3><p>Watch</p><ul>{useCase.items.map((item) => <li key={item}>{item}</li>)}</ul></article>)}</div></div></section>
+    <section className={styles.useCases} id="use-cases"><div className={styles.container}><div className={styles.useCaseHeading}><p className={styles.sectionLabel}>Common pages to monitor</p><h2>Monitor the competitor pages you check most often.</h2></div><div className={styles.useCaseGrid}>{useCases.map((useCase) => <article key={useCase.title}><h3>{useCase.title}</h3><p>Monitor</p><ul>{useCase.items.map((item) => <li key={item}>{item}</li>)}</ul></article>)}</div></div></section>
   );
 }

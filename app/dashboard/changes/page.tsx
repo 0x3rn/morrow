@@ -481,17 +481,16 @@ export default async function ChangeHistoryPage({
 
           <div className="mt-6">
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
-              Intelligence archive
+              History
             </div>
             <h1 className="text-3xl font-semibold tracking-tight">
               Change history
             </h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Search meaningful competitor
-              changes that Morrow has already
-              detected, classified, and
-              summarized.
+              Search and filter the changes
+              Morrow has recorded across your
+              monitored pages.
             </p>
           </div>
         </header>
@@ -516,7 +515,7 @@ export default async function ChangeHistoryPage({
                 defaultValue={
                   keyword
                 }
-                placeholder="Pricing, feature, competitor..."
+                placeholder="Search changes, competitors, or page URLs"
                 className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/15"
               />
             </div>
@@ -690,7 +689,7 @@ export default async function ChangeHistoryPage({
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold">
-                Timeline
+                Recorded changes
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
@@ -699,7 +698,7 @@ export default async function ChangeHistoryPage({
                   ? "change"
                   : "changes"}
                 {changes.length === 100
-                  ? " shown, limited to the latest 100"
+                  ? " · showing the latest 100"
                   : ""}
               </p>
             </div>
@@ -712,8 +711,7 @@ export default async function ChangeHistoryPage({
               </h3>
 
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                There are no persisted
-                changes matching the current
+                No changes match the current
                 filters.
               </p>
             </div>
@@ -775,7 +773,7 @@ export default async function ChangeHistoryPage({
 
                     <h3 className="mt-5 max-w-4xl text-lg font-semibold leading-7 text-slate-950">
                       {change.summary ||
-                        "A meaningful competitor change was detected."}
+                        "Change detected."}
                     </h3>
 
                     {change.why_it_matters ? (

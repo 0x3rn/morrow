@@ -22,7 +22,7 @@ export function ChangeExamples() {
             </article>
           ))}
         </div>
-        <p className={styles.sectionCaption}>Examples of the kinds of page changes a monitoring workflow can surface.</p>
+        <p className={styles.sectionCaption}>Examples of page changes Morrow can record.</p>
       </div>
     </section>
   );

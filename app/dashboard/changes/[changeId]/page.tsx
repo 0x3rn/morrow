@@ -301,7 +301,7 @@ export default async function ChangeDetailPage({
 
               <h1 className="mt-5 max-w-4xl text-2xl font-semibold leading-9 tracking-tight text-slate-950 sm:text-3xl">
                 {change.summary ||
-                  "Meaningful competitor change"}
+                  "Change detected"}
               </h1>
 
               {change.why_it_matters ? (
@@ -375,9 +375,8 @@ export default async function ChangeDetailPage({
             </h2>
 
             <p className="mt-1 text-sm leading-6 text-slate-500">
-              Bounded changed-only evidence
-              persisted when this meaningful
-              change was recorded.
+              The text Morrow recorded before
+              and after this change.
             </p>
           </div>
 
@@ -389,7 +388,7 @@ export default async function ChangeDetailPage({
 
               <pre className="mt-4 whitespace-pre-wrap break-words font-mono text-sm leading-7 text-slate-700">
                 {change.previous_text ||
-                  "No previous changed-text evidence was stored."}
+                  "No previous text is available for this change."}
               </pre>
             </div>
 
@@ -400,7 +399,7 @@ export default async function ChangeDetailPage({
 
               <pre className="mt-4 whitespace-pre-wrap break-words font-mono text-sm leading-7 text-slate-700">
                 {change.current_text ||
-                  "No current changed-text evidence was stored."}
+                  "No current text is available for this change."}
               </pre>
             </div>
           </div>
@@ -409,27 +408,27 @@ export default async function ChangeDetailPage({
         <section className="mt-8">
           <div className="mb-5">
             <h2 className="text-xl font-semibold">
-              Source snapshots
+              Source captures
             </h2>
 
             <p className="mt-1 text-sm leading-6 text-slate-500">
-              Snapshot metadata links this
-              interpreted change back to the
-              source captures that produced it.
+              Capture details for the page
+              versions used to record this
+              change.
             </p>
           </div>
 
           <div className="grid gap-5 lg:grid-cols-2">
             <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
               <h3 className="font-semibold text-slate-900">
-                Previous snapshot
+                Previous capture
               </h3>
 
               {change.previous_snapshot_id ? (
                 <dl className="mt-5 space-y-4">
                   <div>
                     <dt className="text-xs text-slate-400">
-                      Snapshot ID
+                      Capture ID
                     </dt>
 
                     <dd className="mt-1 break-all font-mono text-xs text-slate-700">
@@ -479,21 +478,21 @@ export default async function ChangeDetailPage({
                 </dl>
               ) : (
                 <p className="mt-4 text-sm leading-6 text-slate-500">
-                  This change does not have a
-                  previous snapshot reference.
+                  No previous capture is available
+                  for this change.
                 </p>
               )}
             </article>
 
             <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
               <h3 className="font-semibold text-slate-900">
-                Current snapshot
+                Current capture
               </h3>
 
               <dl className="mt-5 space-y-4">
                 <div>
                   <dt className="text-xs text-slate-400">
-                    Snapshot ID
+                    Capture ID
                   </dt>
 
                   <dd className="mt-1 break-all font-mono text-xs text-slate-700">

@@ -1063,7 +1063,7 @@ export default async function DashboardPage() {
         <section className="mt-8">
           <div className="mb-5">
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-              MVP capacity
+              Workspace limits
             </div>
 
             <h2 className="mt-2 text-xl font-semibold tracking-[-0.02em] text-slate-950">
