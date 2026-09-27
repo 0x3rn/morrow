@@ -1,6 +1,9 @@
+/* eslint-disable @next/next/no-img-element -- protected screenshot routes must be fetched directly by the browser so the authenticated session cookie is sent */
+
 import { auth } from "@/lib/auth";
 import { ArrowLeftIcon } from "@/components/morrow-icons";
 import { env } from "cloudflare:workers";
+import Link from "next/link";
 import { headers } from "next/headers";
 import {
   notFound,
@@ -258,17 +261,32 @@ export default async function ChangeDetailPage({
     notFound();
   }
 
+  const previousScreenshotUrl =
+    change.previous_snapshot_id &&
+    change.previous_snapshot_screenshot_object_key
+      ? `/api/changes/${encodeURIComponent(
+          change.id
+        )}/screenshot/previous`
+      : null;
+
+  const currentScreenshotUrl =
+    change.current_snapshot_screenshot_object_key
+      ? `/api/changes/${encodeURIComponent(
+          change.id
+        )}/screenshot/current`
+      : null;
+
   return (
     <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
       <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <nav className="mb-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
-          <a
+          <Link
             href="/dashboard/changes"
             className="inline-flex items-center gap-2 font-medium text-slate-500 hover:text-slate-950"
           >
             <ArrowLeftIcon />
             <span>Change history</span>
-          </a>
+          </Link>
 
           <span className="text-slate-300">
             /
@@ -402,6 +420,106 @@ export default async function ChangeDetailPage({
                   "No current text is available for this change."}
               </pre>
             </div>
+          </div>
+        </section>
+
+        <section className="mt-8">
+          <div className="mb-5">
+            <h2 className="text-xl font-semibold">
+              Visual comparison
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              Captured page before and after
+              this change.
+            </p>
+          </div>
+          <div className="grid gap-5 lg:grid-cols-2">
+            <article className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-5">
+                <div>
+                  <h3 className="font-semibold text-slate-900">
+                    Previous capture
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {formatDateTime(
+                      change.previous_snapshot_captured_at
+                    )}
+                  </p>
+                </div>
+                {previousScreenshotUrl ? (
+                  <a
+                    href={previousScreenshotUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex min-h-9 items-center rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                  >
+                    Open full capture
+                  </a>
+                ) : null}
+              </div>
+              {previousScreenshotUrl ? (
+                <div className="max-h-[560px] overflow-auto bg-slate-100 sm:max-h-[680px] lg:max-h-[720px]">
+                  <img
+                    src={previousScreenshotUrl}
+                    alt={`Previous capture of ${
+                      change.monitored_page_label ||
+                      change.monitored_page_url
+                    }`}
+                    loading="lazy"
+                    decoding="async"
+                    className="block h-auto w-full"
+                  />
+                </div>
+              ) : (
+                <div className="flex min-h-64 items-center justify-center p-6 text-center text-sm leading-6 text-slate-500">
+                  No previous screenshot is
+                  available for this change.
+                </div>
+              )}
+            </article>
+            <article className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-5">
+                <div>
+                  <h3 className="font-semibold text-slate-900">
+                    Current capture
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {formatDateTime(
+                      change.current_snapshot_captured_at
+                    )}
+                  </p>
+                </div>
+                {currentScreenshotUrl ? (
+                  <a
+                    href={currentScreenshotUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex min-h-9 items-center rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                  >
+                    Open full capture
+                  </a>
+                ) : null}
+              </div>
+              {currentScreenshotUrl ? (
+                <div className="max-h-[560px] overflow-auto bg-slate-100 sm:max-h-[680px] lg:max-h-[720px]">
+                  <img
+                    src={currentScreenshotUrl}
+                    alt={`Current capture of ${
+                      change.monitored_page_label ||
+                      change.monitored_page_url
+                    }`}
+                    loading="lazy"
+                    decoding="async"
+                    className="block h-auto w-full"
+                  />
+                </div>
+              ) : (
+                <div className="flex min-h-64 items-center justify-center p-6 text-center text-sm leading-6 text-slate-500">
+                  No current screenshot is
+                  available for this change.
+                </div>
+              )}
+            </article>
           </div>
         </section>
 
