@@ -352,14 +352,23 @@ export default async function MonitoredPageHistory({
                 </div>
               </div>
 
-              <Link
-                href={`/dashboard/changes?monitoredPage=${encodeURIComponent(
-                  monitoredPage.id
-                )}`}
-                className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-              >
-                Open in Change history
-              </Link>
+              <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                <Link
+                  href={`/dashboard/pages/${monitoredPage.id}/snapshots`}
+                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  Snapshot history
+                </Link>
+
+                <Link
+                  href={`/dashboard/changes?monitoredPage=${encodeURIComponent(
+                    monitoredPage.id
+                  )}`}
+                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  Open in Change history
+                </Link>
+              </div>
             </div>
           </div>
 
