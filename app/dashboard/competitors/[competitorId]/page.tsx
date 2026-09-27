@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { env } from "cloudflare:workers";
+import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import {
@@ -657,7 +658,7 @@ export default async function CompetitorPage({
     <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <nav className="mb-6 sm:mb-8">
-          <a
+          <Link
             href="/dashboard/competitors"
             className="inline-flex min-h-10 items-center gap-2 rounded-lg pr-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25 motion-reduce:transition-none"
           >
@@ -666,7 +667,7 @@ export default async function CompetitorPage({
             <span>
               Competitors
             </span>
-          </a>
+          </Link>
         </nav>
 
         <header className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -1382,6 +1383,15 @@ export default async function CompetitorPage({
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/dashboard/pages/${page.id}/history`}
+                          className={
+                            subtleButtonClasses
+                          }
+                        >
+                          View history
+                        </Link>
+
                         <form
                           action={
                             toggleMonitoredPageStatus
@@ -1432,7 +1442,7 @@ export default async function CompetitorPage({
                                 </h4>
 
                                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                                  Update this page's label or URL.
+                                  Update this page&apos;s label or URL.
                                 </p>
                               </div>
 
