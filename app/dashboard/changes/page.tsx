@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { ArrowLeftIcon } from "@/components/morrow-icons";
 import { env } from "cloudflare:workers";
+import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -16,6 +17,14 @@ interface ChangeHistoryPageProps {
 interface CompetitorOption {
   id: string;
   name: string;
+}
+
+interface MonitoredPageOption {
+  id: string;
+  url: string;
+  label: string | null;
+  competitor_id: string;
+  competitor_name: string;
 }
 
 interface HistoryChange {
@@ -57,6 +66,8 @@ const CHANGE_SIGNIFICANCE = [
   "moderate",
   "major",
 ] as const;
+
+const HISTORY_PAGE_SIZE = 25;
 
 function getSearchParam(
   value: string | string[] | undefined
@@ -163,6 +174,11 @@ export default async function ChangeHistoryPage({
       params.competitor
     ).trim();
 
+  const requestedMonitoredPageId =
+    getSearchParam(
+      params.monitoredPage
+    ).trim();
+
   const requestedCategory =
     getSearchParam(
       params.category
@@ -182,6 +198,22 @@ export default async function ChangeHistoryPage({
     getSearchParam(
       params.to
     ).trim();
+
+  const requestedPage =
+    Number.parseInt(
+      getSearchParam(
+        params.page
+      ),
+      10
+    );
+
+  const page =
+    Number.isSafeInteger(
+      requestedPage
+    ) &&
+    requestedPage > 0
+      ? requestedPage
+      : 1;
 
   const category =
     CHANGE_CATEGORIES.includes(
@@ -258,6 +290,73 @@ export default async function ChangeHistoryPage({
       ? requestedCompetitorId
       : "";
 
+  const {
+    results: monitoredPages,
+  } = await env.DB.prepare(
+    `
+      SELECT
+        monitored_pages.id,
+        monitored_pages.url,
+        monitored_pages.label,
+
+        competitors.id
+          AS competitor_id,
+
+        competitors.name
+          AS competitor_name
+
+      FROM monitored_pages
+
+      INNER JOIN competitors
+        ON competitors.id =
+           monitored_pages.competitor_id
+
+      WHERE EXISTS (
+        SELECT 1
+
+        FROM workspace_members
+
+        WHERE workspace_members.workspace_id =
+              competitors.workspace_id
+
+          AND workspace_members.user_id = ?
+      )
+
+      ORDER BY
+        competitors.name COLLATE NOCASE ASC,
+        COALESCE(
+          monitored_pages.label,
+          monitored_pages.url
+        ) COLLATE NOCASE ASC
+    `
+  )
+    .bind(
+      session.user.id
+    )
+    .all<MonitoredPageOption>();
+
+  const allowedMonitoredPageIds =
+    new Set(
+      monitoredPages
+        .filter(
+          (monitoredPage) =>
+            !competitorId ||
+            monitoredPage.competitor_id ===
+              competitorId
+        )
+        .map(
+          (monitoredPage) =>
+            monitoredPage.id
+        )
+    );
+
+  const monitoredPageId =
+    allowedMonitoredPageIds.has(
+      requestedMonitoredPageId
+    )
+      ? requestedMonitoredPageId
+      : "";
+
   const conditions: string[] = [
     `
       EXISTS (
@@ -284,6 +383,16 @@ export default async function ChangeHistoryPage({
 
     bindings.push(
       competitorId
+    );
+  }
+
+  if (monitoredPageId) {
+    conditions.push(
+      "monitored_pages.id = ?"
+    );
+
+    bindings.push(
+      monitoredPageId
     );
   }
 
@@ -392,6 +501,61 @@ export default async function ChangeHistoryPage({
     );
   }
 
+  const countSql = `
+    SELECT
+      COUNT(*) AS total
+
+    FROM changes
+
+    INNER JOIN monitored_pages
+      ON monitored_pages.id =
+         changes.monitored_page_id
+
+    INNER JOIN competitors
+      ON competitors.id =
+         monitored_pages.competitor_id
+
+    WHERE
+      ${conditions.join(
+        "\nAND "
+      )}
+  `;
+
+  const countResult =
+    await env.DB.prepare(
+      countSql
+    )
+      .bind(
+        ...bindings
+      )
+      .first<{
+        total: number;
+      }>();
+
+  const totalChanges =
+    Number(
+      countResult?.total ?? 0
+    );
+
+  const totalPages =
+    Math.max(
+      1,
+      Math.ceil(
+        totalChanges /
+          HISTORY_PAGE_SIZE
+      )
+    );
+
+  const currentPage =
+    Math.min(
+      page,
+      totalPages
+    );
+
+  const offset =
+    (currentPage - 1) *
+    HISTORY_PAGE_SIZE;
+
   const historySql = `
     SELECT
       changes.id,
@@ -444,7 +608,8 @@ export default async function ChangeHistoryPage({
       ) DESC,
       changes.id DESC
 
-    LIMIT 100
+    LIMIT ?
+    OFFSET ?
   `;
 
   const {
@@ -453,14 +618,87 @@ export default async function ChangeHistoryPage({
     historySql
   )
     .bind(
-      ...bindings
+      ...bindings,
+      HISTORY_PAGE_SIZE,
+      offset
     )
     .all<HistoryChange>();
+
+  function getHistoryPageUrl(
+    targetPage: number
+  ) {
+    const nextParams =
+      new URLSearchParams();
+
+    if (keyword) {
+      nextParams.set(
+        "q",
+        keyword
+      );
+    }
+
+    if (competitorId) {
+      nextParams.set(
+        "competitor",
+        competitorId
+      );
+    }
+
+    if (monitoredPageId) {
+      nextParams.set(
+        "monitoredPage",
+        monitoredPageId
+      );
+    }
+
+    if (category) {
+      nextParams.set(
+        "category",
+        category
+      );
+    }
+
+    if (significance) {
+      nextParams.set(
+        "significance",
+        significance
+      );
+    }
+
+    if (dateFrom) {
+      nextParams.set(
+        "from",
+        dateFrom
+      );
+    }
+
+    if (dateTo) {
+      nextParams.set(
+        "to",
+        dateTo
+      );
+    }
+
+    if (targetPage > 1) {
+      nextParams.set(
+        "page",
+        String(targetPage)
+      );
+    }
+
+    const query =
+      nextParams.toString();
+
+    return query
+      ? `/dashboard/changes?${query}`
+      : "/dashboard/changes";
+  }
 
   const hasFilters =
     Boolean(
       keyword ||
       competitorId ||
+      monitoredPageId ||
       category ||
       significance ||
       dateFrom ||
@@ -498,7 +736,7 @@ export default async function ChangeHistoryPage({
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <form
             method="get"
-            className="grid gap-4 lg:grid-cols-6"
+            className="grid gap-4 md:grid-cols-2 lg:grid-cols-6"
           >
             <div className="lg:col-span-2">
               <label
@@ -556,6 +794,53 @@ export default async function ChangeHistoryPage({
                     </option>
                   )
                 )}
+              </select>
+            </div>
+
+            <div className="lg:col-span-2">
+              <label
+                htmlFor="monitoredPage"
+                className="mb-1.5 block text-xs font-medium text-slate-600"
+              >
+                Monitored page
+              </label>
+
+              <select
+                id="monitoredPage"
+                name="monitoredPage"
+                defaultValue={
+                  monitoredPageId
+                }
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400"
+              >
+                <option value="">
+                  All monitored pages
+                </option>
+
+                {monitoredPages
+                  .filter(
+                    (monitoredPage) =>
+                      !competitorId ||
+                      monitoredPage.competitor_id ===
+                        competitorId
+                  )
+                  .map(
+                    (monitoredPage) => (
+                      <option
+                        key={
+                          monitoredPage.id
+                        }
+                        value={
+                          monitoredPage.id
+                        }
+                      >
+                        {`${monitoredPage.competitor_name} — ${
+                          monitoredPage.label ||
+                          monitoredPage.url
+                        }`}
+                      </option>
+                    )
+                  )}
               </select>
             </div>
 
@@ -674,12 +959,12 @@ export default async function ChangeHistoryPage({
               </button>
 
               {hasFilters ? (
-                <a
+                <Link
                   href="/dashboard/changes"
                   className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
                 >
                   Clear
-                </a>
+                </Link>
               ) : null}
             </div>
           </form>
@@ -693,13 +978,23 @@ export default async function ChangeHistoryPage({
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                {changes.length}{" "}
-                {changes.length === 1
-                  ? "change"
-                  : "changes"}
-                {changes.length === 100
-                  ? " · showing the latest 100"
-                  : ""}
+                {totalChanges === 0 ? (
+                  "No changes"
+                ) : (
+                  <>
+                    Showing{" "}
+                    {offset + 1}–
+                    {Math.min(
+                      offset +
+                        changes.length,
+                      totalChanges
+                    )}{" "}
+                    of {totalChanges}{" "}
+                    {totalChanges === 1
+                      ? "change"
+                      : "changes"}
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -808,6 +1103,57 @@ export default async function ChangeHistoryPage({
               )}
             </div>
           )}
+
+          {totalPages > 1 ? (
+            <nav
+              aria-label="Change history pagination"
+              className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <p className="text-sm text-slate-500">
+                Page {currentPage} of{" "}
+                {totalPages}
+              </p>
+
+              <div className="flex items-center gap-2">
+                {currentPage > 1 ? (
+                  <a
+                    href={getHistoryPageUrl(
+                      currentPage - 1
+                    )}
+                    className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                  >
+                    Previous
+                  </a>
+                ) : (
+                  <span
+                    aria-disabled="true"
+                    className="inline-flex min-h-10 cursor-not-allowed items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-400"
+                  >
+                    Previous
+                  </span>
+                )}
+
+                {currentPage <
+                totalPages ? (
+                  <a
+                    href={getHistoryPageUrl(
+                      currentPage + 1
+                    )}
+                    className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                  >
+                    Next
+                  </a>
+                ) : (
+                  <span
+                    aria-disabled="true"
+                    className="inline-flex min-h-10 cursor-not-allowed items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-400"
+                  >
+                    Next
+                  </span>
+                )}
+              </div>
+            </nav>
+          ) : null}
         </section>
       </div>
     </main>
