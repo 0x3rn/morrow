@@ -920,8 +920,17 @@ export default async function CompetitorPage({
                 </p>
               </div>
 
-              <div className="text-xs text-slate-400">
-                Showing {recentChanges.length}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="text-xs text-slate-400">
+                  Showing {recentChanges.length}
+                </div>
+
+                <Link
+                  href={`/dashboard/competitors/${competitor.id}/history`}
+                  className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  View full history
+                </Link>
               </div>
             </div>
 
