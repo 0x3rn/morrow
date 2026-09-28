@@ -21,6 +21,10 @@ import {
   notifyChangeByEmail,
 } from "./change-email";
 
+import {
+  runDigestScheduler,
+} from "./digest-scheduler";
+
 interface Env {
   DB: D1Database;
   VINEXT_KV_CACHE: KVNamespace;
@@ -1974,27 +1978,11 @@ async function claimMonitoredPages(
   return claimed;
 }
 
-async function runMorrowScheduler(
+async function runMonitoringScheduler(
   env: Env,
-  controller:
-    ScheduledController,
+  scheduledAt: string,
   ctx: ExecutionContext
 ) {
-  const scheduledAt =
-    new Date(
-      controller.scheduledTime
-    ).toISOString();
-
-  console.log(
-    "Morrow scheduler fired",
-    {
-      cron:
-        controller.cron,
-
-      scheduledAt,
-    }
-  );
-
   const duePages =
     await getDueMonitoredPages(
       env,
@@ -2101,6 +2089,72 @@ async function runMorrowScheduler(
        */
     }
   }
+}
+
+async function runMorrowScheduler(
+  env: Env,
+  controller:
+    ScheduledController,
+  ctx: ExecutionContext
+) {
+  const scheduledAt =
+    new Date(
+      controller.scheduledTime
+    ).toISOString();
+
+  console.log(
+    "Morrow scheduler fired",
+    {
+      cron:
+        controller.cron,
+
+      scheduledAt,
+    }
+  );
+
+  const monitoringTask =
+    runMonitoringScheduler(
+      env,
+      scheduledAt,
+      ctx
+    ).catch((error) => {
+      console.error(
+        "Morrow monitoring scheduler failed",
+        {
+          scheduledAt,
+
+          error:
+            error instanceof
+            Error
+              ? error.message
+              : String(error),
+        }
+      );
+    });
+
+  const digestTask =
+    runDigestScheduler(
+      env.DB,
+      scheduledAt
+    ).catch((error) => {
+      console.error(
+        "Morrow digest scheduler failed",
+        {
+          scheduledAt,
+
+          error:
+            error instanceof
+            Error
+              ? error.message
+              : String(error),
+        }
+      );
+    });
+
+  await Promise.all([
+    monitoringTask,
+    digestTask,
+  ]);
 }
 
 /*
