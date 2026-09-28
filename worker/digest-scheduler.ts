@@ -120,12 +120,16 @@ export function getDueDigestWindows(
 ): DigestReportingWindow[] {
   const scheduled = parseScheduledAt(scheduledAt);
 
-  if (
-    scheduled.getUTCHours() !== 0 ||
-    scheduled.getUTCMinutes() !== 0 ||
-    scheduled.getUTCSeconds() !== 0 ||
-    scheduled.getUTCMilliseconds() !== 0
-  ) {
+  const isFiveMinuteBoundary =
+    scheduled.getUTCMinutes() % 5 === 0 &&
+    scheduled.getUTCSeconds() === 0 &&
+    scheduled.getUTCMilliseconds() === 0;
+
+  const isDigestRetryWindow =
+    scheduled.getUTCHours() === 0 &&
+    isFiveMinuteBoundary;
+
+  if (!isDigestRetryWindow) {
     return [];
   }
 
