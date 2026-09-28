@@ -73,6 +73,9 @@ interface D1ResultLike<T> {
 
 interface D1RunResultLike {
   success?: boolean;
+  meta?: {
+    changes?: number;
+  };
 }
 
 interface D1PreparedStatementLike {
@@ -87,6 +90,39 @@ interface D1DatabaseLike {
 }
 
 const MAX_FAILURE_REASON_CHARS = 1000;
+
+export class DigestGenerationInProgressError
+  extends Error {
+  readonly digestId: string;
+
+  constructor(digestId: string) {
+    super(
+      `Digest generation already in progress for ${digestId}.`,
+    );
+    this.name = "DigestGenerationInProgressError";
+    this.digestId = digestId;
+  }
+}
+
+type DigestGenerationReservation =
+  | {
+      kind: "acquired";
+      row: DigestRow;
+    }
+  | {
+      kind: "generated";
+      digest: GeneratedDigest;
+    }
+  | {
+      kind: "in_progress";
+      digestId: string;
+    };
+
+function getAffectedRows(
+  result: D1RunResultLike,
+): number {
+  return Number(result.meta?.changes ?? 0);
+}
 
 function isDigestPeriod(
   value: string,
@@ -517,29 +553,38 @@ function reuseGeneratedDigest(
   };
 }
 
-async function reserveDigest(
+function classifyExistingDigest(
+  row: DigestRow,
+): DigestGenerationReservation {
+  if (row.status === "generated") {
+    return {
+      kind: "generated",
+      digest: reuseGeneratedDigest(row),
+    };
+  }
+
+  if (row.status === "pending") {
+    return {
+      kind: "in_progress",
+      digestId: row.id,
+    };
+  }
+
+  throw new Error(
+    `Digest ${row.id} has unsupported status ${row.status}.`,
+  );
+}
+
+async function acquireDigestGeneration(
   db: D1DatabaseLike,
   workspaceId: string,
   period: DigestPeriod,
   windowStart: string,
   windowEnd: string,
-): Promise<DigestRow> {
-  const existing =
-    await findDigest(
-      db,
-      workspaceId,
-      period,
-      windowStart,
-      windowEnd,
-    );
-
-  if (existing) {
-    return existing;
-  }
-
+): Promise<DigestGenerationReservation> {
   const id = createDigestId();
 
-  await db
+  const insertResult = await db
     .prepare(
       `
         INSERT INTO digests (
@@ -569,7 +614,33 @@ async function reserveDigest(
     )
     .run();
 
-  const reserved =
+  if (getAffectedRows(insertResult) === 1) {
+    const inserted =
+      await findDigest(
+        db,
+        workspaceId,
+        period,
+        windowStart,
+        windowEnd,
+      );
+
+    if (
+      !inserted ||
+      inserted.id !== id ||
+      inserted.status !== "pending"
+    ) {
+      throw new Error(
+        "Digest reservation was inserted but could not be acquired.",
+      );
+    }
+
+    return {
+      kind: "acquired",
+      row: inserted,
+    };
+  }
+
+  const existing =
     await findDigest(
       db,
       workspaceId,
@@ -578,20 +649,17 @@ async function reserveDigest(
       windowEnd,
     );
 
-  if (!reserved) {
+  if (!existing) {
     throw new Error(
-      "Digest reservation did not produce a persisted row.",
+      "Digest reservation conflict did not produce a persisted row.",
     );
   }
 
-  return reserved;
-}
+  if (existing.status !== "failed") {
+    return classifyExistingDigest(existing);
+  }
 
-async function markDigestPending(
-  db: D1DatabaseLike,
-  digestId: string,
-): Promise<void> {
-  await db
+  const retryResult = await db
     .prepare(
       `
         UPDATE digests
@@ -609,8 +677,51 @@ async function markDigestPending(
           AND status = 'failed'
       `,
     )
-    .bind(digestId)
+    .bind(existing.id)
     .run();
+
+  if (getAffectedRows(retryResult) === 1) {
+    const acquired =
+      await findDigest(
+        db,
+        workspaceId,
+        period,
+        windowStart,
+        windowEnd,
+      );
+
+    if (
+      !acquired ||
+      acquired.id !== existing.id ||
+      acquired.status !== "pending"
+    ) {
+      throw new Error(
+        `Digest ${existing.id} retry was claimed but could not be acquired.`,
+      );
+    }
+
+    return {
+      kind: "acquired",
+      row: acquired,
+    };
+  }
+
+  const current =
+    await findDigest(
+      db,
+      workspaceId,
+      period,
+      windowStart,
+      windowEnd,
+    );
+
+  if (!current) {
+    throw new Error(
+      `Digest ${existing.id} disappeared while acquiring retry ownership.`,
+    );
+  }
+
+  return classifyExistingDigest(current);
 }
 
 async function persistGeneratedDigest(
@@ -693,8 +804,8 @@ export async function generateDigest(
     windowEnd,
   );
 
-  const row =
-    await reserveDigest(
+  const reservation =
+    await acquireDigestGeneration(
       db,
       workspaceId,
       period,
@@ -702,20 +813,17 @@ export async function generateDigest(
       windowEnd,
     );
 
-  if (row.status === "generated") {
-    return reuseGeneratedDigest(row);
+  if (reservation.kind === "generated") {
+    return reservation.digest;
   }
 
-  if (row.status === "failed") {
-    await markDigestPending(
-      db,
-      row.id,
-    );
-  } else if (row.status !== "pending") {
-    throw new Error(
-      `Digest ${row.id} has unsupported status ${row.status}.`,
+  if (reservation.kind === "in_progress") {
+    throw new DigestGenerationInProgressError(
+      reservation.digestId,
     );
   }
+
+  const row = reservation.row;
 
   try {
     const intelligence =
