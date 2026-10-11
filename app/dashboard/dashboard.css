@@ -123,7 +123,8 @@
 body:has(.workspace-panel[open]) { overflow: hidden; }
 .workspace-panel-heading { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--morrow-line); background: var(--morrow-surface); }
 .workspace-panel-heading h2 { margin: 0; }
-.workspace-panel-close { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--morrow-line); border-radius: 8px; background: var(--morrow-surface); color: var(--morrow-ink-soft); font-size: 26px; cursor: pointer; flex-shrink: 0; }
+.workspace-panel-heading h2:focus { outline: none; }
+.workspace-panel-close { display: grid; place-items: center; width: 44px; height: 44px; border: 0; background: transparent; color: var(--morrow-ink-soft); font-size: 26px; cursor: pointer; flex-shrink: 0; }
 .workspace-panel-body { padding: 20px; padding-bottom: max(24px,env(safe-area-inset-bottom)); }
 .workspace-panel-body > * + * { margin-top: 20px; }
 .workspace-panel-body :is(form, [class*="grid-cols-"]) { grid-template-columns: minmax(0,1fr); }
@@ -167,7 +168,8 @@ body:has(.workspace-panel[open]) { overflow: hidden; }
 .morrow-dashboard textarea { line-height: 1.6; resize: vertical; }
 .morrow-dashboard :is(input, textarea)::placeholder { color: var(--morrow-ink-soft); opacity: .7; }
 .morrow-dashboard label { font-size: 13px; color: var(--morrow-ink-soft); font-family: inherit; text-transform: none; letter-spacing: 0; }
-.morrow-dashboard :is(a, button, summary, input, select, textarea):focus-visible { outline: 2px solid var(--morrow-ink); outline-offset: 3px; box-shadow: 0 0 0 3px var(--morrow-coral); }
+.morrow-dashboard :is(a, button, summary, input, select, textarea):focus-visible { outline: 2px solid var(--morrow-ink-soft); outline-offset: 2px; box-shadow: none; }
+.morrow-dashboard .workspace-panel-close:focus-visible { outline-offset: 0; box-shadow: none; }
 .morrow-dashboard .morrow-signout { min-height: 44px; padding: 8px 12px; border: 1px solid var(--morrow-line); border-radius: 8px; color: var(--morrow-ink); background: var(--morrow-surface); font-size: 14px; text-align: left; cursor: pointer; }
 .morrow-dashboard .morrow-signout:hover { background: var(--morrow-paper-deep); }
 .morrow-dashboard :is([class~="p-5"], [class~="p-6"], [class~="p-8"]) { padding: 20px; }
