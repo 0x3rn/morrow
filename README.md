@@ -1203,6 +1203,31 @@ The responsibilities are isolated so failure in one does not prevent the other f
 
 # Authentication and Authorization
 
+Signup uses an email/password form followed by a six-digit email verification code.
+After verification, users log in with their password and a fresh six-digit email code.
+Better Auth's email OTP and two-factor plugins enforce these steps on the server;
+no authenticated session is issued while the login code is pending.
+
+Codes expire after five minutes, are stored as hashes, and allow five incorrect
+attempts. Resend requests are rate limited using D1. The forms support pasting
+codes, resending, and retrying failed email delivery. Passwordless OTP login,
+disabling two-factor authentication, and trusting a device are disabled.
+
+Authentication emails use the existing Resend configuration: `RESEND_API_KEY`
+and `MORROW_EMAIL_FROM` must be set as Cloudflare secrets/bindings (or local
+`.dev.vars`). `BETTER_AUTH_SECRET` and the canonical `BETTER_AUTH_URL` must also
+be configured for production. Missing email configuration blocks signup/login.
+
+Apply migration `0008_add_email_verification.sql` before running the updated
+application. It adds mandatory two-factor state and persisted auth rate limits,
+and revokes existing password-only sessions; existing users must sign in again.
+Users whose email was never verified complete email verification first.
+
+Run the auth integration tests with `npm run test:auth`. They use the actual
+Better Auth handlers and D1 dialect with an isolated SQLite database and a
+mock email provider, including migrations, session isolation, wrong/expired
+codes, replay, resends, rate limits, and delivery failures.
+
 Authentication is handled by Better Auth.
 
 New accounts are provisioned into a workspace model.

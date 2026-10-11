@@ -284,6 +284,57 @@
   font-size: 12px;
 }
 
+.verificationNotice {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.field .codeInput {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 24px;
+  letter-spacing: 0.35em;
+  text-align: center;
+}
+
+.verificationActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.textButton {
+  border: 0;
+  padding: 8px 0;
+  background: transparent;
+  color: var(--purple);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.textButton:disabled {
+  color: var(--ink-soft);
+  cursor: default;
+  opacity: 0.65;
+}
+
+.submitLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 680;
+  text-decoration: none;
+}
+
 .error {
   margin: -2px 0 0;
   padding: 11px 13px;

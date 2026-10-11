@@ -6,6 +6,7 @@ import styles from "./auth-shell.module.css";
 type PasswordFieldProps = {
   autoComplete: string;
   id: string;
+  disabled?: boolean;
   minLength?: number;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   placeholder: string;
@@ -15,6 +16,7 @@ type PasswordFieldProps = {
 export function PasswordField({
   autoComplete,
   id,
+  disabled,
   minLength,
   onChange,
   placeholder,
@@ -26,6 +28,7 @@ export function PasswordField({
     <div className={styles.passwordControl}>
       <input
         id={id}
+        disabled={disabled}
         type={isVisible ? "text" : "password"}
         value={value}
         onChange={onChange}
@@ -40,6 +43,7 @@ export function PasswordField({
         className={styles.passwordToggle}
         onClick={() => setIsVisible((visible) => !visible)}
         type="button"
+        disabled={disabled}
       >
         {isVisible ? "Hide" : "Show"}
       </button>
