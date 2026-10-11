@@ -98,7 +98,6 @@ export function DashboardOverview({ metrics, usage, monitoringRows, recentChange
   return (
     <main className="workspace-page dashboard-overview">
       <header className="workspace-page-heading">
-        <div className="workspace-eyebrow">Workspace</div>
         <h1>Monitoring Overview</h1>
         <p>Track your competitors, monitored pages, recent changes, and workspace usage.</p>
       </header>

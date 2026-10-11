@@ -179,25 +179,6 @@ function getStatusClasses(
   return "border-slate-200 bg-slate-50 text-slate-600";
 }
 
-function ArrowLeftIcon() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden="true"
-      className="h-4 w-4"
-    >
-      <path
-        d="M12.5 5 7.5 10l5 5"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function PlusIcon() {
   return (
     <svg
@@ -602,18 +583,7 @@ export default async function CompetitorsPage() {
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <header className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
           <div>
-            <Link
-              href="/dashboard"
-              className="inline-flex min-h-10 items-center gap-2 rounded-lg pr-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25"
-            >
-              <ArrowLeftIcon />
-
-              <span>
-                Dashboard
-              </span>
-            </Link>
-
-            <div className="mt-5">
+            <div>
               <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
                 Monitoring
               </div>

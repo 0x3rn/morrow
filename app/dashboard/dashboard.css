@@ -23,11 +23,6 @@
   background-image: linear-gradient(rgba(23,32,29,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(23,32,29,.07) 1px, transparent 1px);
   background-size: 32px 32px; mask-image: radial-gradient(circle at 90% 5%, #000 0%, transparent 34%); content: ""; pointer-events: none;
 }
-.morrow-dashboard::after {
-  position: fixed; z-index: 50; inset: 0 auto 0 0; width: 4px;
-  background: linear-gradient(to bottom, var(--morrow-signal) 0 33%, var(--morrow-lime) 33% 66%, var(--morrow-coral) 66%);
-  content: ""; pointer-events: none;
-}
 .morrow-dashboard *, .morrow-dashboard *::before, .morrow-dashboard *::after { box-sizing: border-box; }
 .morrow-dashboard :is(main, section, article, aside, header, footer, form, div, dl, dd) { min-width: 0; }
 .workspace-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 30; width: 208px; display: flex; flex-direction: column; padding: 28px 16px 20px; border-right: 1px solid var(--morrow-line); background: var(--morrow-paper); }
@@ -117,6 +112,7 @@
 .workspace-link { display: inline-flex; align-items: center; gap: 6px; color: var(--morrow-ink); font-size: 13px; font-weight: 500; min-height: 44px; text-decoration-color: var(--morrow-coral); }
 .morrow-dashboard a { text-underline-offset: 3px; }
 .morrow-dashboard a:hover { text-decoration: underline; text-decoration-color: var(--morrow-coral); }
+.morrow-dashboard .workspace-nav a:is(:hover, :focus, :active) { text-decoration: none; }
 .morrow-dashboard a svg { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .morrow-dashboard :is(button, summary, a[class*="min-h-"]) { min-height: 44px; }
 .workspace-primary, .workspace-panel-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 10px 16px; border: 1px solid var(--morrow-line); border-radius: 8px; background: var(--morrow-coral); color: var(--morrow-ink); font-size: 14px; font-weight: 600; cursor: pointer; }
@@ -237,7 +233,6 @@ body:has(.workspace-panel[open]) { overflow: hidden; }
 }
 @media (max-width: 767px) {
   .morrow-dashboard { font-size: 15px; }
-  .morrow-dashboard::after { width: 3px; }
   .workspace-sidebar { position: sticky; inset: auto; top: 0; flex-direction: row; align-items: center; justify-content: space-between; width: 100%; min-height: 60px; padding: 8px 16px; border-right: 0; border-bottom: 1px solid var(--morrow-line); background: var(--morrow-paper); }
   .workspace-label { padding: 0; }
   .workspace-content { padding-left: 0; }

@@ -1,6 +1,5 @@
 import { WorkspaceFilters } from "@/components/workspace-filters";
 import { auth } from "@/lib/auth";
-import { ArrowLeftIcon } from "@/components/morrow-icons";
 import { env } from "cloudflare:workers";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -710,15 +709,7 @@ export default async function ChangeHistoryPage({
     <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8">
-          <a
-            href="/dashboard"
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-950"
-          >
-            <ArrowLeftIcon />
-            <span>Dashboard</span>
-          </a>
-
-          <div className="mt-6">
+          <div>
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
               History
             </div>

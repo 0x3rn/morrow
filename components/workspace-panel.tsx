@@ -14,7 +14,6 @@ export function WorkspacePanel({ label, title = label, children }: {
     <>
       <button className={`workspace-panel-trigger${label === "Manage" ? " workspace-panel-secondary" : ""}`} type="button" aria-haspopup="dialog" onClick={() => dialog.current?.showModal()}>
         {label}
-        <span aria-hidden="true">↗</span>
       </button>
       <dialog ref={dialog} className="workspace-panel" aria-labelledby={titleId}
         onClick={(event) => { if (event.target === event.currentTarget) event.currentTarget.close(); }}>
