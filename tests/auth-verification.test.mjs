@@ -97,7 +97,8 @@ function fixture(t, { configured = true } = {}) {
   const credentials = { email: "person@example.com", password: "correct-password-123" };
   async function registerAndVerify() {
     assert.equal((await call("/sign-up/email", { ...credentials, name: "Test Person" })).status, 200);
-    assert.equal((await call("/email-otp/verify-email", { email: credentials.email, otp: emails.at(-1).code })).status, 200);
+    assert.equal((await call("/email-otp/verify-email", { email: credentials.email, otp: emails.at(-1).code, password: credentials.password })).status, 200);
+    await call("/sign-out", {});
   }
   async function challenge() {
     const result = await call("/sign-in/email", credentials);
@@ -109,7 +110,7 @@ function fixture(t, { configured = true } = {}) {
   return { sqlite, emails, cookies, call, credentials, registerAndVerify, challenge, failProvider: (value = true) => { providerFails = value; } };
 }
 
-test("signup verifies email, then login requires both password and code before issuing a session", async (t) => {
+test("signup creates a session after one code, then every login requires password and a fresh code", async (t) => {
   const f = fixture(t);
   const signup = await f.call("/sign-up/email", { ...f.credentials, name: "Test Person" });
   assert.equal(signup.status, 200);
@@ -118,9 +119,14 @@ test("signup verifies email, then login requires both password and code before i
   assert.equal((await f.call("/get-session")).body, null);
   assert.equal(f.sqlite.prepare("SELECT COUNT(*) AS count FROM workspaces").get().count, 1);
   assert.equal(f.sqlite.prepare("SELECT two_factor_enabled FROM users").get().two_factor_enabled, 1);
-  assert.equal((await f.call("/email-otp/verify-email", { email: f.credentials.email, otp: "wrong-code" })).status, 400);
-  assert.equal((await f.call("/email-otp/verify-email", { email: f.credentials.email, otp: f.emails[0].code })).status, 200);
+  assert.equal((await f.call("/email-otp/verify-email", { ...f.credentials, otp: "wrong-code" })).status, 400);
   assert.equal((await f.call("/get-session")).body, null);
+  const verified = await f.call("/email-otp/verify-email", { ...f.credentials, otp: f.emails[0].code });
+  assert.equal(verified.status, 200);
+  assert.ok(verified.body.token);
+  assert.equal((await f.call("/get-session")).body.user.email, f.credentials.email);
+  assert.equal(f.emails.length, 1);
+  await f.call("/sign-out", {});
 
   assert.notEqual((await f.call("/sign-in/email", { ...f.credentials, password: "incorrect-password" })).status, 200);
   const code = await f.challenge();
@@ -225,15 +231,47 @@ test("signup delivery failures can be recovered by resending without duplicating
   assert.equal((await f.call("/get-session")).body, null);
   f.failProvider(false);
   assert.equal((await f.call("/email-otp/send-verification-otp", { email: f.credentials.email, type: "email-verification" })).status, 200);
-  assert.equal((await f.call("/email-otp/verify-email", { email: f.credentials.email, otp: f.emails.at(-1).code })).status, 200);
+  assert.equal((await f.call("/email-otp/verify-email", { ...f.credentials, otp: f.emails.at(-1).code })).status, 200);
   assert.equal(f.sqlite.prepare("SELECT COUNT(*) AS count FROM workspaces").get().count, 1);
 });
 
-test("email verification never becomes a passwordless login for an existing verified account", async (t) => {
+test("email verification requires the password even when an attacker has a correct code", async (t) => {
   const f = fixture(t);
   await f.registerAndVerify();
   await f.call("/email-otp/send-verification-otp", { email: f.credentials.email, type: "email-verification" });
-  assert.equal((await f.call("/email-otp/verify-email", { email: f.credentials.email, otp: f.emails.at(-1).code })).status, 200);
+  const otp = f.emails.at(-1).code;
+  assert.equal((await f.call("/email-otp/verify-email", { email: f.credentials.email, otp })).status, 401);
+  assert.equal((await f.call("/email-otp/verify-email", { ...f.credentials, password: "wrong-password", otp })).status, 401);
+  assert.equal((await f.call("/get-session")).body, null);
+  assert.equal((await f.call("/email-otp/verify-email", { ...f.credentials, otp })).status, 200);
+  assert.equal((await f.call("/get-session")).body.user.email, f.credentials.email);
+});
+
+test("an unverified user's login completes with one code without a second password or code prompt", async (t) => {
+  const f = fixture(t);
+  await f.call("/sign-up/email", { ...f.credentials, name: "Test Person" });
+  const login = await f.call("/sign-in/email", f.credentials);
+  assert.equal(login.body.code, "EMAIL_NOT_VERIFIED");
+  assert.equal((await f.call("/get-session")).body, null);
+  await f.call("/email-otp/send-verification-otp", { email: f.credentials.email, type: "email-verification" });
+  const otp = f.emails.at(-1).code;
+  assert.equal((await f.call("/email-otp/verify-email", { ...f.credentials, otp })).status, 200);
+  assert.equal((await f.call("/get-session")).body.user.email, f.credentials.email);
+  assert.equal(f.emails.length, 2);
+  await f.call("/sign-out", {});
+  assert.notEqual((await f.call("/email-otp/verify-email", { ...f.credentials, otp })).status, 200);
+  assert.equal((await f.call("/get-session")).body, null);
+});
+
+test("signup resend replaces the code and expired signup codes never create a session", async (t) => {
+  const f = fixture(t);
+  await f.call("/sign-up/email", { ...f.credentials, name: "Test Person" });
+  const oldCode = f.emails.at(-1).code;
+  await f.call("/email-otp/send-verification-otp", { email: f.credentials.email, type: "email-verification" });
+  const otp = f.emails.at(-1).code;
+  if (otp !== oldCode) assert.notEqual((await f.call("/email-otp/verify-email", { ...f.credentials, otp: oldCode })).status, 200);
+  f.sqlite.prepare("UPDATE verifications SET expires_at = 0").run();
+  assert.notEqual((await f.call("/email-otp/verify-email", { ...f.credentials, otp })).status, 200);
   assert.equal((await f.call("/get-session")).body, null);
 });
 

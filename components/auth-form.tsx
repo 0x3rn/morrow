@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { PasswordField } from "./password-field";
 import styles from "./auth-shell.module.css";
 
-type Step = "credentials" | "email-verification" | "two-factor" | "verified";
+type Step = "credentials" | "email-verification" | "two-factor";
 type AuthError = { code?: string; status?: number; message?: string };
 
 function errorMessage(error: AuthError, verifying = false) {
@@ -21,7 +19,6 @@ function errorMessage(error: AuthError, verifying = false) {
 }
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
-  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,7 +36,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     return () => window.clearTimeout(timeout);
   }, [resendSeconds]);
 
-  async function sendCode(verificationStep: Step) {
+  async function sendCode(verificationStep: Step, isResend = false) {
     const result = verificationStep === "two-factor"
       ? await authClient.twoFactor.sendOtp({ trustDevice: false })
       : await authClient.emailOtp.sendVerificationOtp({ email: email.trim(), type: "email-verification" });
@@ -48,7 +45,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       return;
     }
     setCode("");
-    setNotice("A new code has been sent. Use the latest email.");
+    setNotice(isResend ? "A new code has been sent." : "");
     setResendSeconds(60);
   }
 
@@ -63,13 +60,11 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         if (result.error) {
           // Creation may succeed before delivery fails; allow resending without re-registering.
           if (result.error.code === "EMAIL_DELIVERY_UNAVAILABLE") {
-            setPassword("");
             setStep("email-verification");
           }
           setError(errorMessage(result.error));
           return;
         }
-        setPassword("");
         setStep("email-verification");
         setResendSeconds(60);
         return;
@@ -78,7 +73,6 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       const result = await authClient.signIn.email({ email: email.trim(), password });
       if (result.error) {
         if (result.error.code === "EMAIL_NOT_VERIFIED") {
-          setPassword("");
           setStep("email-verification");
           await sendCode("email-verification");
         } else {
@@ -109,22 +103,29 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     setIsLoading(true);
     try {
       if (step === "email-verification") {
-        const result = await authClient.emailOtp.verifyEmail({ email: email.trim(), otp: code });
+        const result = await authClient.$fetch<{ token: string | null }>("/email-otp/verify-email", {
+          method: "POST",
+          body: { email: email.trim(), otp: code, password },
+        });
         if (result.error) {
           setError(errorMessage(result.error, true));
           return;
         }
-        setCode("");
-        setStep("verified");
+        if (!result.data?.token) {
+          setError("We couldn't complete your login. Please try again.");
+          return;
+        }
       } else {
         const result = await authClient.twoFactor.verifyOtp({ code, trustDevice: false });
         if (result.error) {
           setError(errorMessage(result.error, true));
           return;
         }
-        router.replace("/dashboard");
-        router.refresh();
       }
+      setPassword("");
+      // Load the dashboard with the new session cookie rather than a cached
+      // unauthenticated router response from before verification.
+      window.location.replace("/dashboard");
     } catch {
       setError("We couldn't reach Morrow. Please check your connection and try again.");
     } finally {
@@ -137,7 +138,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     setNotice("");
     setIsLoading(true);
     try {
-      await sendCode(step);
+      await sendCode(step, true);
     } catch {
       setError("We couldn't send your code. Please try again shortly.");
     } finally {
@@ -150,36 +151,27 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     setPassword("");
     setError("");
     setNotice("");
+    setResendSeconds(0);
     setStep("credentials");
-  }
-
-  if (step === "verified") {
-    return (
-      <div className={styles.form}>
-        <p className={styles.verificationNotice} role="status">Your email is verified. Log in with your password and an email code to open your workspace.</p>
-        {isRegister
-          ? <Link className={styles.submitLink} href="/login">Continue to login</Link>
-          : <button className={styles.submit} onClick={restart}>Continue to login</button>}
-      </div>
-    );
   }
 
   if (step !== "credentials") {
     return (
-      <form className={styles.form} onSubmit={handleVerification}>
-        <p className={styles.verificationNotice}>Enter the six-digit code sent to <strong>{email.trim()}</strong> {step === "two-factor" ? "to finish logging in." : "to verify your email."}</p>
+      <form key="verification" className={styles.form} onSubmit={handleVerification}>
+        <p id="code-message" className={styles.verificationNotice} role="status">
+          {notice || "A code has been sent to your email and expires in 5 minutes."}
+        </p>
         <div className={styles.field}>
           <label htmlFor="verification-code">Verification code</label>
-          <input id="verification-code" name="code" type="text" inputMode="numeric" autoComplete="one-time-code"
+          <input key="one-time-code" id="verification-code" name="verification-code" type="text" inputMode="numeric" autoComplete="one-time-code"
             className={styles.codeInput} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
             pattern="[0-9]{6}" minLength={6} maxLength={6} required autoFocus disabled={isLoading}
-            aria-describedby="code-hint" placeholder="000000" />
-          <p id="code-hint" className={styles.fieldHint}>Codes expire after 5 minutes. Use the most recent code.</p>
+            spellCheck={false} autoCapitalize="none" autoCorrect="off"
+            aria-describedby="code-message" placeholder="000000" />
         </div>
         {error && <p className={styles.error} role="alert">{error}</p>}
-        {notice && <p className={styles.fieldHint} role="status">{notice}</p>}
         <button className={styles.submit} type="submit" disabled={isLoading || code.length !== 6}>
-          {isLoading ? "Please wait…" : step === "two-factor" ? "Verify and log in" : "Verify email"}
+          {isLoading ? "Please wait…" : "Verify and continue"}
         </button>
         <div className={styles.verificationActions}>
           <button className={styles.textButton} type="button" onClick={resendCode} disabled={isLoading || resendSeconds > 0}>
@@ -192,7 +184,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   }
 
   return (
-    <form className={styles.form} onSubmit={handleCredentials}>
+    <form key="credentials" className={styles.form} onSubmit={handleCredentials}>
       {isRegister && <div className={styles.field}>
         <label htmlFor="name">Name</label>
         <input id="name" type="text" value={name} onChange={(event) => setName(event.target.value)} required autoComplete="name" placeholder="Your name" disabled={isLoading} />
@@ -207,7 +199,6 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           autoComplete={isRegister ? "new-password" : "current-password"} placeholder={isRegister ? "Create a password" : "Enter your password"} disabled={isLoading} />
         {isRegister && <p className={styles.fieldHint}>At least 8 characters.</p>}
       </div>
-      <p className={styles.fieldHint}>We&apos;ll email you a six-digit code {isRegister ? "to verify your account" : "to complete login"}.</p>
       {error && <p className={styles.error} role="alert">{error}</p>}
       <button className={styles.submit} type="submit" disabled={isLoading}>
         {isLoading ? "Please wait…" : isRegister ? "Create account" : "Continue"}

@@ -37,8 +37,9 @@ export function createEmailVerificationOptions(
       // Send from the OTP plugin's signup hook, which retains the request context.
       sendOnSignUp: false,
       sendOnSignIn: false,
-      // Verifying an email by itself must never become a passwordless login.
-      autoSignInAfterVerification: false,
+      // The verification endpoint checks the password before consuming the code.
+      // Both factors complete in one step, including signup and unverified users.
+      autoSignInAfterVerification: true,
     },
     plugins: [
       emailOTP({
@@ -114,6 +115,7 @@ export function createEmailVerificationOptions(
         "/sign-up/email": { window: 60, max: 3 },
         "/sign-in/email": { window: 60, max: 5 },
         "/email-otp/send-verification-otp": { window: 60, max: 3 },
+        "/email-otp/verify-email": { window: 60, max: 5 },
         "/two-factor/send-otp": { window: 60, max: 3 },
         "/two-factor/verify-otp": { window: 60, max: 10 },
       },
@@ -121,6 +123,26 @@ export function createEmailVerificationOptions(
     advanced: { ipAddress: { ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"] } },
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path === "/email-otp/verify-email") {
+          const password = ctx.body?.password;
+          const email = ctx.body?.email;
+          const invalidCredentials = () => new APIError("UNAUTHORIZED", {
+            code: "INVALID_EMAIL_OR_PASSWORD",
+            message: "Invalid email or password.",
+          });
+          if (typeof password !== "string" || !password || password.length > 128 || typeof email !== "string") {
+            throw invalidCredentials();
+          }
+          const record = await ctx.context.internalAdapter.findUserByEmail(email.toLowerCase(), { includeAccounts: true });
+          const account = record?.accounts.find((account) => account.providerId === "credential" && account.accountId === record.user.id);
+          if (!account?.password) {
+            await ctx.context.password.hash(password);
+            throw invalidCredentials();
+          }
+          if (!await ctx.context.password.verify({ hash: account.password, password })) {
+            throw invalidCredentials();
+          }
+        }
         if (ctx.path === "/email-otp/send-verification-otp" && ctx.body?.type !== "email-verification") {
           throw new APIError("BAD_REQUEST", { message: "Only email verification codes are available here." });
         }

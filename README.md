@@ -1204,9 +1204,12 @@ The responsibilities are isolated so failure in one does not prevent the other f
 # Authentication and Authorization
 
 Signup uses an email/password form followed by a six-digit email verification code.
-After verification, users log in with their password and a fresh six-digit email code.
+That code completes signup and opens the dashboard. Login also uses a password
+followed by one six-digit email code, including accounts awaiting email verification.
 Better Auth's email OTP and two-factor plugins enforce these steps on the server;
 no authenticated session is issued while the login code is pending.
+Email verification checks the password submitted with the code before creating
+a session, so the verification endpoint cannot be used as passwordless login.
 
 Codes expire after five minutes, are stored as hashes, and allow five incorrect
 attempts. Resend requests are rate limited using D1. The forms support pasting
