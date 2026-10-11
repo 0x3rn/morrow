@@ -300,7 +300,7 @@ export default async function ChangeDetailPage({
           </a>
         </nav>
 
-        <header className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <header className="workspace-change-detail-header rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -398,7 +398,7 @@ export default async function ChangeDetailPage({
             </p>
           </div>
 
-          <div className="grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:grid-cols-2">
+          <div className="workspace-evidence grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:grid-cols-2">
             <div className="bg-red-50/40 p-5 sm:p-6">
               <div className="text-xs font-semibold uppercase tracking-wide text-red-700">
                 Previous
@@ -523,20 +523,13 @@ export default async function ChangeDetailPage({
           </div>
         </section>
 
-        <section className="mt-8">
-          <div className="mb-5">
-            <h2 className="text-xl font-semibold">
+        <details className="workspace-source-captures workspace-secondary-disclosure"><summary><h2 className="text-xl font-semibold">
               Source captures
-            </h2>
-
-            <p className="mt-1 text-sm leading-6 text-slate-500">
+            </h2></summary><p className="mt-1 text-sm leading-6 text-slate-500">
               Capture details for the page
               versions used to record this
               change.
-            </p>
-          </div>
-
-          <div className="grid gap-5 lg:grid-cols-2">
+            </p><div className="grid gap-5 lg:grid-cols-2">
             <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
               <h3 className="font-semibold text-slate-900">
                 Previous capture
@@ -659,8 +652,7 @@ export default async function ChangeDetailPage({
                 </div>
               </dl>
             </article>
-          </div>
-        </section>
+          </div></details>
       </div>
     </main>
   );

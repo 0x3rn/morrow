@@ -408,7 +408,7 @@ export default async function CompetitorHistoryPage({
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="workspace-list workspace-timeline space-y-4">
               {changes.map(
                 (change) => (
                   <article
@@ -442,12 +442,10 @@ export default async function CompetitorHistoryPage({
                         </time>
                       </div>
 
-                      <h3 className="mt-5 break-words text-lg font-semibold leading-7 tracking-[-0.01em] text-slate-950">
+                      <details className="workspace-change-disclosure"><summary><h3 className="mt-5 break-words text-lg font-semibold leading-7 tracking-[-0.01em] text-slate-950">
                         {change.summary ||
                           "Change detected."}
-                      </h3>
-
-                      {change.why_it_matters ? (
+                      </h3></summary><div className="workspace-change-description">{change.why_it_matters ? (
                         <div className="mt-5 rounded-xl bg-slate-50 px-4 py-4 sm:px-5">
                           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-600">
                             Why it matters
@@ -459,7 +457,7 @@ export default async function CompetitorHistoryPage({
                             }
                           </p>
                         </div>
-                      ) : null}
+                      ) : null}</div></details>
 
                       <div className="mt-5 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:px-5">
                         <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
@@ -495,7 +493,7 @@ export default async function CompetitorHistoryPage({
                             View before and after
                           </summary>
 
-                          <div className="mt-3 grid min-w-0 overflow-hidden rounded-xl border border-slate-200 md:grid-cols-2">
+                          <div className="workspace-evidence mt-3 grid min-w-0 overflow-hidden rounded-xl border border-slate-200 md:grid-cols-2">
                             <div className="min-w-0 bg-red-50/50 p-4 sm:p-5">
                               <div className="text-xs font-semibold uppercase tracking-[0.12em] text-red-600">
                                 Previous

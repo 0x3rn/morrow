@@ -1,3 +1,4 @@
+import { WorkspaceFilters } from "@/components/workspace-filters";
 import { auth } from "@/lib/auth";
 import { ArrowLeftIcon } from "@/components/morrow-icons";
 import { env } from "cloudflare:workers";
@@ -733,12 +734,8 @@ export default async function ChangeHistoryPage({
           </div>
         </header>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <form
-            method="get"
-            className="grid gap-4 md:grid-cols-2 lg:grid-cols-6"
-          >
-            <div className="lg:col-span-2">
+        <section className="workspace-filters rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <form method="get"><div className="lg:col-span-2">
               <label
                 htmlFor="q"
                 className="mb-1.5 block text-xs font-medium text-slate-600"
@@ -756,9 +753,7 @@ export default async function ChangeHistoryPage({
                 placeholder="Search changes, competitors, or page URLs"
                 className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/15"
               />
-            </div>
-
-            <div>
+            </div><WorkspaceFilters active={hasFilters}><div>
               <label
                 htmlFor="competitor"
                 className="mb-1.5 block text-xs font-medium text-slate-600"
@@ -796,8 +791,7 @@ export default async function ChangeHistoryPage({
                 )}
               </select>
             </div>
-
-            <div className="lg:col-span-2">
+<div className="lg:col-span-2">
               <label
                 htmlFor="monitoredPage"
                 className="mb-1.5 block text-xs font-medium text-slate-600"
@@ -843,8 +837,7 @@ export default async function ChangeHistoryPage({
                   )}
               </select>
             </div>
-
-            <div>
+<div>
               <label
                 htmlFor="category"
                 className="mb-1.5 block text-xs font-medium text-slate-600"
@@ -876,8 +869,7 @@ export default async function ChangeHistoryPage({
                 )}
               </select>
             </div>
-
-            <div>
+<div>
               <label
                 htmlFor="significance"
                 className="mb-1.5 block text-xs font-medium text-slate-600"
@@ -909,8 +901,7 @@ export default async function ChangeHistoryPage({
                 )}
               </select>
             </div>
-
-            <div className="grid grid-cols-2 gap-3 lg:col-span-2">
+<div className="grid grid-cols-2 gap-3 lg:col-span-2">
               <div>
                 <label
                   htmlFor="from"
@@ -949,8 +940,7 @@ export default async function ChangeHistoryPage({
                 />
               </div>
             </div>
-
-            <div className="flex items-end gap-2 lg:col-span-4">
+<div className="flex items-end gap-2 lg:col-span-4">
               <button
                 type="submit"
                 className="min-h-10 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
@@ -966,8 +956,7 @@ export default async function ChangeHistoryPage({
                   Clear
                 </Link>
               ) : null}
-            </div>
-          </form>
+            </div></WorkspaceFilters></form>
         </section>
 
         <section className="mt-8">
@@ -1011,7 +1000,7 @@ export default async function ChangeHistoryPage({
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="workspace-list space-y-4">
               {changes.map(
                 (change) => (
                   <article
@@ -1066,18 +1055,16 @@ export default async function ChangeHistoryPage({
                       </time>
                     </div>
 
-                    <h3 className="mt-5 max-w-4xl text-lg font-semibold leading-7 text-slate-950">
+                    <details className="workspace-change-disclosure"><summary><h3 className="mt-5 max-w-4xl text-lg font-semibold leading-7 text-slate-950">
                       {change.summary ||
                         "Change detected."}
-                    </h3>
-
-                    {change.why_it_matters ? (
+                    </h3></summary><div className="workspace-change-description">{change.why_it_matters ? (
                       <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-600">
                         {
                           change.why_it_matters
                         }
                       </p>
-                    ) : null}
+                    ) : null}</div></details>
 
                     <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
                       <a

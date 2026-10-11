@@ -1,4 +1,4 @@
-import { SignOutButton } from "@/components/sign-out-button";
+import { WorkspacePanel } from "@/components/workspace-panel";
 import { auth } from "@/lib/auth";
 import { MORROW_MVP_USAGE_LIMITS } from "@/lib/usage-limits";
 import { env } from "cloudflare:workers";
@@ -237,25 +237,6 @@ function ExternalLinkIcon() {
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function ChevronIcon() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden="true"
-      className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
-    >
-      <path
-        d="m6 8 4 4 4-4"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
       />
     </svg>
   );
@@ -647,129 +628,10 @@ export default async function CompetitorsPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="text-right">
-              <div className="text-sm font-medium text-slate-900">
-                {workspace.name}
-              </div>
-
-              <div className="text-xs text-slate-400">
-                {
-                  session.user.email
-                }
-              </div>
-            </div>
-
-            <SignOutButton />
-          </div>
-        </header>
-
-        <nav className="mt-8 flex flex-wrap gap-2 border-b border-slate-200 pb-5">
-          <Link
-            href="/dashboard"
-            className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Dashboard
-          </Link>
-
-          <Link
-            href="/dashboard/competitors"
-            className="inline-flex min-h-10 items-center rounded-xl bg-slate-950 px-4 py-2 text-sm font-medium text-white"
-          >
-            Competitors
-          </Link>
-
-          <Link
-            href="/dashboard/changes"
-            className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Change history
-          </Link>
-        </nav>
-
-        <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-medium text-slate-500">
-              Competitors
-            </div>
-
-            <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
-              {
-                usage.competitors
-              }
-            </div>
-
-            <div className="mt-2 text-xs text-slate-400">
-              {
-                activeCompetitorCount
-              }{" "}
-              active
-            </div>
-          </article>
-
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-medium text-slate-500">
-              Monitored pages
-            </div>
-
-            <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
-              {
-                usage.monitoredPages
-              }
-            </div>
-
-            <div className="mt-2 text-xs text-slate-400">
-              across this workspace
-            </div>
-          </article>
-
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-medium text-slate-500">
-              Changes
-            </div>
-
-            <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
-              {
-                totalChanges
-              }
-            </div>
-
-            <div className="mt-2 text-xs text-slate-400">
-              recorded
-            </div>
-          </article>
-
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-medium text-slate-500">
-              Major changes
-            </div>
-
-            <div
-              className={
-                totalMajorChanges >
-                0
-                  ? "mt-3 text-3xl font-semibold tracking-tight text-red-700"
-                  : "mt-3 text-3xl font-semibold tracking-tight text-slate-950"
-              }
-            >
-              {
-                totalMajorChanges
-              }
-            </div>
-
-            <div className="mt-2 text-xs text-slate-400">
-              recorded as major
-            </div>
-          </article>
-        </section>
-
-        <section className="mt-8 grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <WorkspacePanel label="Add a competitor"><div>
             <div>
 
-              <h2 className="mt-2 text-xl font-semibold text-slate-950">
-                Add a competitor
-              </h2>
+
 
               <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
                 Enter the company name and domain. You can choose which pages to monitor after it’s added.
@@ -851,9 +713,7 @@ export default async function CompetitorsPage() {
                 </div>
               </form>
             )}
-          </div>
-
-          <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          </div><aside className="workspace-capacity rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
               Workspace limits
             </div>
@@ -959,8 +819,88 @@ export default async function CompetitorsPage() {
                 Paused competitors and pages still count toward these limits.
               </p>
             </div>
-          </aside>
+          </aside></WorkspacePanel>
+        </header>
+
+
+
+        <section className="workspace-metrics mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="text-xs font-medium text-slate-500">
+              Competitors
+            </div>
+
+            <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
+              {
+                usage.competitors
+              }
+            </div>
+
+            <div className="mt-2 text-xs text-slate-400">
+              {
+                activeCompetitorCount
+              }{" "}
+              active
+            </div>
+          </article>
+
+          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="text-xs font-medium text-slate-500">
+              Monitored pages
+            </div>
+
+            <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
+              {
+                usage.monitoredPages
+              }
+            </div>
+
+            <div className="mt-2 text-xs text-slate-400">
+              across this workspace
+            </div>
+          </article>
+
+          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="text-xs font-medium text-slate-500">
+              Changes
+            </div>
+
+            <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
+              {
+                totalChanges
+              }
+            </div>
+
+            <div className="mt-2 text-xs text-slate-400">
+              recorded
+            </div>
+          </article>
+
+          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="text-xs font-medium text-slate-500">
+              Major changes
+            </div>
+
+            <div
+              className={
+                totalMajorChanges >
+                0
+                  ? "mt-3 text-3xl font-semibold tracking-tight text-red-700"
+                  : "mt-3 text-3xl font-semibold tracking-tight text-slate-950"
+              }
+            >
+              {
+                totalMajorChanges
+              }
+            </div>
+
+            <div className="mt-2 text-xs text-slate-400">
+              recorded as major
+            </div>
+          </article>
         </section>
+
+
 
         <section className="mt-10">
           <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
@@ -998,7 +938,7 @@ export default async function CompetitorsPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="workspace-list space-y-4">
               {competitors.map(
                 (
                   competitor
@@ -1041,7 +981,7 @@ export default async function CompetitorsPage() {
                       key={
                         competitor.id
                       }
-                      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                      className="workspace-competitor-record overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
                     >
                       <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(420px,0.8fr)] lg:items-start">
                         <div className="min-w-0">
@@ -1261,14 +1201,7 @@ export default async function CompetitorsPage() {
                             </form>
                           </div>
 
-                          <details className="group">
-                            <summary className="inline-flex min-h-10 cursor-pointer list-none items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25">
-                              Manage
-
-                              <ChevronIcon />
-                            </summary>
-
-                            <div className="mt-4 grid gap-6 border-t border-slate-200 pt-5 lg:grid-cols-[minmax(0,1fr)_260px]">
+                          <WorkspacePanel label="Manage" title={competitor.name}><div className="workspace-manage-competitor mt-4 grid gap-6 border-t border-slate-200 pt-5 lg:grid-cols-[minmax(0,1fr)_260px]">
                               <form
                                 action={
                                   updateCompetitor
@@ -1345,7 +1278,7 @@ export default async function CompetitorsPage() {
                                 </div>
                               </form>
 
-                              <div className="border-t border-slate-200 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+                              <div className="workspace-destructive border-t border-slate-200 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
                                 <div className="text-sm font-semibold text-red-700">
                                   Remove competitor
                                 </div>
@@ -1376,8 +1309,7 @@ export default async function CompetitorsPage() {
                                   </button>
                                 </form>
                               </div>
-                            </div>
-                          </details>
+                            </div></WorkspacePanel>
                         </div>
                       </div>
                     </article>

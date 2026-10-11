@@ -440,7 +440,7 @@ export default async function SnapshotHistory({
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="workspace-list space-y-4">
               {snapshots.map(
                 (snapshot) => {
                   const hasChange =
@@ -456,12 +456,16 @@ export default async function SnapshotHistory({
                   return (
                     <article
                       key={snapshot.id}
-                      className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                      className="workspace-capture-record min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
                     >
                       <div className="p-5 sm:p-6">
                         <div className="flex min-w-0 flex-col justify-between gap-4 sm:flex-row sm:items-start">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
+                          <div className="min-w-0"><time className="mt-3 block text-sm font-medium text-slate-700">
+                              {formatDateTime(
+                                snapshot.captured_at
+                              )}
+                            </time>
+<div className="flex flex-wrap items-center gap-2">
                               <span
                                 className={
                                   hasChange
@@ -483,14 +487,7 @@ export default async function SnapshotHistory({
                                 {snapshot.http_status ??
                                   "unknown"}
                               </span>
-                            </div>
-
-                            <time className="mt-3 block text-sm font-medium text-slate-700">
-                              {formatDateTime(
-                                snapshot.captured_at
-                              )}
-                            </time>
-                          </div>
+                            </div></div>
 
                           {hasScreenshot ? (
                             <a
@@ -510,28 +507,7 @@ export default async function SnapshotHistory({
                           )}
                         </div>
 
-                        <div className="mt-5 grid min-w-0 gap-4 border-t border-slate-100 pt-5 md:grid-cols-2">
-                          <div className="min-w-0">
-                            <div className="text-xs font-medium text-slate-500">
-                              Content hash
-                            </div>
 
-                            <div className="mt-2 max-w-full break-all font-mono text-xs leading-5 text-slate-700">
-                              {snapshot.content_hash ||
-                                "Unavailable"}
-                            </div>
-                          </div>
-
-                          <div className="min-w-0">
-                            <div className="text-xs font-medium text-slate-500">
-                              Snapshot ID
-                            </div>
-
-                            <div className="mt-2 max-w-full break-all font-mono text-xs leading-5 text-slate-700">
-                              {snapshot.id}
-                            </div>
-                          </div>
-                        </div>
 
                         {hasChange &&
                         snapshot.change_id ? (
@@ -570,7 +546,28 @@ export default async function SnapshotHistory({
                               View change details
                             </Link>
                           </div>
-                        ) : null}
+                        ) : null}<details className="workspace-snapshot-meta workspace-secondary-disclosure"><summary><span>Content hash</span><span>Snapshot ID</span></summary><div className="mt-5 grid min-w-0 gap-4 border-t border-slate-100 pt-5 md:grid-cols-2">
+                          <div className="min-w-0">
+                            <div className="text-xs font-medium text-slate-500">
+                              Content hash
+                            </div>
+
+                            <div className="mt-2 max-w-full break-all font-mono text-xs leading-5 text-slate-700">
+                              {snapshot.content_hash ||
+                                "Unavailable"}
+                            </div>
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="text-xs font-medium text-slate-500">
+                              Snapshot ID
+                            </div>
+
+                            <div className="mt-2 max-w-full break-all font-mono text-xs leading-5 text-slate-700">
+                              {snapshot.id}
+                            </div>
+                          </div>
+                        </div></details>
                       </div>
                     </article>
                   );

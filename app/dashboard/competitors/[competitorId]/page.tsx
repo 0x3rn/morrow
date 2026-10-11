@@ -1,3 +1,4 @@
+import { WorkspacePanel } from "@/components/workspace-panel";
 import { auth } from "@/lib/auth";
 import { env } from "cloudflare:workers";
 import Link from "next/link";
@@ -292,43 +293,6 @@ function ChevronIcon() {
         strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function PulseIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      className="h-5 w-5"
-    >
-      <path
-        d="M3 12h4l2-5 4 10 2-5h6"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden="true"
-      className="h-4 w-4"
-    >
-      <path
-        d="M10 4v12M4 10h12"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
       />
     </svg>
   );
@@ -670,9 +634,7 @@ export default async function CompetitorPage({
           </Link>
         </nav>
 
-        <header className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="grid gap-8 px-5 py-6 sm:px-7 sm:py-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:px-9 lg:py-9">
-            <div className="min-w-0">
+        <header className="workspace-profile-heading overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"><div><div className="min-w-0">
               <div className="flex items-start gap-4 sm:gap-5">
                 <div className="relative shrink-0">
                   {competitor.favicon_url ? (
@@ -768,405 +730,43 @@ export default async function CompetitorPage({
                   </p>
                 </div>
               </div>
-            </div>
+            </div></div><h2 className="workspace-profile-status">Status</h2><dl className="workspace-profile-overview">
+    <div><dt>Monitoring status</dt><dd>{competitor.status === "active" ? "Monitoring active" : "Monitoring paused"}</dd></div>
+    <div><dt>Active pages</dt><dd>{metrics.activePages} / {metrics.monitoredPages}</dd></div>
+    <div><dt>Healthy pages</dt><dd>{healthyPages} / {metrics.monitoredPages}</dd></div>
+    <div><dt>Next scheduled check</dt><dd>{nextScheduledPage ? formatDateTime(nextScheduledPage.next_check_at) : "Not scheduled"}</dd></div>
+    <div><dt>Detected changes</dt><dd>{metrics.changes}<span className="workspace-meta"> recorded</span></dd></div>
+    <div><dt>Major changes</dt><dd>{metrics.majorChanges}<span className="workspace-meta"> recorded as major</span></dd></div>
+    <div><dt>Last checked</dt><dd>{formatDateTime(metrics.latestCheckedAt)}</dd></div>
+    <div><dt>Latest change</dt><dd>{formatDateTime(metrics.latestChangeAt)}</dd></div>
+    <div><dt>Monitored pages</dt><dd>{metrics.monitoredPages}</dd></div>
+    <div><dt>Paused</dt><dd>{metrics.pausedPages}</dd></div>
+    <div><dt>Latest successful check</dt><dd>{latestCapturedPage ? formatDateTime(latestCapturedPage.latest_captured_at) : "Never"}</dd></div>
+  </dl></header>
 
-            <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2 text-indigo-600">
-                    <PulseIcon />
-
-                    <span className="text-xs font-semibold uppercase tracking-[0.12em]">
-                      Monitoring status
-                    </span>
-                  </div>
-
-                  <div className="mt-2 text-base font-semibold text-slate-950">
-                    {competitor.status ===
-                    "active"
-                      ? "Monitoring active"
-                      : "Monitoring paused"}
-                  </div>
-                </div>
-
-                <span
-                  className={
-                    competitor.status ===
-                    "active"
-                      ? "mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500"
-                      : "mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-slate-400"
-                  }
-                />
+        <section className="workspace-profile-pages">
+          <div className="workspace-section-heading">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Pages
               </div>
 
-              <div className="mt-5 grid grid-cols-2 gap-4 border-t border-indigo-100 pt-4">
-                <div>
-                  <div className="text-xs text-slate-500">
-                    Active pages
-                  </div>
-
-                  <div className="mt-1 text-xl font-semibold text-slate-950">
-                    {metrics.activePages}
-                    <span className="ml-1 text-sm font-normal text-slate-400">
-                      / {metrics.monitoredPages}
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="text-xs text-slate-500">
-                    Healthy pages
-                  </div>
-
-                  <div className="mt-1 text-xl font-semibold text-slate-950">
-                    {healthyPages}
-                    <span className="ml-1 text-sm font-normal text-slate-400">
-                      / {metrics.monitoredPages}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 border-t border-indigo-100 pt-4">
-                <div className="text-xs text-slate-500">
-                  Next scheduled check
-                </div>
-
-                <div className="mt-1 text-sm font-medium text-slate-800">
-                  {nextScheduledPage
-                    ? formatDateTime(
-                        nextScheduledPage.next_check_at
-                      )
-                    : "Not scheduled"}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid border-t border-slate-200 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="border-b border-slate-200 px-5 py-5 sm:border-r sm:px-7 lg:border-b-0">
-              <div className="text-xs font-medium text-slate-500">
-                Detected changes
-              </div>
-
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-semibold tracking-tight text-slate-950">
-                  {metrics.changes}
-                </span>
-
-                <span className="text-xs text-slate-400">
-                  recorded
-                </span>
-              </div>
-            </div>
-
-            <div className="border-b border-slate-200 px-5 py-5 sm:px-7 lg:border-b-0 lg:border-r">
-              <div className="text-xs font-medium text-slate-500">
-                Major changes
-              </div>
-
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-semibold tracking-tight text-slate-950">
-                  {metrics.majorChanges}
-                </span>
-
-                <span className="text-xs font-medium text-red-600">
-                  recorded as major
-                </span>
-              </div>
-            </div>
-
-            <div className="border-b border-slate-200 px-5 py-5 sm:border-b-0 sm:border-r sm:px-7">
-              <div className="text-xs font-medium text-slate-500">
-                Last checked
-              </div>
-
-              <div className="mt-2 text-sm font-semibold leading-6 text-slate-900">
-                {formatDateTime(
-                  metrics.latestCheckedAt
-                )}
-              </div>
-            </div>
-
-            <div className="px-5 py-5 sm:px-7">
-              <div className="text-xs font-medium text-slate-500">
-                Latest change
-              </div>
-
-              <div className="mt-2 text-sm font-semibold leading-6 text-slate-900">
-                {formatDateTime(
-                  metrics.latestChangeAt
-                )}
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <div className="grid gap-8 py-8 sm:py-10 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-10">
-          <section className="min-w-0">
-            <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
-                  Activity
-                </div>
-
-                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-slate-950">
-                  Recent changes
-                </h2>
-
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                  Changes recorded across this competitor&apos;s
-                  monitored pages.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="text-xs text-slate-400">
-                  Showing {recentChanges.length}
-                </div>
-
-                <Link
-                  href={`/dashboard/competitors/${competitor.id}/history`}
-                  className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-                >
-                  View full history
-                </Link>
-              </div>
-            </div>
-
-            {recentChanges.length === 0 ? (
-              <div className="rounded-2xl border border-slate-200 bg-white px-5 py-8 shadow-sm sm:px-6">
-                <h3 className="text-base font-semibold text-slate-900">
-                  No changes yet
-                </h3>
-
-                <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
-                  Changes Morrow records will
-                  appear here after a monitored
-                  page changes.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {recentChanges.map(
-                  (change) => (
-                    <article
-                      key={change.id}
-                      className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-                    >
-                      <div
-                        className={
-                          change.significance ===
-                          "major"
-                            ? "absolute inset-y-0 left-0 w-1 bg-red-500"
-                            : change.significance ===
-                                "moderate"
-                              ? "absolute inset-y-0 left-0 w-1 bg-amber-500"
-                              : "absolute inset-y-0 left-0 w-1 bg-indigo-500"
-                        }
-                      />
-
-                      <div className="p-5 pl-6 sm:p-6 sm:pl-7">
-                        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium capitalize text-indigo-700">
-                              {change.category}
-                            </span>
-
-                            <span
-                              className={`rounded-full border px-2.5 py-1 text-xs font-medium capitalize ${getSignificanceClasses(
-                                change.significance
-                              )}`}
-                            >
-                              {
-                                change.significance
-                              }
-                            </span>
-                          </div>
-
-                          <time className="shrink-0 text-xs text-slate-400">
-                            {formatDateTime(
-                              change.detected_at
-                            )}
-                          </time>
-                        </div>
-
-                        <h3 className="mt-5 max-w-3xl text-lg font-semibold leading-7 tracking-[-0.01em] text-slate-950">
-                          {change.summary ||
-                            "Change detected."}
-                        </h3>
-
-                        {change.why_it_matters ? (
-                          <div className="mt-5 rounded-xl bg-slate-50 px-4 py-4 sm:px-5">
-                            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-600">
-                              Why it matters
-                            </div>
-
-                            <p className="mt-2 text-sm leading-6 text-slate-600">
-                              {
-                                change.why_it_matters
-                              }
-                            </p>
-                          </div>
-                        ) : null}
-
-                        <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-slate-100 pt-4 text-xs">
-                          <span className="font-medium text-slate-700">
-                            {change.monitored_page_label ||
-                              "Monitored page"}
-                          </span>
-
-                          <a
-                            href={
-                              change.monitored_page_url
-                            }
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex min-w-0 max-w-full items-center gap-1.5 text-slate-500 transition-colors hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25 motion-reduce:transition-none"
-                          >
-                            <span className="max-w-[240px] truncate sm:max-w-md">
-                              {
-                                change.monitored_page_url
-                              }
-                            </span>
-
-                            <ExternalLinkIcon />
-                          </a>
-                        </div>
-
-                        {change.previous_text ||
-                        change.current_text ? (
-                          <details className="group mt-4">
-                            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25 motion-reduce:transition-none">
-                              <span>
-                                View before and after
-                              </span>
-
-                              <ChevronIcon />
-                            </summary>
-
-                            <div className="mt-3 grid overflow-hidden rounded-xl border border-slate-200 md:grid-cols-2">
-                              <div className="bg-red-50/50 p-4 sm:p-5">
-                                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-red-600">
-                                  Previous
-                                </div>
-
-                                <pre className="mt-3 whitespace-pre-wrap break-words font-mono text-xs leading-6 text-slate-700">
-                                  {change.previous_text ||
-                                    "No previous text available."}
-                                </pre>
-                              </div>
-
-                              <div className="border-t border-slate-200 bg-emerald-50/50 p-4 sm:p-5 md:border-l md:border-t-0">
-                                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
-                                  Current
-                                </div>
-
-                                <pre className="mt-3 whitespace-pre-wrap break-words font-mono text-xs leading-6 text-slate-700">
-                                  {change.current_text ||
-                                    "No current text available."}
-                                </pre>
-                              </div>
-                            </div>
-                          </details>
-                        ) : null}
-                      </div>
-                    </article>
-                  )
-                )}
-              </div>
-            )}
-          </section>
-
-          <aside className="space-y-5">
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                Monitoring
-              </div>
-
-              <h2 className="mt-2 text-lg font-semibold text-slate-950">
-                Status
+              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-slate-950">
+                Monitored pages
               </h2>
 
-              <dl className="mt-5 space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="text-sm text-slate-500">
-                    Monitored pages
-                  </dt>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                Pages Morrow checks on the schedule you set.
+              </p>
+            </div>
 
-                  <dd className="text-sm font-semibold text-slate-900">
-                    {metrics.monitoredPages}
-                  </dd>
-                </div>
-
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="text-sm text-slate-500">
-                    Active
-                  </dt>
-
-                  <dd className="text-sm font-semibold text-emerald-700">
-                    {metrics.activePages}
-                  </dd>
-                </div>
-
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="text-sm text-slate-500">
-                    Healthy
-                  </dt>
-
-                  <dd className="text-sm font-semibold text-emerald-700">
-                    {healthyPages}
-                  </dd>
-                </div>
-
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="text-sm text-slate-500">
-                    Paused
-                  </dt>
-
-                  <dd className="text-sm font-semibold text-slate-700">
-                    {metrics.pausedPages}
-                  </dd>
-                </div>
-
-                <div className="border-t border-slate-100 pt-4">
-                  <dt className="text-xs text-slate-400">
-                    Latest successful check
-                  </dt>
-
-                  <dd className="mt-1 text-sm font-medium leading-6 text-slate-800">
-                    {latestCapturedPage
-                      ? formatDateTime(
-                          latestCapturedPage.latest_captured_at
-                        )
-                      : "Never"}
-                  </dd>
-                </div>
-              </dl>
-            </section>
-
-            <details className="group rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                    <PlusIcon />
-                  </span>
-
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900">
-                      Add monitored page
-                    </div>
-
-                    <div className="mt-0.5 text-xs text-slate-500">
-                      Enter a page URL to monitor
-                    </div>
-                  </div>
-                </div>
-
-                <ChevronIcon />
-              </summary>
-
-              <form
+            <div className="text-sm font-medium text-slate-500">
+              {metrics.monitoredPages}{" "}
+              {metrics.monitoredPages === 1
+                ? "page"
+                : "pages"}
+            </div>
+          <WorkspacePanel label="Add monitored page"><p className="text-sm text-slate-500">Enter a page URL to monitor</p><form
                 action={createMonitoredPage}
                 className="space-y-4 border-t border-slate-100 px-5 py-5"
               >
@@ -1217,34 +817,7 @@ export default async function CompetitorPage({
                 >
                   Add monitored page
                 </button>
-              </form>
-            </details>
-          </aside>
-        </div>
-
-        <section className="border-t border-slate-200 pt-8 sm:pt-10">
-          <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Pages
-              </div>
-
-              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-slate-950">
-                Monitored pages
-              </h2>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                Pages Morrow checks on the schedule you set.
-              </p>
-            </div>
-
-            <div className="text-sm font-medium text-slate-500">
-              {metrics.monitoredPages}{" "}
-              {metrics.monitoredPages === 1
-                ? "page"
-                : "pages"}
-            </div>
-          </div>
+              </form></WorkspacePanel></div>
 
           {monitoredPages.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center">
@@ -1258,12 +831,12 @@ export default async function CompetitorPage({
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="workspace-list space-y-4">
               {monitoredPages.map(
                 (page) => (
                   <article
                     key={page.id}
-                    className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                    className="workspace-page-record overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
                   >
                     <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(500px,1fr)] lg:items-center">
                       <div className="min-w-0">
@@ -1431,15 +1004,8 @@ export default async function CompetitorPage({
                           </button>
                         </form>
 
-                        <details className="group">
-                          <summary className="inline-flex min-h-10 cursor-pointer list-none items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25 motion-reduce:transition-none">
-                            Manage
-
-                            <ChevronIcon />
-                          </summary>
-
-                          <div className="mt-4 grid gap-6 border-t border-slate-200 pt-5 lg:grid-cols-2">
-                            <form
+                        <WorkspacePanel label="Manage" title={page.label || "Unlabelled page"}>
+    <form
                               action={
                                 updateMonitoredPage
                               }
@@ -1521,9 +1087,7 @@ export default async function CompetitorPage({
                                 Save details
                               </button>
                             </form>
-
-                            <div className="space-y-6">
-                              <form
+    <div className="workspace-panel-section"><form
                                 action={
                                   updateMonitoredPageFrequency
                                 }
@@ -1553,8 +1117,8 @@ export default async function CompetitorPage({
                                   }
                                 />
 
-                                <div className="flex flex-col gap-2 sm:flex-row">
-                                  <select
+                                <div className="workspace-frequency">
+                                  <label className="block text-xs text-slate-500" htmlFor={`frequency-${page.id}`}>Check frequency</label><select
                                     id={`frequency-${page.id}`}
                                     name="frequencyMinutes"
                                     defaultValue={
@@ -1594,9 +1158,26 @@ export default async function CompetitorPage({
                                     Save
                                   </button>
                                 </div>
-                              </form>
-
-                              <div className="border-t border-slate-200 pt-5">
+                              </form></div>
+    <MonitoringScopeForm
+                            monitoredPageId={
+                              page.id
+                            }
+                            competitorId={
+                              competitor.id
+                            }
+                            initialIncludeSelectors={
+                              formatSelectorConfiguration(
+                                page.include_selectors_json
+                              )
+                            }
+                            initialIgnoreSelectors={
+                              formatSelectorConfiguration(
+                                page.ignore_selectors_json
+                              )
+                            }
+                          />
+    <div className="workspace-destructive">
                                 <h4 className="text-sm font-semibold text-red-700">
                                   Remove monitored page
                                 </h4>
@@ -1633,27 +1214,7 @@ export default async function CompetitorPage({
                                   </button>
                                 </form>
                               </div>
-                            </div>
-                          </div>
-                          <MonitoringScopeForm
-                            monitoredPageId={
-                              page.id
-                            }
-                            competitorId={
-                              competitor.id
-                            }
-                            initialIncludeSelectors={
-                              formatSelectorConfiguration(
-                                page.include_selectors_json
-                              )
-                            }
-                            initialIgnoreSelectors={
-                              formatSelectorConfiguration(
-                                page.ignore_selectors_json
-                              )
-                            }
-                          />
-                        </details>
+  </WorkspacePanel>
                       </div>
                     </div>
                   </article>
@@ -1662,6 +1223,179 @@ export default async function CompetitorPage({
             </div>
           )}
         </section>
+
+        <section className="workspace-profile-activity">
+            <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
+                  Activity
+                </div>
+
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-slate-950">
+                  Recent changes
+                </h2>
+
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                  Changes recorded across this competitor&apos;s
+                  monitored pages.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="text-xs text-slate-400">
+                  Showing {recentChanges.length}
+                </div>
+
+                <Link
+                  href={`/dashboard/competitors/${competitor.id}/history`}
+                  className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  View full history
+                </Link>
+              </div>
+            </div>
+
+            {recentChanges.length === 0 ? (
+              <div className="rounded-2xl border border-slate-200 bg-white px-5 py-8 shadow-sm sm:px-6">
+                <h3 className="text-base font-semibold text-slate-900">
+                  No changes yet
+                </h3>
+
+                <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
+                  Changes Morrow records will
+                  appear here after a monitored
+                  page changes.
+                </p>
+              </div>
+            ) : (
+              <div className="workspace-list space-y-4">
+                {recentChanges.map(
+                  (change) => (
+                    <article
+                      key={change.id}
+                      className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                    >
+                      <div
+                        className={
+                          change.significance ===
+                          "major"
+                            ? "absolute inset-y-0 left-0 w-1 bg-red-500"
+                            : change.significance ===
+                                "moderate"
+                              ? "absolute inset-y-0 left-0 w-1 bg-amber-500"
+                              : "absolute inset-y-0 left-0 w-1 bg-indigo-500"
+                        }
+                      />
+
+                      <div className="p-5 pl-6 sm:p-6 sm:pl-7">
+                        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium capitalize text-indigo-700">
+                              {change.category}
+                            </span>
+
+                            <span
+                              className={`rounded-full border px-2.5 py-1 text-xs font-medium capitalize ${getSignificanceClasses(
+                                change.significance
+                              )}`}
+                            >
+                              {
+                                change.significance
+                              }
+                            </span>
+                          </div>
+
+                          <time className="shrink-0 text-xs text-slate-400">
+                            {formatDateTime(
+                              change.detected_at
+                            )}
+                          </time>
+                        </div>
+
+                        <details className="workspace-change-disclosure"><summary><h3 className="mt-5 max-w-3xl text-lg font-semibold leading-7 tracking-[-0.01em] text-slate-950">
+                          {change.summary ||
+                            "Change detected."}
+                        </h3></summary><div className="workspace-change-description">{change.why_it_matters ? (
+                          <div className="mt-5 rounded-xl bg-slate-50 px-4 py-4 sm:px-5">
+                            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-600">
+                              Why it matters
+                            </div>
+
+                            <p className="mt-2 text-sm leading-6 text-slate-600">
+                              {
+                                change.why_it_matters
+                              }
+                            </p>
+                          </div>
+                        ) : null}</div></details>
+
+                        <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-slate-100 pt-4 text-xs">
+                          <span className="font-medium text-slate-700">
+                            {change.monitored_page_label ||
+                              "Monitored page"}
+                          </span>
+
+                          <a
+                            href={
+                              change.monitored_page_url
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex min-w-0 max-w-full items-center gap-1.5 text-slate-500 transition-colors hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25 motion-reduce:transition-none"
+                          >
+                            <span className="max-w-[240px] truncate sm:max-w-md">
+                              {
+                                change.monitored_page_url
+                              }
+                            </span>
+
+                            <ExternalLinkIcon />
+                          </a>
+                        </div>
+
+                        {change.previous_text ||
+                        change.current_text ? (
+                          <details className="group mt-4">
+                            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25 motion-reduce:transition-none">
+                              <span>
+                                View before and after
+                              </span>
+
+                              <ChevronIcon />
+                            </summary>
+
+                            <div className="workspace-evidence mt-3 grid overflow-hidden rounded-xl border border-slate-200 md:grid-cols-2">
+                              <div className="bg-red-50/50 p-4 sm:p-5">
+                                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-red-600">
+                                  Previous
+                                </div>
+
+                                <pre className="mt-3 whitespace-pre-wrap break-words font-mono text-xs leading-6 text-slate-700">
+                                  {change.previous_text ||
+                                    "No previous text available."}
+                                </pre>
+                              </div>
+
+                              <div className="border-t border-slate-200 bg-emerald-50/50 p-4 sm:p-5 md:border-l md:border-t-0">
+                                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
+                                  Current
+                                </div>
+
+                                <pre className="mt-3 whitespace-pre-wrap break-words font-mono text-xs leading-6 text-slate-700">
+                                  {change.current_text ||
+                                    "No current text available."}
+                                </pre>
+                              </div>
+                            </div>
+                          </details>
+                        ) : null}
+                      </div>
+                    </article>
+                  )
+                )}
+              </div>
+            )}
+          </section>
       </div>
     </main>
   );
