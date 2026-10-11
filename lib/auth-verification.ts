@@ -93,6 +93,16 @@ export function createEmailVerificationOptions(
       },
     ],
     disabledPaths: [
+      // Account changes must use the session-bound email-code flow.
+      "/change-email",
+      "/email-otp/change-email",
+      "/email-otp/request-email-change",
+      "/change-password",
+      "/set-password",
+      "/update-user",
+      "/request-password-reset",
+      "/forget-password",
+      "/reset-password",
       "/sign-in/email-otp",
       "/verify-email",
       "/send-verification-email",

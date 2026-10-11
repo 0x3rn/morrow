@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { SignOutButton } from "@/components/sign-out-button";
 import { WorkspaceNav } from "@/components/workspace-nav";
+import { AccountSettings } from "@/components/account-settings";
 import { env } from "cloudflare:workers";
 
 export default async function DashboardLayout({
@@ -27,6 +28,7 @@ export default async function DashboardLayout({
               <div>{session.user.name || "Morrow user"}</div>
               <div className="workspace-account-email">{session.user.email}</div>
                {workspace && <div className="workspace-meta">{workspace.name}</div>}
+              <AccountSettings name={session.user.name} email={session.user.email} />
               <SignOutButton />
             </div>
           </details>

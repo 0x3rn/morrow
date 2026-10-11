@@ -136,6 +136,16 @@ body:has(.workspace-panel[open]) { overflow: hidden; }
 .workspace-panel-body .workspace-frequency { display: flex; gap: 8px; }
 .workspace-panel-body .workspace-frequency select { flex: 1; min-width: 0; }
 .workspace-panel-body .workspace-frequency button { flex-shrink: 0; }
+.account-settings form { display: grid; gap: 10px; margin-top: 12px; }
+.account-settings h3 { font-weight: 600; font-size: 18px; }
+.account-settings .workspace-primary { justify-self: start; margin-top: 4px; }
+.account-settings .account-current-email { margin-top: 6px; }
+.account-settings .account-error { color: #a64c3c; margin-top: 8px; }
+.account-settings .account-text-button { background: transparent; color: var(--morrow-ink); padding: 8px 0; cursor: pointer; }
+.account-settings .workspace-record-actions { justify-content: space-between; margin-top: 8px; }
+.account-settings button:disabled { opacity: .55; cursor: default; }
+.account-settings .account-verification > p { margin-top: 8px; }
+.workspace-account-content .workspace-panel-trigger { width: 100%; justify-content: start; }
 
 /* Retain the original semantic colours while compacting existing route controls. */
 .morrow-dashboard [class~="bg-white"] { background-color: var(--morrow-surface) !important; }
