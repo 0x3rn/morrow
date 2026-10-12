@@ -548,7 +548,7 @@ export function MonitoringScopeForm({
         </div>
       ) : null}
 
-      <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="workspace-scope-footer mt-5 border-t border-slate-100 pt-4">
         <p className="text-xs leading-5 text-slate-400">
           Test these selectors
           against the latest capture
@@ -556,7 +556,7 @@ export function MonitoringScopeForm({
           selectors per list.
         </p>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="workspace-scope-actions">
           <button
             type="button"
             onClick={
