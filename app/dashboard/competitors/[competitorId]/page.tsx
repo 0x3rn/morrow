@@ -1,3 +1,4 @@
+import { CompetitorIcon } from "@/components/competitor-icon";
 import { WorkspaceActionForm } from "@/components/workspace-feedback";
 import { WorkspacePanel } from "@/components/workspace-panel";
 import { auth } from "@/lib/auth";
@@ -638,24 +639,7 @@ export default async function CompetitorPage({
         <header className="workspace-profile-heading overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"><div><div className="min-w-0">
               <div className="flex items-start gap-4 sm:gap-5">
                 <div className="relative shrink-0">
-                  {competitor.favicon_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={
-                        competitor.favicon_url
-                      }
-                      alt=""
-                      width={64}
-                      height={64}
-                      className="h-14 w-14 rounded-2xl border border-slate-200 bg-white object-contain p-2 sm:h-16 sm:w-16"
-                    />
-                  ) : (
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-xl font-semibold text-slate-700 sm:h-16 sm:w-16">
-                      {competitor.name
-                        .charAt(0)
-                        .toUpperCase()}
-                    </div>
-                  )}
+                  <CompetitorIcon name={competitor.name} src={competitor.favicon_url} variant="profile" />
 
                   {competitor.status ===
                   "active" ? (

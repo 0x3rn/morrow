@@ -1,3 +1,4 @@
+import { CompetitorIcon } from "@/components/competitor-icon";
 import { WorkspaceActionForm } from "@/components/workspace-feedback";
 import { WorkspacePanel } from "@/components/workspace-panel";
 import { auth } from "@/lib/auth";
@@ -954,30 +955,7 @@ export default async function CompetitorsPage() {
                       <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(420px,0.8fr)] lg:items-start">
                         <div className="min-w-0">
                           <div className="flex items-start gap-4">
-                            {competitor.favicon_url ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={
-                                  competitor.favicon_url
-                                }
-                                alt=""
-                                width={
-                                  48
-                                }
-                                height={
-                                  48
-                                }
-                                className="h-12 w-12 shrink-0 rounded-xl border border-slate-200 bg-white object-contain p-1.5"
-                              />
-                            ) : (
-                              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 font-semibold text-slate-700">
-                                {competitor.name
-                                  .charAt(
-                                    0
-                                  )
-                                  .toUpperCase()}
-                              </div>
-                            )}
+                            <CompetitorIcon name={competitor.name} src={competitor.favicon_url} variant="list" />
 
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">

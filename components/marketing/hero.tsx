@@ -5,7 +5,7 @@ import styles from "@/app/page.module.css";
 const proofPoints = ["Rendered captures", "Selected-section monitoring", "Noise filtering", "Change history"];
 const signals = [
   { category: "PRICING", time: "12 min ago", title: "Annual plan pricing changed", detail: "Starter plan moved from $49 to $79 per month.", tone: "coral" },
-  { category: "PRODUCT", time: "46 min ago", title: "Enterprise permissions added", detail: "Three new controls appeared on the feature page.", tone: "purple" },
+  { category: "PRODUCT", time: "46 min ago", title: "Enterprise permissions added", detail: "Three new controls appeared on the feature page.", tone: "coral" },
   { category: "POSITIONING", time: "2 hr ago", title: "Homepage audience changed", detail: "Messaging shifted from small teams to larger organizations.", tone: "lime" },
 ] as const;
 

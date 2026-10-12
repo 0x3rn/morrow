@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element -- protected screenshot routes must be fetched directly by the browser so the authenticated session cookie is sent */
+import { CaptureImage } from "@/components/capture-image";
 
 import { auth } from "@/lib/auth";
 import { ArrowLeftIcon } from "@/components/morrow-icons";
@@ -458,18 +458,13 @@ export default async function ChangeDetailPage({
                 ) : null}
               </div>
               {previousScreenshotUrl ? (
-                <div className="max-h-[560px] overflow-auto bg-slate-100 sm:max-h-[680px] lg:max-h-[720px]">
-                  <img
-                    src={previousScreenshotUrl}
-                    alt={`Previous capture of ${
-                      change.monitored_page_label ||
-                      change.monitored_page_url
-                    }`}
-                    loading="lazy"
-                    decoding="async"
-                    className="block h-auto w-full"
-                  />
-                </div>
+                <CaptureImage
+                  src={previousScreenshotUrl}
+                  alt={`Previous capture of ${
+                    change.monitored_page_label ||
+                    change.monitored_page_url
+                  }`}
+                />
               ) : (
                 <div className="flex min-h-64 items-center justify-center p-6 text-center text-sm leading-6 text-slate-500">
                   No previous screenshot is
@@ -501,18 +496,13 @@ export default async function ChangeDetailPage({
                 ) : null}
               </div>
               {currentScreenshotUrl ? (
-                <div className="max-h-[560px] overflow-auto bg-slate-100 sm:max-h-[680px] lg:max-h-[720px]">
-                  <img
-                    src={currentScreenshotUrl}
-                    alt={`Current capture of ${
-                      change.monitored_page_label ||
-                      change.monitored_page_url
-                    }`}
-                    loading="lazy"
-                    decoding="async"
-                    className="block h-auto w-full"
-                  />
-                </div>
+                <CaptureImage
+                  src={currentScreenshotUrl}
+                  alt={`Current capture of ${
+                    change.monitored_page_label ||
+                    change.monitored_page_url
+                  }`}
+                />
               ) : (
                 <div className="flex min-h-64 items-center justify-center p-6 text-center text-sm leading-6 text-slate-500">
                   No current screenshot is
