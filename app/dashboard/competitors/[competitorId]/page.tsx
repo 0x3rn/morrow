@@ -1,3 +1,4 @@
+import { WorkspaceActionForm } from "@/components/workspace-feedback";
 import { WorkspacePanel } from "@/components/workspace-panel";
 import { auth } from "@/lib/auth";
 import { env } from "cloudflare:workers";
@@ -766,8 +767,7 @@ export default async function CompetitorPage({
                 ? "page"
                 : "pages"}
             </div>
-          <WorkspacePanel label="Add monitored page"><p className="text-sm text-slate-500">Enter a page URL to monitor</p><form
-                action={createMonitoredPage}
+          <WorkspacePanel label="Add monitored page"><p className="text-sm text-slate-500">Enter a page URL to monitor</p><WorkspaceActionForm successMessage="Monitored page added." action={createMonitoredPage}
                 className="space-y-4 border-t border-slate-100 px-5 py-5"
               >
                 <input
@@ -817,7 +817,7 @@ export default async function CompetitorPage({
                 >
                   Add monitored page
                 </button>
-              </form></WorkspacePanel></div>
+              </WorkspaceActionForm></WorkspacePanel></div>
 
           {monitoredPages.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center">
@@ -974,10 +974,7 @@ export default async function CompetitorPage({
                           View history
                         </Link>
 
-                        <form
-                          action={
-                            toggleMonitoredPageStatus
-                          }
+                        <WorkspaceActionForm successMessage="Monitoring updated." action={toggleMonitoredPageStatus}
                         >
                           <input
                             type="hidden"
@@ -1002,13 +999,10 @@ export default async function CompetitorPage({
                               ? "Pause"
                               : "Resume"}
                           </button>
-                        </form>
+                        </WorkspaceActionForm>
 
                         <WorkspacePanel label="Manage" title={page.label || "Unlabelled page"}>
-    <form
-                              action={
-                                updateMonitoredPage
-                              }
+    <WorkspaceActionForm successMessage="Page details saved." action={updateMonitoredPage}
                               className="space-y-4"
                             >
                               <div>
@@ -1080,17 +1074,12 @@ export default async function CompetitorPage({
 
                               <button
                                 type="submit"
-                                className={
-                                  subtleButtonClasses
-                                }
+                                className="workspace-primary"
                               >
                                 Save details
                               </button>
-                            </form>
-    <div className="workspace-panel-section"><form
-                                action={
-                                  updateMonitoredPageFrequency
-                                }
+                            </WorkspaceActionForm>
+    <div className="workspace-panel-section"><WorkspaceActionForm successMessage="Check frequency saved." action={updateMonitoredPageFrequency}
                                 className="space-y-4"
                               >
                                 <div>
@@ -1151,14 +1140,12 @@ export default async function CompetitorPage({
 
                                   <button
                                     type="submit"
-                                    className={
-                                      subtleButtonClasses
-                                    }
+                                    className="workspace-primary"
                                   >
                                     Save
                                   </button>
                                 </div>
-                              </form></div>
+                              </WorkspaceActionForm></div>
     <MonitoringScopeForm
                             monitoredPageId={
                               page.id
@@ -1186,10 +1173,7 @@ export default async function CompetitorPage({
                                   This permanently removes the page and its saved history.
                                 </p>
 
-                                <form
-                                  action={
-                                    removeMonitoredPage
-                                  }
+                                <WorkspaceActionForm successMessage="Monitored page removed." action={removeMonitoredPage}
                                   className="mt-4"
                                 >
                                   <input
@@ -1212,7 +1196,7 @@ export default async function CompetitorPage({
                                   >
                                     Remove page
                                   </button>
-                                </form>
+                                </WorkspaceActionForm>
                               </div>
   </WorkspacePanel>
                       </div>

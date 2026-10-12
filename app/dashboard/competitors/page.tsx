@@ -1,3 +1,4 @@
+import { WorkspaceActionForm } from "@/components/workspace-feedback";
 import { WorkspacePanel } from "@/components/workspace-panel";
 import { auth } from "@/lib/auth";
 import { MORROW_MVP_USAGE_LIMITS } from "@/lib/usage-limits";
@@ -623,10 +624,7 @@ export default async function CompetitorsPage() {
                 </p>
               </div>
             ) : (
-              <form
-                action={
-                  createCompetitor
-                }
+              <WorkspaceActionForm successMessage="Competitor added." action={createCompetitor}
                 className="mt-6 grid gap-4 sm:grid-cols-2"
               >
                 <div>
@@ -681,7 +679,7 @@ export default async function CompetitorsPage() {
                     Add competitor
                   </button>
                 </div>
-              </form>
+              </WorkspaceActionForm>
             )}
           </div><aside className="workspace-capacity rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
@@ -1136,10 +1134,7 @@ export default async function CompetitorsPage() {
                               View competitor
                             </Link>
 
-                            <form
-                              action={
-                                toggleCompetitorStatus
-                              }
+                            <WorkspaceActionForm successMessage="Monitoring updated." action={toggleCompetitorStatus}
                             >
                               <input
                                 type="hidden"
@@ -1168,14 +1163,11 @@ export default async function CompetitorsPage() {
                                   ? "Pause"
                                   : "Resume"}
                               </button>
-                            </form>
+                            </WorkspaceActionForm>
                           </div>
 
                           <WorkspacePanel label="Manage" title={competitor.name}><div className="workspace-manage-competitor mt-4 grid gap-6 border-t border-slate-200 pt-5 lg:grid-cols-[minmax(0,1fr)_260px]">
-                              <form
-                                action={
-                                  updateCompetitor
-                                }
+                              <WorkspaceActionForm successMessage="Changes saved." action={updateCompetitor}
                                 className="grid gap-4 sm:grid-cols-2"
                               >
                                 <input
@@ -1239,14 +1231,12 @@ export default async function CompetitorsPage() {
                                 <div className="sm:col-span-2">
                                   <button
                                     type="submit"
-                                    className={
-                                      secondaryButtonClasses
-                                    }
+                                    className="workspace-primary"
                                   >
                                     Save changes
                                   </button>
                                 </div>
-                              </form>
+                              </WorkspaceActionForm>
 
                               <div className="workspace-destructive border-t border-slate-200 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
                                 <div className="text-sm font-semibold text-red-700">
@@ -1257,10 +1247,7 @@ export default async function CompetitorsPage() {
                                   This permanently removes the competitor and its monitored pages, captures, changes, and delivery history.
                                 </p>
 
-                                <form
-                                  action={
-                                    removeCompetitor
-                                  }
+                                <WorkspaceActionForm successMessage="Competitor removed." action={removeCompetitor}
                                   className="mt-4"
                                 >
                                   <input
@@ -1277,7 +1264,7 @@ export default async function CompetitorsPage() {
                                   >
                                     Remove
                                   </button>
-                                </form>
+                                </WorkspaceActionForm>
                               </div>
                             </div></WorkspacePanel>
                         </div>

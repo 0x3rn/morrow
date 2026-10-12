@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { SignOutButton } from "@/components/sign-out-button";
 import { WorkspaceNav } from "@/components/workspace-nav";
 import { AccountSettings } from "@/components/account-settings";
+import { WorkspaceFeedback } from "@/components/workspace-feedback";
 import { env } from "cloudflare:workers";
 
 export default async function DashboardLayout({
@@ -18,6 +19,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="morrow-dashboard">
+      <WorkspaceFeedback>
       <aside className="workspace-sidebar">
         <div className="workspace-label">Workspace</div>
         <WorkspaceNav />
@@ -35,6 +37,7 @@ export default async function DashboardLayout({
         )}
       </aside>
       <div className="workspace-content">{children}</div>
+      </WorkspaceFeedback>
     </div>
   );
 }

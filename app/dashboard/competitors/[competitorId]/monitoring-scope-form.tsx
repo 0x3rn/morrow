@@ -1,5 +1,7 @@
 "use client";
 
+import { WorkspaceActionForm } from "@/components/workspace-feedback";
+
 import {
   useState,
   useTransition,
@@ -344,10 +346,7 @@ export function MonitoringScopeForm({
       .length > 0;
 
   return (
-    <form
-      action={
-        updateMonitoredPageMonitoringScope
-      }
+    <WorkspaceActionForm successMessage="Monitoring scope saved." action={updateMonitoredPageMonitoringScope}
       className="mt-6 border-t border-slate-200 pt-5"
     >
       <input
@@ -577,14 +576,12 @@ export function MonitoringScopeForm({
 
           <button
             type="submit"
-            className={
-              buttonClasses
-            }
+            className="workspace-primary"
           >
             Save monitoring scope
           </button>
         </div>
       </div>
-    </form>
+    </WorkspaceActionForm>
   );
 }

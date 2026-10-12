@@ -20,7 +20,7 @@ export function WorkspaceNav() {
   return (
     <nav className="workspace-nav" aria-label="Workspace">
       {destinations.map(({ href, label }) => (
-        <Link key={href} href={href} aria-current={selected === href ? "page" : undefined}>
+        <Link key={href} href={href} prefetch={false} aria-current={selected === href ? "page" : undefined}>
           {label}
         </Link>
       ))}

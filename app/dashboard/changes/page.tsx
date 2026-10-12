@@ -892,7 +892,7 @@ export default async function ChangeHistoryPage({
                 )}
               </select>
             </div>
-<div className="grid grid-cols-2 gap-3 lg:col-span-2">
+<div className="workspace-date-range">
               <div>
                 <label
                   htmlFor="from"

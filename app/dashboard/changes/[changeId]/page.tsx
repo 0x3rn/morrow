@@ -303,13 +303,13 @@ export default async function ChangeDetailPage({
         <header className="workspace-change-detail-header rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
             <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium capitalize text-indigo-700">
+              <div className="workspace-detail-badges">
+                <span className="workspace-badge workspace-category bg-indigo-50 text-indigo-700">
                   {change.category}
                 </span>
 
                 <span
-                  className={`rounded-full border px-2.5 py-1 text-xs font-medium capitalize ${getSignificanceClasses(
+                  className={`workspace-badge workspace-category ${getSignificanceClasses(
                     change.significance
                   )}`}
                 >

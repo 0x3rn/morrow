@@ -3,12 +3,14 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { WorkspacePanel } from "./workspace-panel";
+import { useWorkspaceFeedback } from "./workspace-feedback";
 
 type Challenge = { id: string; purpose: "email" | "password"; stage: "current-email" | "new-email"; email: string; resendAt: number };
 type Result = { error?: string; message?: string; challenge?: Challenge; user?: { name: string; email: string } };
 
 export function AccountSettings({ name: initialName, email: initialEmail }: { name: string; email: string }) {
   const router = useRouter(), id = useId();
+  const notify = useWorkspaceFeedback();
   const revision = useRef(0);
   const [name, setName] = useState(initialName), [email, setEmail] = useState(initialEmail);
   const [newEmail, setNewEmail] = useState("");
@@ -39,6 +41,7 @@ export function AccountSettings({ name: initialName, email: initialEmail }: { na
       setMessage(result.challenge && body.action !== "resend-code"
         ? `A code has been sent to ${result.challenge.email} and expires in 5 minutes.` : result.message || "");
       if (result.user) {
+        notify(result.message || "Changes saved.");
         setName(result.user.name); setEmail(result.user.email);
         if (body.action !== "update-name") { setChallenge(null); setCode(""); setPassword(""); setConfirmation(""); setNewEmail(""); }
         router.refresh();
