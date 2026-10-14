@@ -7,15 +7,18 @@ const destinations = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/competitors", label: "Competitors" },
   { href: "/dashboard/changes", label: "Change history" },
+  { href: "/dashboard/notifications", label: "Notifications" },
 ];
 
 export function WorkspaceNav() {
   const pathname = usePathname();
-  const selected = pathname.startsWith("/dashboard/changes")
-    ? "/dashboard/changes"
-    : pathname.startsWith("/dashboard/competitors") || pathname.startsWith("/dashboard/pages")
-      ? "/dashboard/competitors"
-      : "/dashboard";
+  const selected = pathname.startsWith("/dashboard/notifications")
+    ? "/dashboard/notifications"
+    : pathname.startsWith("/dashboard/changes")
+      ? "/dashboard/changes"
+      : pathname.startsWith("/dashboard/competitors") || pathname.startsWith("/dashboard/pages")
+        ? "/dashboard/competitors"
+        : "/dashboard";
 
   return (
     <nav className="workspace-nav" aria-label="Workspace">

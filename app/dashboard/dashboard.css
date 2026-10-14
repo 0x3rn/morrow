@@ -187,7 +187,12 @@ body:has(.workspace-panel[open]) { overflow: hidden; }
 .morrow-dashboard .truncate { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
 .morrow-dashboard pre { max-width: 100%; overflow-wrap: anywhere; white-space: pre-wrap; font-size: 14px; line-height: 1.6; }
 .morrow-dashboard [class~="min-h-64"] { min-height: 96px; }
-.morrow-dashboard :is(input, select, textarea):not([type="hidden"]) { width: 100%; min-width: 0; max-width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--morrow-line); border-radius: 8px; background: var(--morrow-surface); color: var(--morrow-ink); font-size: 14px; }
+.morrow-dashboard :is(input, select, textarea):not([type="hidden"], [type="checkbox"], [type="radio"]) { width: 100%; min-width: 0; max-width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--morrow-line); border-radius: 8px; background: var(--morrow-surface); color: var(--morrow-ink); font-size: 14px; }
+.morrow-dashboard input:is([type="checkbox"], [type="radio"]) { width: 18px; height: 18px; margin: 0; accent-color: var(--morrow-ink); flex-shrink: 0; cursor: pointer; }
+.workspace-choice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.workspace-choice-option { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 10px 12px; border: 1px solid var(--morrow-line); border-radius: 8px; background: var(--morrow-surface); color: var(--morrow-ink); cursor: pointer; }
+.workspace-choice-option:hover { background: var(--morrow-paper); }
+.workspace-choice-option input { margin-top: 2px !important; }
 .morrow-dashboard input[type="date"] { display: block; appearance: none; -webkit-appearance: none; }
 .morrow-dashboard input[type="date"]::-webkit-date-and-time-value { min-width: 0; text-align: left; }
 .morrow-dashboard textarea { line-height: 1.6; resize: vertical; }
@@ -271,8 +276,8 @@ body:has(.workspace-panel[open]) { overflow: hidden; }
   .workspace-sidebar { position: sticky; inset: auto; top: 0; flex-direction: row; align-items: center; justify-content: space-between; width: 100%; min-height: 60px; padding: 8px 16px; border-right: 0; border-bottom: 1px solid var(--morrow-line); background: var(--morrow-paper); }
   .workspace-label { padding: 0; }
   .workspace-content { padding-left: 0; }
-  .workspace-nav { position: fixed; z-index: 30; inset: auto 0 0; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 4px; margin: 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--morrow-line); background: var(--morrow-surface); }
-  .workspace-nav a { min-height: 48px; justify-content: center; padding: 6px 8px; font-size: 13px; text-align: center; line-height: 1.3; }
+  .workspace-nav { position: fixed; z-index: 30; inset: auto 0 0; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 4px; margin: 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--morrow-line); background: var(--morrow-surface); }
+  .workspace-nav a { min-height: 48px; justify-content: center; padding: 6px 6px; font-size: 12px; text-align: center; line-height: 1.25; }
   .workspace-nav a[aria-current="page"]::before { inset: auto 25% 0; width: auto; height: 3px; }
   .workspace-account { margin: 0; padding: 0; border: 0; }
   .workspace-account summary { padding: 8px 0 8px 12px; }
@@ -281,7 +286,7 @@ body:has(.workspace-panel[open]) { overflow: hidden; }
   .morrow-dashboard h1 { font-size: 29px !important; line-height: 1.2 !important; }
   .morrow-dashboard h2 { font-size: 18px; }
   .morrow-dashboard [class~="text-sm"] { font-size: 15px; }
-  .morrow-dashboard :is(input, select, textarea):not([type="hidden"]) { font-size: 16px; }
+  .morrow-dashboard :is(input, select, textarea):not([type="hidden"], [type="checkbox"], [type="radio"]) { font-size: 16px; }
   .workspace-page-heading { margin-bottom: 16px; }
   .workspace-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .morrow-dashboard .workspace-metrics > article { padding: 12px 14px; }

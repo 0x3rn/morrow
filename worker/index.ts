@@ -19,6 +19,7 @@ import {
 
 import {
   notifyChangeByEmail,
+  notifyDigestByEmail,
 } from "./change-email";
 
 import {
@@ -2169,16 +2170,75 @@ async function runMorrowScheduler(
       scheduledAt,
       {
         deliverDigest: async (digest) => {
-          const externalDigestResult =
-            await notifyDigestByExternalChannels(
-              env,
-              digest.id
-            );
+          const [
+            emailDigestOutcome,
+            externalDigestOutcome,
+          ] =
+            await Promise.allSettled([
+              notifyDigestByEmail(
+                env,
+                digest.id
+              ),
 
-          console.log(
-            "Morrow digest external notification processed",
-            externalDigestResult
-          );
+              notifyDigestByExternalChannels(
+                env,
+                digest.id
+              ),
+            ]);
+
+          if (
+            emailDigestOutcome.status ===
+            "fulfilled"
+          ) {
+            console.log(
+              "Morrow digest email notification processed",
+              emailDigestOutcome.value
+            );
+          } else {
+            console.error(
+              "Morrow digest email notification failed",
+              {
+                digestId:
+                  digest.id,
+
+                error:
+                  emailDigestOutcome.reason instanceof
+                  Error
+                    ? emailDigestOutcome
+                        .reason.message
+                    : String(
+                        emailDigestOutcome.reason
+                      ),
+              }
+            );
+          }
+
+          if (
+            externalDigestOutcome.status ===
+            "fulfilled"
+          ) {
+            console.log(
+              "Morrow digest external notification processed",
+              externalDigestOutcome.value
+            );
+          } else {
+            console.error(
+              "Morrow digest external notification failed",
+              {
+                digestId:
+                  digest.id,
+
+                error:
+                  externalDigestOutcome.reason instanceof
+                  Error
+                    ? externalDigestOutcome
+                        .reason.message
+                    : String(
+                        externalDigestOutcome.reason
+                      ),
+              }
+            );
+          }
         },
       }
     ).catch((error) => {

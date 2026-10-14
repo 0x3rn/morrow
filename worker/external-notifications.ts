@@ -15,6 +15,10 @@ import {
   type ExternalDeliveryChannel,
   type FetchLike,
 } from "./external-delivery.ts";
+import {
+  matchesChangeRoutingPolicy,
+  scopeDigestContentToRoutingPolicy,
+} from "./notification-routing.ts";
 
 interface D1ResultLike<T> {
   results?: T[];
@@ -50,6 +54,12 @@ export interface ExternalChannelRow {
   name: string;
   status: string;
   config_json: string;
+  send_changes?: number;
+  send_digests?: number;
+  min_significance?: string;
+  categories_json?: string;
+  competitor_ids_json?: string;
+  digest_periods_json?: string;
 }
 
 interface ExistingExternalDelivery {
@@ -366,7 +376,13 @@ async function getActiveWorkspaceChannels(
           channel,
           name,
           status,
-          config_json
+          config_json,
+          COALESCE(send_changes, 1) AS send_changes,
+          COALESCE(send_digests, 1) AS send_digests,
+          COALESCE(min_significance, 'minor') AS min_significance,
+          COALESCE(categories_json, '[]') AS categories_json,
+          COALESCE(competitor_ids_json, '[]') AS competitor_ids_json,
+          COALESCE(digest_periods_json, '["daily","weekly","monthly"]') AS digest_periods_json
         FROM external_notification_channels
         WHERE workspace_id = ?
           AND status = 'active'
@@ -666,9 +682,25 @@ export async function notifyChangeByExternalChannels(
 
   result.changeFound = true;
 
-  const channels = await getActiveWorkspaceChannels(
+  const activeChannels = await getActiveWorkspaceChannels(
     env.DB,
     context.workspace_id,
+  );
+  const channels = activeChannels.filter((channelRow) =>
+    matchesChangeRoutingPolicy(
+      {
+        category: context.category,
+        significance: context.significance,
+        competitorId: context.competitor_id,
+      },
+      {
+        enabled: channelRow.status === "active",
+        sendChanges: channelRow.send_changes ?? 1,
+        minSignificance: channelRow.min_significance,
+        categoriesJson: channelRow.categories_json,
+        competitorIdsJson: channelRow.competitor_ids_json,
+      },
+    ),
   );
   result.channelsFound = channels.length;
 
@@ -816,18 +848,47 @@ export async function notifyDigestByExternalChannels(
 
   result.digestFound = true;
 
-  const channels = await getActiveWorkspaceChannels(
+  const activeChannels = await getActiveWorkspaceChannels(
     env.DB,
     digest.workspaceId,
   );
-  result.channelsFound = channels.length;
+  const eligibleChannels = activeChannels
+    .map((channelRow) => {
+      const scopedContent =
+        scopeDigestContentToRoutingPolicy(digest.content, {
+          enabled: channelRow.status === "active",
+          sendDigests: channelRow.send_digests ?? 1,
+          minSignificance: channelRow.min_significance,
+          categoriesJson: channelRow.categories_json,
+          competitorIdsJson: channelRow.competitor_ids_json,
+          digestPeriodsJson: channelRow.digest_periods_json,
+        });
+
+      return scopedContent
+        ? {
+            channelRow,
+            scopedDigest: {
+              ...digest,
+              content: scopedContent,
+            },
+          }
+        : null;
+    })
+    .filter(
+      (
+        entry,
+      ): entry is NonNullable<typeof entry> =>
+        entry !== null,
+    );
+
+  result.channelsFound = eligibleChannels.length;
 
   if (!env.MORROW_APP_URL) {
     console.log(
       "Morrow external digest notification skipped because MORROW_APP_URL is not configured.",
       {
         digestId,
-        channelsFound: channels.length,
+        channelsFound: eligibleChannels.length,
       },
     );
     return result;
@@ -835,7 +896,10 @@ export async function notifyDigestByExternalChannels(
 
   result.configured = true;
 
-  for (const channelRow of channels) {
+  for (const {
+    channelRow,
+    scopedDigest,
+  } of eligibleChannels) {
     let claim: ExternalDeliveryClaim | null = null;
 
     try {
@@ -876,7 +940,7 @@ export async function notifyDigestByExternalChannels(
         channelRow.config_json,
       );
       const event = buildDigestDeliveryEvent(
-        digest,
+        scopedDigest,
         env.MORROW_APP_URL,
         {
           deliveryId: claim.deliveryId,
