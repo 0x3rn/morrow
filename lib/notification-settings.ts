@@ -19,10 +19,18 @@ import {
   type NotificationDigestPeriod,
   type NotificationSignificanceLevel,
 } from "../worker/notification-routing.ts";
+import { getActiveWorkspaceMembership } from "./team-workspaces.ts";
+import {
+  canManageWorkspaceChannels,
+  normalizeWorkspaceRole,
+  type WorkspaceRole,
+} from "./workspace-roles.ts";
 
 export interface WorkspaceIdentity {
   id: string;
   name: string;
+  role: WorkspaceRole;
+  canManageExternalChannels: boolean;
 }
 
 export interface WorkspaceCompetitorOption {
@@ -205,31 +213,24 @@ export async function getUserPrimaryWorkspace(
   db: D1DatabaseLike,
   userId: string,
 ): Promise<WorkspaceIdentity | null> {
-  return db
-    .prepare(
-      `
-        SELECT
-          workspaces.id,
-          workspaces.name
+  const active =
+    await getActiveWorkspaceMembership(
+      db,
+      userId,
+    );
 
-        FROM workspaces
+  if (!active) {
+    return null;
+  }
 
-        INNER JOIN workspace_members
-          ON workspace_members.workspace_id =
-             workspaces.id
-
-        WHERE workspace_members.user_id = ?
-
-        ORDER BY
-          datetime(
-            workspace_members.joined_at
-          ) ASC
-
-        LIMIT 1
-      `,
-    )
-    .bind(userId)
-    .first<WorkspaceIdentity>();
+  return {
+    id: active.id,
+    name: active.name,
+    role: active.role,
+    canManageExternalChannels:
+      active.permissions
+        .canManageWorkspaceChannels,
+  };
 }
 
 async function getWorkspaceCompetitors(
@@ -848,6 +849,12 @@ export async function createWorkspaceExternalChannel(
     );
   }
 
+  if (!workspace.canManageExternalChannels) {
+    throw new Error(
+      "Only workspace Owners and Admins can manage external delivery channels.",
+    );
+  }
+
   const name = input.name.trim();
   if (!name) {
     throw new Error("Channel name is required.");
@@ -998,7 +1005,8 @@ export async function updateWorkspaceExternalChannel(
           external_notification_channels.id,
           external_notification_channels.workspace_id,
           external_notification_channels.channel,
-          external_notification_channels.config_json
+          external_notification_channels.config_json,
+          workspace_members.role
 
         FROM external_notification_channels
 
@@ -1018,11 +1026,22 @@ export async function updateWorkspaceExternalChannel(
       workspace_id: string;
       channel: string;
       config_json: string;
+      role: string;
     }>();
 
   if (!existing) {
     throw new Error(
       "Notification channel not found or access denied.",
+    );
+  }
+
+  if (
+    !canManageWorkspaceChannels(
+      normalizeWorkspaceRole(existing.role, "viewer"),
+    )
+  ) {
+    throw new Error(
+      "Only workspace Owners and Admins can manage external delivery channels.",
     );
   }
 
@@ -1147,6 +1166,45 @@ export async function toggleWorkspaceExternalChannelStatus(
     throw new Error("Channel ID is required.");
   }
 
+  const existing = await db
+    .prepare(
+      `
+        SELECT
+          external_notification_channels.id,
+          external_notification_channels.workspace_id,
+          workspace_members.role
+        FROM external_notification_channels
+        INNER JOIN workspace_members
+          ON workspace_members.workspace_id =
+             external_notification_channels.workspace_id
+        WHERE external_notification_channels.id = ?
+          AND workspace_members.user_id = ?
+        LIMIT 1
+      `,
+    )
+    .bind(channelId, input.userId)
+    .first<{
+      id: string;
+      workspace_id: string;
+      role: string;
+    }>();
+
+  if (!existing) {
+    throw new Error(
+      "Notification channel not found or access denied.",
+    );
+  }
+
+  if (
+    !canManageWorkspaceChannels(
+      normalizeWorkspaceRole(existing.role, "viewer"),
+    )
+  ) {
+    throw new Error(
+      "Only workspace Owners and Admins can manage external delivery channels.",
+    );
+  }
+
   const nextStatus =
     input.currentStatus.trim() === "active"
       ? "paused"
@@ -1162,15 +1220,10 @@ export async function toggleWorkspaceExternalChannelStatus(
           updated_at = CURRENT_TIMESTAMP
 
         WHERE id = ?
-          AND workspace_id IN (
-            SELECT
-              workspace_id
-            FROM workspace_members
-            WHERE user_id = ?
-          )
+          AND workspace_id = ?
       `,
     )
-    .bind(nextStatus, channelId, input.userId)
+    .bind(nextStatus, channelId, existing.workspace_id)
     .run();
 
   if ((result.meta?.changes ?? 0) === 0) {
@@ -1194,21 +1247,55 @@ export async function removeWorkspaceExternalChannel(
     throw new Error("Channel ID is required.");
   }
 
+  const existing = await db
+    .prepare(
+      `
+        SELECT
+          external_notification_channels.id,
+          external_notification_channels.workspace_id,
+          workspace_members.role
+        FROM external_notification_channels
+        INNER JOIN workspace_members
+          ON workspace_members.workspace_id =
+             external_notification_channels.workspace_id
+        WHERE external_notification_channels.id = ?
+          AND workspace_members.user_id = ?
+        LIMIT 1
+      `,
+    )
+    .bind(channelId, input.userId)
+    .first<{
+      id: string;
+      workspace_id: string;
+      role: string;
+    }>();
+
+  if (!existing) {
+    throw new Error(
+      "Notification channel not found or access denied.",
+    );
+  }
+
+  if (
+    !canManageWorkspaceChannels(
+      normalizeWorkspaceRole(existing.role, "viewer"),
+    )
+  ) {
+    throw new Error(
+      "Only workspace Owners and Admins can manage external delivery channels.",
+    );
+  }
+
   const result = await db
     .prepare(
       `
         DELETE FROM external_notification_channels
 
         WHERE id = ?
-          AND workspace_id IN (
-            SELECT
-              workspace_id
-            FROM workspace_members
-            WHERE user_id = ?
-          )
+          AND workspace_id = ?
       `,
     )
-    .bind(channelId, input.userId)
+    .bind(channelId, existing.workspace_id)
     .run();
 
   if ((result.meta?.changes ?? 0) === 0) {

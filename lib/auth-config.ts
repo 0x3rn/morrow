@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 
 import { createEmailVerificationOptions } from "./auth-verification.ts";
+import { acceptPendingWorkspaceInvitationsForUser } from "./team-workspaces.ts";
 
 const LOCAL_AUTH_URL =
   "http://localhost:3001";
@@ -202,8 +203,29 @@ return betterAuth({
                     workspaceId,
                     user.id
                   ),
+
+                  runtimeEnv.DB.prepare(
+                    `
+                      UPDATE users
+                      SET active_workspace_id = ?
+                      WHERE id = ?
+                    `
+                  ).bind(
+                    workspaceId,
+                    user.id
+                  ),
                 ]
               );
+
+              if (user.email) {
+                await acceptPendingWorkspaceInvitationsForUser(
+                  runtimeEnv.DB,
+                  {
+                    userId: user.id,
+                    email: user.email,
+                  }
+                );
+              }
             },
         },
       },

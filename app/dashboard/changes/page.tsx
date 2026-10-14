@@ -1,5 +1,6 @@
 import { WorkspaceFilters } from "@/components/workspace-filters";
 import { auth } from "@/lib/auth";
+import { requireActiveWorkspaceMembership } from "@/lib/team-workspaces";
 import { env } from "cloudflare:workers";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -245,6 +246,12 @@ export default async function ChangeHistoryPage({
       ? requestedDateTo
       : "";
 
+  const workspace =
+    await requireActiveWorkspaceMembership(
+      env.DB,
+      session.user.id
+    );
+
   const {
     results: competitors,
   } = await env.DB.prepare(
@@ -255,23 +262,14 @@ export default async function ChangeHistoryPage({
 
       FROM competitors
 
-      WHERE EXISTS (
-        SELECT 1
-
-        FROM workspace_members
-
-        WHERE workspace_members.workspace_id =
-              competitors.workspace_id
-
-          AND workspace_members.user_id = ?
-      )
+      WHERE competitors.workspace_id = ?
 
       ORDER BY
         competitors.name COLLATE NOCASE ASC
     `
   )
     .bind(
-      session.user.id
+      workspace.id
     )
     .all<CompetitorOption>();
 
@@ -311,16 +309,7 @@ export default async function ChangeHistoryPage({
         ON competitors.id =
            monitored_pages.competitor_id
 
-      WHERE EXISTS (
-        SELECT 1
-
-        FROM workspace_members
-
-        WHERE workspace_members.workspace_id =
-              competitors.workspace_id
-
-          AND workspace_members.user_id = ?
-      )
+      WHERE competitors.workspace_id = ?
 
       ORDER BY
         competitors.name COLLATE NOCASE ASC,
@@ -331,7 +320,7 @@ export default async function ChangeHistoryPage({
     `
   )
     .bind(
-      session.user.id
+      workspace.id
     )
     .all<MonitoredPageOption>();
 
@@ -358,22 +347,11 @@ export default async function ChangeHistoryPage({
       : "";
 
   const conditions: string[] = [
-    `
-      EXISTS (
-        SELECT 1
-
-        FROM workspace_members
-
-        WHERE workspace_members.workspace_id =
-              competitors.workspace_id
-
-          AND workspace_members.user_id = ?
-      )
-    `,
+    "competitors.workspace_id = ?",
   ];
 
   const bindings: string[] = [
-    session.user.id,
+    workspace.id,
   ];
 
   if (competitorId) {

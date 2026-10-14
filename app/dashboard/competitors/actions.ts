@@ -1,15 +1,17 @@
 "use server";
 
 import { auth } from "@/lib/auth";
+import { getActiveWorkspaceMembership } from "@/lib/team-workspaces";
 import { MORROW_MVP_USAGE_LIMITS } from "@/lib/usage-limits";
+import {
+  canDeleteMonitoringResources,
+  canEditMonitoring,
+  normalizeWorkspaceRole,
+} from "@/lib/workspace-roles";
 import { env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-
-interface WorkspaceRow {
-  id: string;
-}
 
 interface IdRow {
   id: string;
@@ -165,31 +167,10 @@ async function findFaviconUrl(
 async function getUserWorkspace(
   userId: string
 ) {
-  return env.DB.prepare(
-    `
-      SELECT
-        workspaces.id
-
-      FROM workspaces
-
-      INNER JOIN workspace_members
-        ON workspace_members.workspace_id =
-           workspaces.id
-
-      WHERE workspace_members.user_id = ?
-
-      ORDER BY
-        datetime(
-          workspace_members.joined_at
-        ) ASC
-
-      LIMIT 1
-    `
-  )
-    .bind(
-      userId
-    )
-    .first<WorkspaceRow>();
+  return getActiveWorkspaceMembership(
+    env.DB,
+    userId
+  );
 }
 
 async function getWorkspaceCompetitorCount(
@@ -269,6 +250,15 @@ export async function createCompetitor(
   ) {
     throw new Error(
       "No workspace found for this account."
+    );
+  }
+
+  if (
+    !workspace.permissions
+      .canEditMonitoring
+  ) {
+    throw new Error(
+      "Viewers have read-only access and cannot add competitors."
     );
   }
 
@@ -460,6 +450,55 @@ export async function toggleCompetitorStatus(
     );
   }
 
+  const competitor =
+    await env.DB.prepare(
+      `
+        SELECT
+          competitors.id,
+          competitors.workspace_id,
+          workspace_members.role
+
+        FROM competitors
+
+        INNER JOIN workspace_members
+          ON workspace_members.workspace_id =
+             competitors.workspace_id
+
+        WHERE competitors.id = ?
+          AND workspace_members.user_id = ?
+
+        LIMIT 1
+      `
+    )
+      .bind(
+        competitorId,
+        session.user.id
+      )
+      .first<{
+        id: string;
+        workspace_id: string;
+        role: string;
+      }>();
+
+  if (!competitor) {
+    throw new Error(
+      "Competitor not found or access denied."
+    );
+  }
+
+  if (
+    !canEditMonitoring(
+      normalizeWorkspaceRole(
+        competitor.role,
+        "viewer"
+      )
+    )
+  ) {
+    throw new Error(
+      "Viewers have read-only access and cannot modify competitors."
+    );
+  }
+
   const nextStatus =
     currentStatus ===
     "active"
@@ -478,21 +517,13 @@ export async function toggleCompetitorStatus(
             CURRENT_TIMESTAMP
 
         WHERE id = ?
-
-          AND workspace_id IN (
-            SELECT
-              workspace_id
-
-            FROM workspace_members
-
-            WHERE user_id = ?
-          )
+          AND workspace_id = ?
       `
     )
       .bind(
         nextStatus,
         competitorId,
-        session.user.id
+        competitor.workspace_id
       )
       .run();
 
@@ -575,7 +606,8 @@ export async function updateCompetitor(
       `
         SELECT
           competitors.id,
-          competitors.workspace_id
+          competitors.workspace_id,
+          workspace_members.role
 
         FROM competitors
 
@@ -596,6 +628,7 @@ export async function updateCompetitor(
       .first<{
         id: string;
         workspace_id: string;
+        role: string;
       }>();
 
   if (
@@ -603,6 +636,19 @@ export async function updateCompetitor(
   ) {
     throw new Error(
       "Competitor not found or access denied."
+    );
+  }
+
+  if (
+    !canEditMonitoring(
+      normalizeWorkspaceRole(
+        competitor.role,
+        "viewer"
+      )
+    )
+  ) {
+    throw new Error(
+      "Viewers have read-only access and cannot modify competitors."
     );
   }
 
@@ -658,15 +704,7 @@ export async function updateCompetitor(
               CURRENT_TIMESTAMP
 
           WHERE id = ?
-
-            AND workspace_id IN (
-              SELECT
-                workspace_id
-
-              FROM workspace_members
-
-              WHERE user_id = ?
-            )
+            AND workspace_id = ?
         `
       )
         .bind(
@@ -674,7 +712,7 @@ export async function updateCompetitor(
           domain,
           faviconUrl,
           competitorId,
-          session.user.id
+          competitor.workspace_id
         )
         .run();
   } catch (error) {
@@ -751,7 +789,8 @@ export async function removeCompetitor(
     await env.DB.prepare(
       `
         SELECT
-          competitors.id
+          competitors.id,
+          workspace_members.role
 
         FROM competitors
 
@@ -769,13 +808,29 @@ export async function removeCompetitor(
         competitorId,
         session.user.id
       )
-      .first<IdRow>();
+      .first<{
+        id: string;
+        role: string;
+      }>();
 
   if (
     !competitor
   ) {
     throw new Error(
       "Competitor not found or access denied."
+    );
+  }
+
+  if (
+    !canDeleteMonitoringResources(
+      normalizeWorkspaceRole(
+        competitor.role,
+        "viewer"
+      )
+    )
+  ) {
+    throw new Error(
+      "Only workspace Owners and Admins can remove competitors."
     );
   }
 

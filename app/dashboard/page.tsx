@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { requireActiveWorkspaceMembership } from "@/lib/team-workspaces";
 import { MORROW_MVP_USAGE_LIMITS } from "@/lib/usage-limits";
 import { env } from "cloudflare:workers";
 import { headers } from "next/headers";
@@ -42,6 +43,12 @@ export default async function DashboardPage() {
     );
   }
 
+  const workspace =
+    await requireActiveWorkspaceMembership(
+      env.DB,
+      session.user.id
+    );
+
   const overview =
     await env.DB.prepare(
       `
@@ -52,16 +59,7 @@ export default async function DashboardPage() {
 
           FROM competitors
 
-          WHERE EXISTS (
-            SELECT 1
-
-            FROM workspace_members
-
-            WHERE workspace_members.workspace_id =
-                  competitors.workspace_id
-
-              AND workspace_members.user_id = ?
-          )
+          WHERE competitors.workspace_id = ?
         ),
 
         page_state AS (
@@ -266,7 +264,7 @@ export default async function DashboardPage() {
       `
     )
       .bind(
-        session.user.id
+        workspace.id
       )
       .first<DashboardOverviewRow>();
 
@@ -342,16 +340,7 @@ export default async function DashboardPage() {
             ON competitors.id =
                monitored_pages.competitor_id
 
-          WHERE EXISTS (
-            SELECT 1
-
-            FROM workspace_members
-
-            WHERE workspace_members.workspace_id =
-                  competitors.workspace_id
-
-              AND workspace_members.user_id = ?
-          )
+          WHERE competitors.workspace_id = ?
         ),
 
         page_health AS (
@@ -418,7 +407,7 @@ export default async function DashboardPage() {
       `
     )
       .bind(
-        session.user.id
+        workspace.id
       )
       .all<DashboardMonitoringRow>();
 
@@ -458,16 +447,7 @@ export default async function DashboardPage() {
           ON competitors.id =
              monitored_pages.competitor_id
 
-        WHERE EXISTS (
-          SELECT 1
-
-          FROM workspace_members
-
-          WHERE workspace_members.workspace_id =
-                competitors.workspace_id
-
-            AND workspace_members.user_id = ?
-        )
+        WHERE competitors.workspace_id = ?
 
         ORDER BY
           datetime(
@@ -479,7 +459,7 @@ export default async function DashboardPage() {
       `
     )
       .bind(
-        session.user.id
+        workspace.id
       )
       .all<DashboardRecentChange>();
 

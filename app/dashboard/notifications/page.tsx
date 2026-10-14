@@ -441,11 +441,14 @@ export default async function NotificationsPage() {
   );
 
   const {
+    workspace,
     competitors,
     emailPreferences,
     externalChannels,
     deliveryMetrics,
   } = settings;
+  const canManageExternalChannels =
+    workspace.canManageExternalChannels;
 
   const activeExternalChannels = externalChannels.filter(
     (channel) => channel.status === "active",
@@ -478,6 +481,7 @@ export default async function NotificationsPage() {
             </p>
           </div>
 
+          {canManageExternalChannels ? (
           <WorkspacePanel
             label="Add delivery channel"
             title="Add delivery channel"
@@ -623,6 +627,7 @@ export default async function NotificationsPage() {
               </WorkspaceActionForm>
             </div>
           </WorkspacePanel>
+          ) : null}
         </header>
 
         <section className="workspace-metrics mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -860,7 +865,9 @@ export default async function NotificationsPage() {
                 No external delivery channels configured
               </h3>
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-                Use “Add delivery channel” above to connect Slack, Telegram, or a custom HTTPS webhook to this workspace.
+                {canManageExternalChannels
+                  ? "Use “Add delivery channel” above to connect Slack, Telegram, or a custom HTTPS webhook to this workspace."
+                  : "Workspace owners and admins can connect Slack, Telegram, or custom HTTPS webhooks to this workspace."}
               </p>
             </div>
           ) : (
@@ -995,6 +1002,7 @@ export default async function NotificationsPage() {
                       </div>
                     </div>
 
+                    {canManageExternalChannels ? (
                     <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-4 sm:px-6">
                       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                         <div className="workspace-record-actions">
@@ -1197,6 +1205,7 @@ export default async function NotificationsPage() {
                         </WorkspacePanel>
                       </div>
                     </div>
+                    ) : null}
                   </article>
                 );
               })}

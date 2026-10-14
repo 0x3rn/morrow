@@ -131,7 +131,7 @@ function createD1Fixture(t) {
         INSERT INTO workspace_members (workspace_id, user_id, role, joined_at)
         VALUES
           ('ws_acme', 'usr_alice', 'owner', '2026-10-01T00:00:00Z'),
-          ('ws_acme', 'usr_bob', 'member', '2026-10-01T00:05:00Z'),
+          ('ws_acme', 'usr_bob', 'admin', '2026-10-01T00:05:00Z'),
           ('ws_other', 'usr_outsider', 'owner', '2026-10-01T00:00:00Z')
       `,
     )

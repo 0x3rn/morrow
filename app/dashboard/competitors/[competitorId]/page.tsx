@@ -2,6 +2,10 @@ import { CompetitorIcon } from "@/components/competitor-icon";
 import { WorkspaceActionForm } from "@/components/workspace-feedback";
 import { WorkspacePanel } from "@/components/workspace-panel";
 import { auth } from "@/lib/auth";
+import {
+  getWorkspaceRolePermissions,
+  normalizeWorkspaceRole,
+} from "@/lib/workspace-roles";
 import { env } from "cloudflare:workers";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -26,6 +30,7 @@ interface Competitor {
   status: string;
   created_at: string;
   updated_at: string;
+  role: string;
 }
 
 interface MonitoredPage {
@@ -325,7 +330,8 @@ export default async function CompetitorPage({
           competitors.description,
           competitors.status,
           competitors.created_at,
-          competitors.updated_at
+          competitors.updated_at,
+          workspace_members.role
 
         FROM competitors
 
@@ -348,6 +354,14 @@ export default async function CompetitorPage({
   if (!competitor) {
     notFound();
   }
+
+  const permissions =
+    getWorkspaceRolePermissions(
+      normalizeWorkspaceRole(
+        competitor.role,
+        "viewer"
+      )
+    );
 
   const overview =
     await env.DB.prepare(
@@ -751,7 +765,7 @@ export default async function CompetitorPage({
                 ? "page"
                 : "pages"}
             </div>
-          <WorkspacePanel label="Add monitored page"><p className="text-sm text-slate-500">Enter a page URL to monitor</p><WorkspaceActionForm successMessage="Monitored page added." action={createMonitoredPage}
+          {permissions.canEditMonitoring ? (<WorkspacePanel label="Add monitored page"><p className="text-sm text-slate-500">Enter a page URL to monitor</p><WorkspaceActionForm successMessage="Monitored page added." action={createMonitoredPage}
                 className="space-y-4 border-t border-slate-100 px-5 py-5"
               >
                 <input
@@ -801,7 +815,7 @@ export default async function CompetitorPage({
                 >
                   Add monitored page
                 </button>
-              </WorkspaceActionForm></WorkspacePanel></div>
+              </WorkspaceActionForm></WorkspacePanel>) : null}</div>
 
           {monitoredPages.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center">
@@ -958,6 +972,8 @@ export default async function CompetitorPage({
                           View history
                         </Link>
 
+                        {permissions.canEditMonitoring ? (
+                        <>
                         <WorkspaceActionForm successMessage="Monitoring updated." action={toggleMonitoredPageStatus}
                         >
                           <input
@@ -1148,6 +1164,7 @@ export default async function CompetitorPage({
                               )
                             }
                           />
+    {permissions.canDeleteMonitoringResources ? (
     <div className="workspace-destructive">
                                 <h4 className="text-sm font-semibold text-red-700">
                                   Remove monitored page
@@ -1182,7 +1199,10 @@ export default async function CompetitorPage({
                                   </button>
                                 </WorkspaceActionForm>
                               </div>
+    ) : null}
   </WorkspacePanel>
+                        </>
+                        ) : null}
                       </div>
                     </div>
                   </article>

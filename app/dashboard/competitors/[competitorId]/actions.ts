@@ -6,6 +6,11 @@ import {
 } from "@/lib/monitoring-selectors";
 import { auth } from "@/lib/auth";
 import { MORROW_MVP_USAGE_LIMITS } from "@/lib/usage-limits";
+import {
+  canDeleteMonitoringResources,
+  canEditMonitoring,
+  normalizeWorkspaceRole,
+} from "@/lib/workspace-roles";
 import { env } from "cloudflare:workers";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -13,6 +18,13 @@ import { headers } from "next/headers";
 interface OwnedCompetitorRow {
   id: string;
   workspace_id: string;
+  role: string;
+}
+
+interface OwnedMonitoredPageRow {
+  id: string;
+  workspace_id: string;
+  role: string;
 }
 
 interface IdRow {
@@ -81,7 +93,8 @@ async function getOwnedCompetitor(
     `
       SELECT
         competitors.id,
-        competitors.workspace_id
+        competitors.workspace_id,
+        workspace_members.role
 
       FROM competitors
 
@@ -100,6 +113,43 @@ async function getOwnedCompetitor(
       userId
     )
     .first<OwnedCompetitorRow>();
+}
+
+async function getOwnedMonitoredPage(
+  monitoredPageId: string,
+  competitorId: string,
+  userId: string
+) {
+  return env.DB.prepare(
+    `
+      SELECT
+        monitored_pages.id,
+        competitors.workspace_id,
+        workspace_members.role
+
+      FROM monitored_pages
+
+      INNER JOIN competitors
+        ON competitors.id =
+           monitored_pages.competitor_id
+
+      INNER JOIN workspace_members
+        ON workspace_members.workspace_id =
+           competitors.workspace_id
+
+      WHERE monitored_pages.id = ?
+        AND monitored_pages.competitor_id = ?
+        AND workspace_members.user_id = ?
+
+      LIMIT 1
+    `
+  )
+    .bind(
+      monitoredPageId,
+      competitorId,
+      userId
+    )
+    .first<OwnedMonitoredPageRow>();
 }
 
 async function getPageUsage(
@@ -241,6 +291,19 @@ export async function createMonitoredPage(
   ) {
     throw new Error(
       "Competitor not found or access denied."
+    );
+  }
+
+  if (
+    !canEditMonitoring(
+      normalizeWorkspaceRole(
+        competitor.role,
+        "viewer"
+      )
+    )
+  ) {
+    throw new Error(
+      "Viewers have read-only access and cannot add monitored pages."
     );
   }
 
@@ -467,6 +530,32 @@ export async function toggleMonitoredPageStatus(
     );
   }
 
+  const monitoredPage =
+    await getOwnedMonitoredPage(
+      monitoredPageId,
+      competitorId,
+      session.user.id
+    );
+
+  if (!monitoredPage) {
+    throw new Error(
+      "Monitored page not found or access denied."
+    );
+  }
+
+  if (
+    !canEditMonitoring(
+      normalizeWorkspaceRole(
+        monitoredPage.role,
+        "viewer"
+      )
+    )
+  ) {
+    throw new Error(
+      "Viewers have read-only access and cannot modify monitored pages."
+    );
+  }
+
   const result =
     await env.DB.prepare(
       `
@@ -487,25 +576,11 @@ export async function toggleMonitoredPageStatus(
 
         WHERE id = ?
           AND competitor_id = ?
-
-          AND competitor_id IN (
-            SELECT
-              competitors.id
-
-            FROM competitors
-
-            INNER JOIN workspace_members
-              ON workspace_members.workspace_id =
-                 competitors.workspace_id
-
-            WHERE workspace_members.user_id = ?
-          )
       `
     )
       .bind(
         monitoredPageId,
-        competitorId,
-        session.user.id
+        competitorId
       )
       .run();
 
@@ -583,6 +658,32 @@ export async function updateMonitoredPageFrequency(
     );
   }
 
+  const monitoredPage =
+    await getOwnedMonitoredPage(
+      monitoredPageId,
+      competitorId,
+      session.user.id
+    );
+
+  if (!monitoredPage) {
+    throw new Error(
+      "Monitored page not found or access denied."
+    );
+  }
+
+  if (
+    !canEditMonitoring(
+      normalizeWorkspaceRole(
+        monitoredPage.role,
+        "viewer"
+      )
+    )
+  ) {
+    throw new Error(
+      "Viewers have read-only access and cannot modify monitored pages."
+    );
+  }
+
   const result =
     await env.DB.prepare(
       `
@@ -596,26 +697,12 @@ export async function updateMonitoredPageFrequency(
 
         WHERE id = ?
           AND competitor_id = ?
-
-          AND competitor_id IN (
-            SELECT
-              competitors.id
-
-            FROM competitors
-
-            INNER JOIN workspace_members
-              ON workspace_members.workspace_id =
-                 competitors.workspace_id
-
-            WHERE workspace_members.user_id = ?
-          )
       `
     )
       .bind(
         frequencyMinutes,
         monitoredPageId,
-        competitorId,
-        session.user.id
+        competitorId
       )
       .run();
 
@@ -687,6 +774,32 @@ export async function updateMonitoredPageMonitoringScope(
     );
   }
 
+  const monitoredPage =
+    await getOwnedMonitoredPage(
+      monitoredPageId,
+      competitorId,
+      session.user.id
+    );
+
+  if (!monitoredPage) {
+    throw new Error(
+      "Monitored page not found or access denied."
+    );
+  }
+
+  if (
+    !canEditMonitoring(
+      normalizeWorkspaceRole(
+        monitoredPage.role,
+        "viewer"
+      )
+    )
+  ) {
+    throw new Error(
+      "Viewers have read-only access and cannot modify monitored pages."
+    );
+  }
+
   const includeSelectors =
     parseMonitoringSelectorInput(
       includeSelectorsInput
@@ -711,19 +824,6 @@ export async function updateMonitoredPageMonitoringScope(
 
         WHERE id = ?
           AND competitor_id = ?
-
-          AND competitor_id IN (
-            SELECT
-              competitors.id
-
-            FROM competitors
-
-            INNER JOIN workspace_members
-              ON workspace_members.workspace_id =
-                 competitors.workspace_id
-
-            WHERE workspace_members.user_id = ?
-          )
       `
     )
       .bind(
@@ -736,8 +836,7 @@ export async function updateMonitoredPageMonitoringScope(
         ),
 
         monitoredPageId,
-        competitorId,
-        session.user.id
+        competitorId
       )
       .run();
 
@@ -844,36 +943,11 @@ export async function previewMonitoredPageMonitoringScope(
   }
 
   const monitoredPage =
-    await env.DB.prepare(
-      `
-        SELECT
-          monitored_pages.id
-
-        FROM monitored_pages
-
-        INNER JOIN competitors
-          ON competitors.id =
-             monitored_pages.competitor_id
-
-        INNER JOIN workspace_members
-          ON workspace_members.workspace_id =
-             competitors.workspace_id
-
-        WHERE monitored_pages.id = ?
-          AND monitored_pages.competitor_id = ?
-          AND workspace_members.user_id = ?
-
-        LIMIT 1
-      `
-    )
-      .bind(
-        monitoredPageId,
-        competitorId,
-        session.user.id
-      )
-      .first<{
-        id: string;
-      }>();
+    await getOwnedMonitoredPage(
+      monitoredPageId,
+      competitorId,
+      session.user.id
+    );
 
   if (!monitoredPage) {
     throw new Error(
@@ -1009,40 +1083,30 @@ export async function removeMonitoredPage(
   }
 
   const monitoredPage =
-    await env.DB.prepare(
-      `
-        SELECT
-          monitored_pages.id
-
-        FROM monitored_pages
-
-        INNER JOIN competitors
-          ON competitors.id =
-             monitored_pages.competitor_id
-
-        INNER JOIN workspace_members
-          ON workspace_members.workspace_id =
-             competitors.workspace_id
-
-        WHERE monitored_pages.id = ?
-          AND competitors.id = ?
-          AND workspace_members.user_id = ?
-
-        LIMIT 1
-      `
-    )
-      .bind(
-        monitoredPageId,
-        competitorId,
-        session.user.id
-      )
-      .first<IdRow>();
+    await getOwnedMonitoredPage(
+      monitoredPageId,
+      competitorId,
+      session.user.id
+    );
 
   if (
     !monitoredPage
   ) {
     throw new Error(
       "Monitored page not found or access denied."
+    );
+  }
+
+  if (
+    !canDeleteMonitoringResources(
+      normalizeWorkspaceRole(
+        monitoredPage.role,
+        "viewer"
+      )
+    )
+  ) {
+    throw new Error(
+      "Only workspace Owners and Admins can remove monitored pages."
     );
   }
 
@@ -1152,40 +1216,30 @@ export async function updateMonitoredPage(
   }
 
   const monitoredPage =
-    await env.DB.prepare(
-      `
-        SELECT
-          monitored_pages.id
-
-        FROM monitored_pages
-
-        INNER JOIN competitors
-          ON competitors.id =
-             monitored_pages.competitor_id
-
-        INNER JOIN workspace_members
-          ON workspace_members.workspace_id =
-             competitors.workspace_id
-
-        WHERE monitored_pages.id = ?
-          AND competitors.id = ?
-          AND workspace_members.user_id = ?
-
-        LIMIT 1
-      `
-    )
-      .bind(
-        monitoredPageId,
-        competitorId,
-        session.user.id
-      )
-      .first<IdRow>();
+    await getOwnedMonitoredPage(
+      monitoredPageId,
+      competitorId,
+      session.user.id
+    );
 
   if (
     !monitoredPage
   ) {
     throw new Error(
       "Monitored page not found or access denied."
+    );
+  }
+
+  if (
+    !canEditMonitoring(
+      normalizeWorkspaceRole(
+        monitoredPage.role,
+        "viewer"
+      )
+    )
+  ) {
+    throw new Error(
+      "Viewers have read-only access and cannot modify monitored pages."
     );
   }
 
@@ -1236,27 +1290,13 @@ export async function updateMonitoredPage(
 
           WHERE id = ?
             AND competitor_id = ?
-
-            AND competitor_id IN (
-              SELECT
-                competitors.id
-
-              FROM competitors
-
-              INNER JOIN workspace_members
-                ON workspace_members.workspace_id =
-                   competitors.workspace_id
-
-              WHERE workspace_members.user_id = ?
-            )
         `
       )
         .bind(
           url,
           label || null,
           monitoredPageId,
-          competitorId,
-          session.user.id
+          competitorId
         )
         .run();
   } catch (error) {

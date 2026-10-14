@@ -2,7 +2,9 @@ import { CompetitorIcon } from "@/components/competitor-icon";
 import { WorkspaceActionForm } from "@/components/workspace-feedback";
 import { WorkspacePanel } from "@/components/workspace-panel";
 import { auth } from "@/lib/auth";
+import { requireActiveWorkspaceMembership } from "@/lib/team-workspaces";
 import { MORROW_MVP_USAGE_LIMITS } from "@/lib/usage-limits";
+import { WORKSPACE_ROLE_DETAILS } from "@/lib/workspace-roles";
 import { env } from "cloudflare:workers";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -14,11 +16,6 @@ import {
   toggleCompetitorStatus,
   updateCompetitor,
 } from "./actions";
-
-interface Workspace {
-  id: string;
-  name: string;
-}
 
 interface CompetitorRow {
   id: string;
@@ -238,50 +235,16 @@ export default async function CompetitorsPage() {
     );
   }
 
-  /*
-   * Morrow currently has a single-workspace MVP
-   * experience and no workspace switcher.
-   *
-   * This selection intentionally mirrors the
-   * createCompetitor server action so the list,
-   * usage counts, and resource creation all refer
-   * to the same workspace.
-   */
   const workspace =
-    await env.DB.prepare(
-      `
-        SELECT
-          workspaces.id,
-          workspaces.name
-
-        FROM workspaces
-
-        INNER JOIN workspace_members
-          ON workspace_members.workspace_id =
-             workspaces.id
-
-        WHERE workspace_members.user_id = ?
-
-        ORDER BY
-          datetime(
-            workspace_members.joined_at
-          ) ASC
-
-        LIMIT 1
-      `
-    )
-      .bind(
-        session.user.id
-      )
-      .first<Workspace>();
-
-  if (
-    !workspace
-  ) {
-    throw new Error(
-      "No workspace found for this account."
+    await requireActiveWorkspaceMembership(
+      env.DB,
+      session.user.id
     );
-  }
+
+  const {
+    canEditMonitoring,
+    canDeleteMonitoringResources,
+  } = workspace.permissions;
 
   const usageRow =
     await env.DB.prepare(
@@ -600,6 +563,7 @@ export default async function CompetitorsPage() {
             </div>
           </div>
 
+          {canEditMonitoring ? (
           <WorkspacePanel label="Add a competitor"><div>
             <div>
 
@@ -789,6 +753,11 @@ export default async function CompetitorsPage() {
               </p>
             </div>
           </aside></WorkspacePanel>
+          ) : (
+            <span className="workspace-badge health-paused">
+              {WORKSPACE_ROLE_DETAILS[workspace.role].label} • Read-only access
+            </span>
+          )}
         </header>
 
 
@@ -1112,41 +1081,8 @@ export default async function CompetitorsPage() {
                               View competitor
                             </Link>
 
-                            <WorkspaceActionForm successMessage="Monitoring updated." action={toggleCompetitorStatus}
-                            >
-                              <input
-                                type="hidden"
-                                name="competitorId"
-                                value={
-                                  competitor.id
-                                }
-                              />
-
-                              <input
-                                type="hidden"
-                                name="currentStatus"
-                                value={
-                                  competitor.status
-                                }
-                              />
-
-                              <button
-                                type="submit"
-                                className={
-                                  secondaryButtonClasses
-                                }
-                              >
-                                {competitor.status ===
-                                "active"
-                                  ? "Pause"
-                                  : "Resume"}
-                              </button>
-                            </WorkspaceActionForm>
-                          </div>
-
-                          <WorkspacePanel label="Manage" title={competitor.name}><div className="workspace-manage-competitor mt-4 grid gap-6 border-t border-slate-200 pt-5 lg:grid-cols-[minmax(0,1fr)_260px]">
-                              <WorkspaceActionForm successMessage="Changes saved." action={updateCompetitor}
-                                className="grid gap-4 sm:grid-cols-2"
+                            {canEditMonitoring ? (
+                              <WorkspaceActionForm successMessage="Monitoring updated." action={toggleCompetitorStatus}
                               >
                                 <input
                                   type="hidden"
@@ -1156,77 +1092,33 @@ export default async function CompetitorsPage() {
                                   }
                                 />
 
-                                <div>
-                                  <label
-                                    htmlFor={`name-${competitor.id}`}
-                                    className="mb-1.5 block text-xs font-medium text-slate-600"
-                                  >
-                                    Name
-                                  </label>
+                                <input
+                                  type="hidden"
+                                  name="currentStatus"
+                                  value={
+                                    competitor.status
+                                  }
+                                />
 
-                                  <input
-                                    id={`name-${competitor.id}`}
-                                    name="name"
-                                    type="text"
-                                    defaultValue={
-                                      competitor.name
-                                    }
-                                    required
-                                    maxLength={
-                                      120
-                                    }
-                                    className={
-                                      inputClasses
-                                    }
-                                  />
-                                </div>
-
-                                <div>
-                                  <label
-                                    htmlFor={`domain-${competitor.id}`}
-                                    className="mb-1.5 block text-xs font-medium text-slate-600"
-                                  >
-                                    Domain
-                                  </label>
-
-                                  <input
-                                    id={`domain-${competitor.id}`}
-                                    name="domain"
-                                    type="text"
-                                    defaultValue={
-                                      competitor.domain
-                                    }
-                                    required
-                                    maxLength={
-                                      255
-                                    }
-                                    className={
-                                      inputClasses
-                                    }
-                                  />
-                                </div>
-
-                                <div className="sm:col-span-2">
-                                  <button
-                                    type="submit"
-                                    className="workspace-primary"
-                                  >
-                                    Save changes
-                                  </button>
-                                </div>
+                                <button
+                                  type="submit"
+                                  className={
+                                    secondaryButtonClasses
+                                  }
+                                >
+                                  {competitor.status ===
+                                  "active"
+                                    ? "Pause"
+                                    : "Resume"}
+                                </button>
                               </WorkspaceActionForm>
+                            ) : null}
+                          </div>
 
-                              <div className="workspace-destructive border-t border-slate-200 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
-                                <div className="text-sm font-semibold text-red-700">
-                                  Remove competitor
-                                </div>
-
-                                <p className="mt-2 text-xs leading-5 text-slate-500">
-                                  This permanently removes the competitor and its monitored pages, captures, changes, and delivery history.
-                                </p>
-
-                                <WorkspaceActionForm successMessage="Competitor removed." action={removeCompetitor}
-                                  className="mt-4"
+                          {canEditMonitoring ? (
+                            <WorkspacePanel label="Manage" title={competitor.name}><div className="workspace-manage-competitor mt-4 grid gap-6 border-t border-slate-200 pt-5 lg:grid-cols-[minmax(0,1fr)_260px]">
+                                <WorkspaceActionForm successMessage="Changes saved." action={updateCompetitor}
+                                  className="grid gap-4 sm:grid-cols-2"
                                 >
                                   <input
                                     type="hidden"
@@ -1236,15 +1128,102 @@ export default async function CompetitorsPage() {
                                     }
                                   />
 
-                                  <button
-                                    type="submit"
-                                    className="inline-flex min-h-10 items-center justify-center rounded-xl border border-red-200 bg-white px-3.5 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/20"
-                                  >
-                                    Remove
-                                  </button>
+                                  <div>
+                                    <label
+                                      htmlFor={`name-${competitor.id}`}
+                                      className="mb-1.5 block text-xs font-medium text-slate-600"
+                                    >
+                                      Name
+                                    </label>
+
+                                    <input
+                                      id={`name-${competitor.id}`}
+                                      name="name"
+                                      type="text"
+                                      defaultValue={
+                                        competitor.name
+                                      }
+                                      required
+                                      maxLength={
+                                        120
+                                      }
+                                      className={
+                                        inputClasses
+                                      }
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label
+                                      htmlFor={`domain-${competitor.id}`}
+                                      className="mb-1.5 block text-xs font-medium text-slate-600"
+                                    >
+                                      Domain
+                                    </label>
+
+                                    <input
+                                      id={`domain-${competitor.id}`}
+                                      name="domain"
+                                      type="text"
+                                      defaultValue={
+                                        competitor.domain
+                                      }
+                                      required
+                                      maxLength={
+                                        255
+                                      }
+                                      className={
+                                        inputClasses
+                                      }
+                                    />
+                                  </div>
+
+                                  <div className="sm:col-span-2">
+                                    <button
+                                      type="submit"
+                                      className="workspace-primary"
+                                    >
+                                      Save changes
+                                    </button>
+                                  </div>
                                 </WorkspaceActionForm>
-                              </div>
-                            </div></WorkspacePanel>
+
+                                <div className="workspace-destructive border-t border-slate-200 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+                                  <div className="text-sm font-semibold text-red-700">
+                                    Remove competitor
+                                  </div>
+
+                                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                                    This permanently removes the competitor and its monitored pages, captures, changes, and delivery history.
+                                  </p>
+
+                                  {canDeleteMonitoringResources ? (
+                                    <WorkspaceActionForm successMessage="Competitor removed." action={removeCompetitor}
+                                      className="mt-4"
+                                    >
+                                      <input
+                                        type="hidden"
+                                        name="competitorId"
+                                        value={
+                                          competitor.id
+                                        }
+                                      />
+
+                                      <button
+                                        type="submit"
+                                        className="inline-flex min-h-10 items-center justify-center rounded-xl border border-red-200 bg-white px-3.5 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/20"
+                                      >
+                                        Remove
+                                      </button>
+                                    </WorkspaceActionForm>
+                                  ) : (
+                                    <p className="mt-3 text-xs text-slate-500">
+                                      Only workspace Owners and Admins can permanently remove a competitor.
+                                    </p>
+                                  )}
+                                </div>
+                              </div></WorkspacePanel>
+                          ) : null}
                         </div>
                       </div>
                     </article>
