@@ -3,7 +3,7 @@ import {
   generateDigest,
   type DigestPeriod,
   type GeneratedDigest,
-} from "./digest-generator";
+} from "./digest-generator.ts";
 
 export interface DigestReportingWindow {
   period: DigestPeriod;
@@ -55,6 +55,10 @@ type GenerateDigest = (
   windowEnd: string,
 ) => Promise<GeneratedDigest>;
 
+type DeliverDigest = (
+  digest: GeneratedDigest,
+) => Promise<unknown>;
+
 interface DigestSchedulerLogger {
   info(
     message: string,
@@ -69,6 +73,7 @@ interface DigestSchedulerLogger {
 
 export interface DigestSchedulerDependencies {
   generate?: GenerateDigest;
+  deliverDigest?: DeliverDigest;
   logger?: DigestSchedulerLogger;
 }
 
@@ -272,6 +277,26 @@ export async function runDigestScheduler(
             reused: digest.reused,
           },
         );
+
+        if (dependencies.deliverDigest) {
+          try {
+            await dependencies.deliverDigest(
+              digest,
+            );
+          } catch (deliveryError) {
+            logger.error(
+              "Morrow digest scheduler failed downstream digest delivery",
+              {
+                ...context,
+                digestId: digest.id,
+                error:
+                  deliveryError instanceof Error
+                    ? deliveryError.message
+                    : String(deliveryError),
+              },
+            );
+          }
+        }
       } catch (error) {
         if (
           error instanceof

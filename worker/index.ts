@@ -25,6 +25,11 @@ import {
   runDigestScheduler,
 } from "./digest-scheduler";
 
+import {
+  notifyChangeByExternalChannels,
+  notifyDigestByExternalChannels,
+} from "./external-notifications";
+
 interface Env {
   DB: D1Database;
   VINEXT_KV_CACHE: KVNamespace;
@@ -967,6 +972,32 @@ async function notifyPersistedChange(
      */
     console.error(
       "Morrow change email notification failed after persistence",
+      {
+        changeId,
+
+        error:
+          error instanceof
+          Error
+            ? error.message
+            : String(error),
+      }
+    );
+  }
+
+  try {
+    const externalResult =
+      await notifyChangeByExternalChannels(
+        env,
+        changeId
+      );
+
+    console.log(
+      "Morrow change external notification processed",
+      externalResult
+    );
+  } catch (error) {
+    console.error(
+      "Morrow change external notification failed after persistence",
       {
         changeId,
 
@@ -2135,7 +2166,21 @@ async function runMorrowScheduler(
   const digestTask =
     runDigestScheduler(
       env.DB,
-      scheduledAt
+      scheduledAt,
+      {
+        deliverDigest: async (digest) => {
+          const externalDigestResult =
+            await notifyDigestByExternalChannels(
+              env,
+              digest.id
+            );
+
+          console.log(
+            "Morrow digest external notification processed",
+            externalDigestResult
+          );
+        },
+      }
     ).catch((error) => {
       console.error(
         "Morrow digest scheduler failed",

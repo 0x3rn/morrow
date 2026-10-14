@@ -5,7 +5,7 @@ import {
   type DigestChange,
   type DigestCompetitorGroup,
   type DigestIntelligence,
-} from "./digest-query";
+} from "./digest-query.ts";
 
 export const DIGEST_PERIODS = [
   "daily",
