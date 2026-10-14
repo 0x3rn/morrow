@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { ArrowLeftIcon } from "@/components/morrow-icons";
+import { getWorkspaceRetentionWindow } from "@/lib/workspace-billing";
 import { env } from "cloudflare:workers";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -20,6 +21,7 @@ interface CompetitorHistoryPageProps {
 
 interface CompetitorContext {
   id: string;
+  workspace_id: string;
   name: string;
   domain: string;
   status: string;
@@ -148,6 +150,7 @@ export default async function CompetitorHistoryPage({
       `
         SELECT
           competitors.id,
+          competitors.workspace_id,
           competitors.name,
           competitors.domain,
           competitors.status
@@ -180,6 +183,12 @@ export default async function CompetitorHistoryPage({
     notFound();
   }
 
+  const retentionWindow =
+    await getWorkspaceRetentionWindow(
+      env.DB,
+      competitor.workspace_id
+    );
+
   const countResult =
     await env.DB.prepare(
       `
@@ -197,10 +206,12 @@ export default async function CompetitorHistoryPage({
              monitored_pages.competitor_id
 
         WHERE competitors.id = ?
+          AND datetime(changes.detected_at) >= datetime(?)
       `
     )
       .bind(
-        competitor.id
+        competitor.id,
+        retentionWindow.cutoffIso
       )
       .first<{
         total: number;
@@ -264,6 +275,7 @@ export default async function CompetitorHistoryPage({
            monitored_pages.competitor_id
 
       WHERE competitors.id = ?
+        AND datetime(changes.detected_at) >= datetime(?)
 
       ORDER BY
         datetime(
@@ -277,6 +289,7 @@ export default async function CompetitorHistoryPage({
   )
     .bind(
       competitor.id,
+      retentionWindow.cutoffIso,
       HISTORY_PAGE_SIZE,
       offset
     )
@@ -360,7 +373,7 @@ export default async function CompetitorHistoryPage({
 
           <div className="border-t border-slate-200 px-5 py-5 sm:px-7">
             <div className="text-xs font-medium text-slate-500">
-              Recorded changes
+              Recorded changes ({retentionWindow.entitlements.planName} · {retentionWindow.retentionDays}-day retention)
             </div>
 
             <div className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">

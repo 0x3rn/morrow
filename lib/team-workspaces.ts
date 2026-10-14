@@ -2,6 +2,10 @@ import { randomUUID } from "node:crypto";
 
 import type { D1DatabaseLike } from "../worker/external-notifications.ts";
 import {
+  assertWorkspaceTeamSeatCapacity,
+  ensureWorkspaceSubscription,
+} from "./workspace-billing.ts";
+import {
   canAssignWorkspaceRole,
   canInviteWithWorkspaceRole,
   canManageTargetMemberRole,
@@ -465,6 +469,11 @@ export async function createTeamWorkspace(
       .bind(workspaceId, input.userId),
   ]);
 
+  await ensureWorkspaceSubscription(db, {
+    workspaceId,
+    actorUserId: input.userId,
+  });
+
   const created =
     await getWorkspaceMembershipById(
       db,
@@ -637,7 +646,14 @@ export async function inviteOrAddWorkspaceMember(
         "That user is already a member of this workspace.",
       );
     }
+  }
 
+  await assertWorkspaceTeamSeatCapacity(db, {
+    workspaceId,
+    candidateEmail: email,
+  });
+
+  if (existingUser) {
     await executeBatch(db, [
       db
         .prepare(

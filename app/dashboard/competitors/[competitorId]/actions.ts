@@ -5,7 +5,11 @@ import {
   parseMonitoringSelectorInput,
 } from "@/lib/monitoring-selectors";
 import { auth } from "@/lib/auth";
-import { MORROW_MVP_USAGE_LIMITS } from "@/lib/usage-limits";
+import { getDefaultFrequencyForPlan } from "@/lib/billing-plans";
+import {
+  assertWorkspaceMonitoringFrequencyAllowed,
+  getWorkspaceEntitlements,
+} from "@/lib/workspace-billing";
 import {
   canDeleteMonitoringResources,
   canEditMonitoring,
@@ -335,13 +339,23 @@ export async function createMonitoredPage(
     );
   }
 
-  /*
-   * Friendly preflight usage check.
-   *
-   * The actual INSERT below repeats both checks
-   * atomically and remains the real enforcement
-   * boundary.
-   */
+  const entitlements =
+    await getWorkspaceEntitlements(
+      env.DB,
+      competitor.workspace_id
+    );
+
+  const workspacePageLimit =
+    entitlements.limits
+      .monitoredPagesPerWorkspace;
+  const competitorPageLimit =
+    entitlements.limits
+      .monitoredPagesPerCompetitor;
+  const defaultFrequencyMinutes =
+    getDefaultFrequencyForPlan(
+      entitlements
+    );
+
   const usage =
     await getPageUsage(
       competitor.workspace_id,
@@ -350,21 +364,19 @@ export async function createMonitoredPage(
 
   if (
     usage.competitorPages >=
-    MORROW_MVP_USAGE_LIMITS
-      .monitoredPagesPerCompetitor
+    competitorPageLimit
   ) {
     throw new Error(
-      `This competitor has reached the MVP limit of ${MORROW_MVP_USAGE_LIMITS.monitoredPagesPerCompetitor} monitored pages.`
+      `This competitor has reached the ${entitlements.planName} plan limit of ${competitorPageLimit} monitored pages per competitor. Upgrade your workspace plan in Billing to add more pages.`
     );
   }
 
   if (
     usage.workspacePages >=
-    MORROW_MVP_USAGE_LIMITS
-      .monitoredPagesPerWorkspace
+    workspacePageLimit
   ) {
     throw new Error(
-      `This workspace has reached the MVP limit of ${MORROW_MVP_USAGE_LIMITS.monitoredPagesPerWorkspace} monitored pages.`
+      `This workspace has reached the ${entitlements.planName} plan limit of ${workspacePageLimit} monitored pages. Upgrade your workspace plan in Billing to monitor more pages.`
     );
   }
 
@@ -389,10 +401,12 @@ export async function createMonitoredPage(
             id,
             competitor_id,
             url,
-            label
+            label,
+            frequency_minutes
           )
 
           SELECT
+            ?,
             ?,
             ?,
             ?,
@@ -426,16 +440,13 @@ export async function createMonitoredPage(
           competitorId,
           url,
           label || null,
+          defaultFrequencyMinutes,
 
           competitor.workspace_id,
-
-          MORROW_MVP_USAGE_LIMITS
-            .monitoredPagesPerWorkspace,
+          workspacePageLimit,
 
           competitorId,
-
-          MORROW_MVP_USAGE_LIMITS
-            .monitoredPagesPerCompetitor
+          competitorPageLimit
         )
         .run();
   } catch (error) {
@@ -472,21 +483,24 @@ export async function createMonitoredPage(
 
     if (
       currentUsage.competitorPages >=
-      MORROW_MVP_USAGE_LIMITS
-        .monitoredPagesPerCompetitor
+      competitorPageLimit
     ) {
       throw new Error(
-        `This competitor has reached the MVP limit of ${MORROW_MVP_USAGE_LIMITS.monitoredPagesPerCompetitor} monitored pages.`
+        `This competitor has reached the ${entitlements.planName} plan limit of ${competitorPageLimit} monitored pages per competitor. Upgrade your workspace plan in Billing to add more pages.`
       );
     }
 
     throw new Error(
-      `This workspace has reached the MVP limit of ${MORROW_MVP_USAGE_LIMITS.monitoredPagesPerWorkspace} monitored pages.`
+      `This workspace has reached the ${entitlements.planName} plan limit of ${workspacePageLimit} monitored pages. Upgrade your workspace plan in Billing to monitor more pages.`
     );
   }
 
   revalidateCompetitorViews(
     competitorId
+  );
+
+  revalidatePath(
+    "/dashboard/billing"
   );
 }
 
@@ -683,6 +697,15 @@ export async function updateMonitoredPageFrequency(
       "Viewers have read-only access and cannot modify monitored pages."
     );
   }
+
+  await assertWorkspaceMonitoringFrequencyAllowed(
+    env.DB,
+    {
+      workspaceId:
+        monitoredPage.workspace_id,
+      frequencyMinutes,
+    }
+  );
 
   const result =
     await env.DB.prepare(

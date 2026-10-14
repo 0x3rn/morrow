@@ -71,6 +71,7 @@ export interface WorkspaceRolePermissions {
   canManageWorkspaceChannels: boolean;
   canManageWorkspaceSettings: boolean;
   canManageTeamMembers: boolean;
+  canManageWorkspaceBilling: boolean;
   assignableRoles: WorkspaceRole[];
   invitableRoles: InvitableWorkspaceRole[];
 }
@@ -144,6 +145,12 @@ export function canManageTeamMembers(
   role: WorkspaceRole,
 ): boolean {
   return hasWorkspaceRoleAtLeast(role, "admin");
+}
+
+export function canManageWorkspaceBilling(
+  role: WorkspaceRole,
+): boolean {
+  return role === "owner";
 }
 
 export function getAssignableWorkspaceRoles(
@@ -225,6 +232,8 @@ export function getWorkspaceRolePermissions(
       canManageWorkspaceSettings(role),
     canManageTeamMembers:
       canManageTeamMembers(role),
+    canManageWorkspaceBilling:
+      canManageWorkspaceBilling(role),
     assignableRoles:
       getAssignableWorkspaceRoles(role),
     invitableRoles:

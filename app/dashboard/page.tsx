@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { requireActiveWorkspaceMembership } from "@/lib/team-workspaces";
-import { MORROW_MVP_USAGE_LIMITS } from "@/lib/usage-limits";
+import { getWorkspaceEntitlements } from "@/lib/workspace-billing";
 import { env } from "cloudflare:workers";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -539,24 +539,30 @@ export default async function DashboardPage() {
       null,
   };
 
+  const entitlements =
+    await getWorkspaceEntitlements(
+      env.DB,
+      workspace.id
+    );
+
   const usage = {
     competitorLimit:
-      MORROW_MVP_USAGE_LIMITS
+      entitlements.limits
         .competitorsPerWorkspace,
 
     pageLimit:
-      MORROW_MVP_USAGE_LIMITS
+      entitlements.limits
         .monitoredPagesPerWorkspace,
 
     perCompetitorPageLimit:
-      MORROW_MVP_USAGE_LIMITS
+      entitlements.limits
         .monitoredPagesPerCompetitor,
 
     competitorRemaining:
       Math.max(
         0,
 
-        MORROW_MVP_USAGE_LIMITS
+        entitlements.limits
           .competitorsPerWorkspace -
           metrics.competitors
       ),
@@ -565,7 +571,7 @@ export default async function DashboardPage() {
       Math.max(
         0,
 
-        MORROW_MVP_USAGE_LIMITS
+        entitlements.limits
           .monitoredPagesPerWorkspace -
           metrics.monitoredPages
       ),
@@ -574,7 +580,7 @@ export default async function DashboardPage() {
       clampPercentage(
         metrics.competitors,
 
-        MORROW_MVP_USAGE_LIMITS
+        entitlements.limits
           .competitorsPerWorkspace
       ),
 
@@ -582,7 +588,7 @@ export default async function DashboardPage() {
       clampPercentage(
         metrics.monitoredPages,
 
-        MORROW_MVP_USAGE_LIMITS
+        entitlements.limits
           .monitoredPagesPerWorkspace
       ),
   };

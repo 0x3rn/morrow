@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { getActiveWorkspaceMembership } from "@/lib/team-workspaces";
-import { MORROW_MVP_USAGE_LIMITS } from "@/lib/usage-limits";
+import { getWorkspaceEntitlements } from "@/lib/workspace-billing";
 import {
   canDeleteMonitoringResources,
   canEditMonitoring,
@@ -295,12 +295,16 @@ export async function createCompetitor(
     );
   }
 
-  /*
-   * Fast friendly limit check.
-   *
-   * The actual INSERT below also checks the limit
-   * atomically so this is not the security boundary.
-   */
+  const entitlements =
+    await getWorkspaceEntitlements(
+      env.DB,
+      workspace.id
+    );
+
+  const competitorLimit =
+    entitlements.limits
+      .competitorsPerWorkspace;
+
   const currentCount =
     await getWorkspaceCompetitorCount(
       workspace.id
@@ -308,11 +312,10 @@ export async function createCompetitor(
 
   if (
     currentCount >=
-    MORROW_MVP_USAGE_LIMITS
-      .competitorsPerWorkspace
+    competitorLimit
   ) {
     throw new Error(
-      `This workspace has reached the MVP limit of ${MORROW_MVP_USAGE_LIMITS.competitorsPerWorkspace} competitors.`
+      `This workspace has reached the ${entitlements.planName} plan limit of ${competitorLimit} competitors. Upgrade your workspace plan in Billing to monitor more competitors.`
     );
   }
 
@@ -372,9 +375,7 @@ export async function createCompetitor(
           domain,
           faviconUrl,
           workspace.id,
-
-          MORROW_MVP_USAGE_LIMITS
-            .competitorsPerWorkspace
+          competitorLimit
         )
         .run();
   } catch (error) {
@@ -398,7 +399,7 @@ export async function createCompetitor(
     ) === 0
   ) {
     throw new Error(
-      `This workspace has reached the MVP limit of ${MORROW_MVP_USAGE_LIMITS.competitorsPerWorkspace} competitors.`
+      `This workspace has reached the ${entitlements.planName} plan limit of ${competitorLimit} competitors. Upgrade your workspace plan in Billing to monitor more competitors.`
     );
   }
 
@@ -408,6 +409,10 @@ export async function createCompetitor(
 
   revalidatePath(
     "/dashboard/competitors"
+  );
+
+  revalidatePath(
+    "/dashboard/billing"
   );
 }
 

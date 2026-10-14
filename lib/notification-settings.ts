@@ -20,6 +20,7 @@ import {
   type NotificationSignificanceLevel,
 } from "../worker/notification-routing.ts";
 import { getActiveWorkspaceMembership } from "./team-workspaces.ts";
+import { assertWorkspaceExternalChannelCapacity } from "./workspace-billing.ts";
 import {
   canManageWorkspaceChannels,
   normalizeWorkspaceRole,
@@ -854,6 +855,11 @@ export async function createWorkspaceExternalChannel(
       "Only workspace Owners and Admins can manage external delivery channels.",
     );
   }
+
+  await assertWorkspaceExternalChannelCapacity(
+    db,
+    workspace.id,
+  );
 
   const name = input.name.trim();
   if (!name) {

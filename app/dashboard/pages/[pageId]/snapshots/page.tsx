@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { ArrowLeftIcon } from "@/components/morrow-icons";
+import { getWorkspaceRetentionWindow } from "@/lib/workspace-billing";
 import { env } from "cloudflare:workers";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -20,6 +21,7 @@ interface SnapshotHistoryProps {
 
 interface MonitoredPageContext {
   id: string;
+  workspace_id: string;
   url: string;
   label: string | null;
   status: string;
@@ -166,6 +168,7 @@ export default async function SnapshotHistory({
       `
         SELECT
           monitored_pages.id,
+          competitors.workspace_id,
           monitored_pages.url,
           monitored_pages.label,
           monitored_pages.status,
@@ -208,6 +211,12 @@ export default async function SnapshotHistory({
     notFound();
   }
 
+  const retentionWindow =
+    await getWorkspaceRetentionWindow(
+      env.DB,
+      monitoredPage.workspace_id
+    );
+
   const monitoredPageId =
     monitoredPage.id;
 
@@ -220,10 +229,12 @@ export default async function SnapshotHistory({
         FROM snapshots
 
         WHERE snapshots.monitored_page_id = ?
+          AND datetime(snapshots.captured_at) >= datetime(?)
       `
     )
       .bind(
-        monitoredPageId
+        monitoredPageId,
+        retentionWindow.cutoffIso
       )
       .first<{
         total: number;
@@ -286,6 +297,7 @@ export default async function SnapshotHistory({
             snapshots.monitored_page_id
 
       WHERE snapshots.monitored_page_id = ?
+        AND datetime(snapshots.captured_at) >= datetime(?)
 
       ORDER BY
         datetime(
@@ -299,6 +311,7 @@ export default async function SnapshotHistory({
   )
     .bind(
       monitoredPageId,
+      retentionWindow.cutoffIso,
       SNAPSHOT_PAGE_SIZE,
       offset
     )
@@ -395,7 +408,7 @@ export default async function SnapshotHistory({
 
           <div className="border-t border-slate-200 px-5 py-5 sm:px-7">
             <div className="text-xs font-medium text-slate-500">
-              Retained snapshots
+              Retained snapshots ({retentionWindow.entitlements.planName} · {retentionWindow.retentionDays}-day retention)
             </div>
 
             <div className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">

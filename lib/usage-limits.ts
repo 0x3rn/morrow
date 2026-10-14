@@ -1,8 +1,23 @@
-export const MORROW_MVP_USAGE_LIMITS = Object.freeze({
-  competitorsPerWorkspace: 10,
-  monitoredPagesPerWorkspace: 50,
-  monitoredPagesPerCompetitor: 10,
-});
+import {
+  BILLING_PLAN_CATALOG,
+  type BillingPlanLimits,
+} from "./billing-plans.ts";
 
-export type MorrowMvpUsageLimits =
-  typeof MORROW_MVP_USAGE_LIMITS;
+export const MORROW_MVP_USAGE_LIMITS = {
+  competitorsPerWorkspace:
+    BILLING_PLAN_CATALOG.starter.limits
+      .competitorsPerWorkspace,
+  monitoredPagesPerWorkspace:
+    BILLING_PLAN_CATALOG.starter.limits
+      .monitoredPagesPerWorkspace,
+  monitoredPagesPerCompetitor:
+    BILLING_PLAN_CATALOG.starter.limits
+      .monitoredPagesPerCompetitor,
+} as const;
+
+export type MorrowUsageLimits = Pick<
+  BillingPlanLimits,
+  | "competitorsPerWorkspace"
+  | "monitoredPagesPerWorkspace"
+  | "monitoredPagesPerCompetitor"
+>;

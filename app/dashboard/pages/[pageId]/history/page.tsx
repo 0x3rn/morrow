@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { ArrowLeftIcon } from "@/components/morrow-icons";
+import { getWorkspaceRetentionWindow } from "@/lib/workspace-billing";
 import { env } from "cloudflare:workers";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -20,6 +21,7 @@ interface MonitoredPageHistoryProps {
 
 interface MonitoredPageContext {
   id: string;
+  workspace_id: string;
   url: string;
   label: string | null;
   status: string;
@@ -151,6 +153,7 @@ export default async function MonitoredPageHistory({
       `
         SELECT
           monitored_pages.id,
+          competitors.workspace_id,
           monitored_pages.url,
           monitored_pages.label,
           monitored_pages.status,
@@ -199,6 +202,12 @@ export default async function MonitoredPageHistory({
     notFound();
   }
 
+  const retentionWindow =
+    await getWorkspaceRetentionWindow(
+      env.DB,
+      monitoredPage.workspace_id
+    );
+
   const countResult =
     await env.DB.prepare(
       `
@@ -208,10 +217,12 @@ export default async function MonitoredPageHistory({
         FROM changes
 
         WHERE changes.monitored_page_id = ?
+          AND datetime(changes.detected_at) >= datetime(?)
       `
     )
       .bind(
-        monitoredPage.id
+        monitoredPage.id,
+        retentionWindow.cutoffIso
       )
       .first<{
         total: number;
@@ -258,6 +269,7 @@ export default async function MonitoredPageHistory({
       FROM changes
 
       WHERE changes.monitored_page_id = ?
+        AND datetime(changes.detected_at) >= datetime(?)
 
       ORDER BY
         datetime(
@@ -271,6 +283,7 @@ export default async function MonitoredPageHistory({
   )
     .bind(
       monitoredPage.id,
+      retentionWindow.cutoffIso,
       HISTORY_PAGE_SIZE,
       offset
     )
@@ -375,7 +388,7 @@ export default async function MonitoredPageHistory({
           <div className="grid border-t border-slate-200 sm:grid-cols-3">
             <div className="border-b border-slate-200 px-5 py-5 sm:border-b-0 sm:border-r sm:px-7">
               <div className="text-xs font-medium text-slate-500">
-                Recorded changes
+                Recorded changes ({retentionWindow.entitlements.planName} · {retentionWindow.retentionDays}-day retention)
               </div>
 
               <div className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">

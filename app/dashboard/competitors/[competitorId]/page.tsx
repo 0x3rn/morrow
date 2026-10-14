@@ -2,6 +2,7 @@ import { CompetitorIcon } from "@/components/competitor-icon";
 import { WorkspaceActionForm } from "@/components/workspace-feedback";
 import { WorkspacePanel } from "@/components/workspace-panel";
 import { auth } from "@/lib/auth";
+import { getWorkspaceEntitlements } from "@/lib/workspace-billing";
 import {
   getWorkspaceRolePermissions,
   normalizeWorkspaceRole,
@@ -23,6 +24,7 @@ import {
 
 interface Competitor {
   id: string;
+  workspace_id: string;
   name: string;
   domain: string;
   favicon_url: string | null;
@@ -324,6 +326,7 @@ export default async function CompetitorPage({
       `
         SELECT
           competitors.id,
+          competitors.workspace_id,
           competitors.name,
           competitors.domain,
           competitors.favicon_url,
@@ -354,6 +357,12 @@ export default async function CompetitorPage({
   if (!competitor) {
     notFound();
   }
+
+  const entitlements =
+    await getWorkspaceEntitlements(
+      env.DB,
+      competitor.workspace_id
+    );
 
   const permissions =
     getWorkspaceRolePermissions(
@@ -760,10 +769,12 @@ export default async function CompetitorPage({
             </div>
 
             <div className="text-sm font-medium text-slate-500">
-              {metrics.monitoredPages}{" "}
-              {metrics.monitoredPages === 1
-                ? "page"
-                : "pages"}
+              {metrics.monitoredPages} /{" "}
+              {
+                entitlements.limits
+                  .monitoredPagesPerCompetitor
+              }{" "}
+              pages ({entitlements.planName} plan)
             </div>
           {permissions.canEditMonitoring ? (<WorkspacePanel label="Add monitored page"><p className="text-sm text-slate-500">Enter a page URL to monitor</p><WorkspaceActionForm successMessage="Monitored page added." action={createMonitoredPage}
                 className="space-y-4 border-t border-slate-100 px-5 py-5"
@@ -1117,8 +1128,19 @@ export default async function CompetitorPage({
                                       inputClasses
                                     }
                                   >
-                                    <option value="60">
-                                      Every hour
+                                    <option
+                                      value="60"
+                                      disabled={
+                                        !entitlements
+                                          .features
+                                          .hourlyMonitoring
+                                      }
+                                    >
+                                      {entitlements
+                                        .features
+                                        .hourlyMonitoring
+                                        ? "Every hour"
+                                        : "Every hour (Growth & Scale plans)"}
                                     </option>
 
                                     <option value="360">
@@ -1145,6 +1167,26 @@ export default async function CompetitorPage({
                                     Save
                                   </button>
                                 </div>
+                                {!entitlements
+                                  .features
+                                  .hourlyMonitoring ? (
+                                  <p className="text-xs text-slate-500">
+                                    Your{" "}
+                                    <strong>
+                                      {
+                                        entitlements.planName
+                                      }
+                                    </strong>{" "}
+                                    plan supports checks as frequent as every 6 hours.{" "}
+                                    <Link
+                                      href="/dashboard/billing"
+                                      className="font-medium text-indigo-600"
+                                    >
+                                      Upgrade in Billing
+                                    </Link>{" "}
+                                    for hourly monitoring.
+                                  </p>
+                                ) : null}
                               </WorkspaceActionForm></div>
     <MonitoringScopeForm
                             monitoredPageId={

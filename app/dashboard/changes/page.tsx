@@ -1,6 +1,7 @@
 import { WorkspaceFilters } from "@/components/workspace-filters";
 import { auth } from "@/lib/auth";
 import { requireActiveWorkspaceMembership } from "@/lib/team-workspaces";
+import { getWorkspaceRetentionWindow } from "@/lib/workspace-billing";
 import { env } from "cloudflare:workers";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -346,12 +347,20 @@ export default async function ChangeHistoryPage({
       ? requestedMonitoredPageId
       : "";
 
+  const retentionWindow =
+    await getWorkspaceRetentionWindow(
+      env.DB,
+      workspace.id
+    );
+
   const conditions: string[] = [
     "competitors.workspace_id = ?",
+    "datetime(changes.detected_at) >= datetime(?)",
   ];
 
   const bindings: string[] = [
     workspace.id,
+    retentionWindow.cutoffIso,
   ];
 
   if (competitorId) {
@@ -698,7 +707,19 @@ export default async function ChangeHistoryPage({
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
               Search and filter the changes
               Morrow has recorded across your
-              monitored pages.
+              monitored pages within your{" "}
+              <strong>
+                {retentionWindow.entitlements.planName}
+              </strong>{" "}
+              plan&apos;s{" "}
+              {retentionWindow.retentionDays}-day
+              retention window.{" "}
+              <Link
+                href="/dashboard/billing"
+                className="font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                Manage plan
+              </Link>
             </p>
           </div>
         </header>

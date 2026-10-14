@@ -277,7 +277,7 @@ body:has(.workspace-panel[open]) { overflow: hidden; }
   .workspace-sidebar { position: sticky; inset: auto; top: 0; flex-direction: row; align-items: center; justify-content: space-between; width: 100%; min-height: 60px; padding: 8px 16px; border-right: 0; border-bottom: 1px solid var(--morrow-line); background: var(--morrow-paper); }
   .workspace-label { padding: 0; }
   .workspace-content { padding-left: 0; }
-  .workspace-nav { position: fixed; z-index: 30; inset: auto 0 0; display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 4px; margin: 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--morrow-line); background: var(--morrow-surface); }
+  .workspace-nav { position: fixed; z-index: 30; inset: auto 0 0; display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 4px; margin: 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--morrow-line); background: var(--morrow-surface); }
   .workspace-nav a { min-height: 48px; justify-content: center; padding: 6px 6px; font-size: 12px; text-align: center; line-height: 1.25; }
   .workspace-nav a[aria-current="page"]::before { inset: auto 25% 0; width: auto; height: 3px; }
   .workspace-account { margin: 0; padding: 0; border: 0; }

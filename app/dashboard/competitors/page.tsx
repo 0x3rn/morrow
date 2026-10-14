@@ -3,7 +3,7 @@ import { WorkspaceActionForm } from "@/components/workspace-feedback";
 import { WorkspacePanel } from "@/components/workspace-panel";
 import { auth } from "@/lib/auth";
 import { requireActiveWorkspaceMembership } from "@/lib/team-workspaces";
-import { MORROW_MVP_USAGE_LIMITS } from "@/lib/usage-limits";
+import { getWorkspaceEntitlements } from "@/lib/workspace-billing";
 import { WORKSPACE_ROLE_DETAILS } from "@/lib/workspace-roles";
 import { env } from "cloudflare:workers";
 import Link from "next/link";
@@ -406,6 +406,12 @@ export default async function CompetitorsPage() {
       )
       .all<CompetitorRow>();
 
+  const entitlements =
+    await getWorkspaceEntitlements(
+      env.DB,
+      workspace.id
+    );
+
   const usage = {
     competitors:
       Number(
@@ -420,15 +426,15 @@ export default async function CompetitorsPage() {
       ),
 
     competitorLimit:
-      MORROW_MVP_USAGE_LIMITS
+      entitlements.limits
         .competitorsPerWorkspace,
 
     monitoredPageLimit:
-      MORROW_MVP_USAGE_LIMITS
+      entitlements.limits
         .monitoredPagesPerWorkspace,
 
     perCompetitorPageLimit:
-      MORROW_MVP_USAGE_LIMITS
+      entitlements.limits
         .monitoredPagesPerCompetitor,
   };
 
