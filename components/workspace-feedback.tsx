@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { toUserFacingErrorMessage } from "@/lib/user-facing-error";
 
 const FeedbackContext = createContext<(message: string) => void>(() => {});
 
@@ -69,6 +70,16 @@ export function WorkspaceActionForm({ action, successMessage, children, classNam
         if (
           typeof result === "object" &&
           result !== null &&
+          "error" in result &&
+          typeof (result as { error?: unknown }).error === "string" &&
+          (result as { error: string }).error.trim().length > 0
+        ) {
+          setError(toUserFacingErrorMessage((result as { error: string }).error));
+          return;
+        }
+        if (
+          typeof result === "object" &&
+          result !== null &&
           "checkoutUrl" in result &&
           typeof (result as { checkoutUrl?: unknown }).checkoutUrl === "string" &&
           (result as { checkoutUrl: string }).checkoutUrl.startsWith("https://")
@@ -78,7 +89,7 @@ export function WorkspaceActionForm({ action, successMessage, children, classNam
         }
         notify(successMessage);
       } catch (error) {
-        setError(error instanceof Error && !("digest" in error) ? error.message : "We couldn't save this change. Please try again.");
+        setError(toUserFacingErrorMessage(error));
       } finally {
         inFlight.current = false;
       }

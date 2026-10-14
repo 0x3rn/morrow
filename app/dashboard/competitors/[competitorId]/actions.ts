@@ -7,6 +7,10 @@ import {
 import { auth } from "@/lib/auth";
 import { getDefaultFrequencyForPlan } from "@/lib/billing-plans";
 import {
+  toUserFacingErrorMessage,
+  type WorkspaceActionResult,
+} from "@/lib/user-facing-error";
+import {
   assertWorkspaceMonitoringFrequencyAllowed,
   assertWorkspaceSectionLevelMonitoringAllowed,
   getWorkspaceEntitlements,
@@ -19,6 +23,19 @@ import {
 import { env } from "cloudflare:workers";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+
+async function runMonitoredPageAction(
+  operation: () => Promise<void>,
+): Promise<WorkspaceActionResult> {
+  try {
+    await operation();
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
+}
 
 interface OwnedCompetitorRow {
   id: string;
@@ -227,7 +244,8 @@ function revalidateCompetitorViews(
 
 export async function createMonitoredPage(
   formData: FormData
-) {
+): Promise<WorkspaceActionResult> {
+  return runMonitoredPageAction(async () => {
   const session =
     await auth.api.getSession({
       headers:
@@ -503,11 +521,13 @@ export async function createMonitoredPage(
   revalidatePath(
     "/dashboard/billing"
   );
+  });
 }
 
 export async function toggleMonitoredPageStatus(
   formData: FormData
-) {
+): Promise<WorkspaceActionResult> {
+  return runMonitoredPageAction(async () => {
   const session =
     await auth.api.getSession({
       headers:
@@ -613,11 +633,13 @@ export async function toggleMonitoredPageStatus(
   revalidateCompetitorViews(
     competitorId
   );
+  });
 }
 
 export async function updateMonitoredPageFrequency(
   formData: FormData
-) {
+): Promise<WorkspaceActionResult> {
+  return runMonitoredPageAction(async () => {
   const session =
     await auth.api.getSession({
       headers:
@@ -744,11 +766,13 @@ export async function updateMonitoredPageFrequency(
   revalidateCompetitorViews(
     competitorId
   );
+  });
 }
 
 export async function updateMonitoredPageMonitoringScope(
   formData: FormData
-) {
+): Promise<WorkspaceActionResult> {
+  return runMonitoredPageAction(async () => {
   const session =
     await auth.api.getSession({
       headers:
@@ -888,11 +912,13 @@ export async function updateMonitoredPageMonitoringScope(
   revalidateCompetitorViews(
     competitorId
   );
+  });
 }
 
 export async function previewMonitoredPageMonitoringScope(
   formData: FormData
 ) {
+  try {
   const session =
     await auth.api.getSession({
       headers:
@@ -967,9 +993,10 @@ export async function previewMonitoredPageMonitoringScope(
     return {
       ok: false,
       message:
-        error instanceof Error
-          ? error.message
-          : "Invalid selector input.",
+        toUserFacingErrorMessage(
+          error,
+          "Invalid selector input."
+        ),
       capturedAt: null,
       includeMatches: [],
       ignoreMatches: [],
@@ -1003,9 +1030,10 @@ export async function previewMonitoredPageMonitoringScope(
     return {
       ok: false,
       message:
-        error instanceof Error
-          ? error.message
-          : "Section-level CSS selector monitoring requires Starter or higher.",
+        toUserFacingErrorMessage(
+          error,
+          "Section-level CSS selector monitoring requires Starter or higher."
+        ),
       capturedAt: null,
       includeMatches: [],
       ignoreMatches: [],
@@ -1097,11 +1125,25 @@ export async function previewMonitoredPageMonitoringScope(
     ignoreMatches:
       analysis.ignoreMatches,
   };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        toUserFacingErrorMessage(
+          error,
+          "Morrow couldn't test these selectors."
+        ),
+      capturedAt: null,
+      includeMatches: [],
+      ignoreMatches: [],
+    };
+  }
 }
 
 export async function removeMonitoredPage(
   formData: FormData
-) {
+): Promise<WorkspaceActionResult> {
+  return runMonitoredPageAction(async () => {
   const session =
     await auth.api.getSession({
       headers:
@@ -1202,11 +1244,13 @@ export async function removeMonitoredPage(
   revalidateCompetitorViews(
     competitorId
   );
+  });
 }
 
 export async function updateMonitoredPage(
   formData: FormData
-) {
+): Promise<WorkspaceActionResult> {
+  return runMonitoredPageAction(async () => {
   const session =
     await auth.api.getSession({
       headers:
@@ -1384,4 +1428,5 @@ export async function updateMonitoredPage(
   revalidateCompetitorViews(
     competitorId
   );
+  });
 }

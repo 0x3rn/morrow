@@ -68,6 +68,13 @@ import {
   updateWorkspaceSubscriptionCancellationWithLemonSqueezy,
   verifyLemonSqueezyWebhookSignature,
 } from "../lib/lemonsqueezy.ts";
+import {
+  BILLING_PROVIDER_CONNECTION_USER_FACING_MESSAGE,
+  BILLING_UNAVAILABLE_USER_FACING_MESSAGE,
+  DEFAULT_USER_FACING_ERROR_MESSAGE,
+  isTechnicalOrRedactedErrorMessage,
+  toUserFacingErrorMessage,
+} from "../lib/user-facing-error.ts";
 import { canManageWorkspaceBilling } from "../lib/workspace-roles.ts";
 
 function createD1Fixture(t) {
@@ -2279,5 +2286,93 @@ test("THE-28.6: enforces Free & Personal tier limits, workspace creation caps, C
         nextRole: "owner",
       }),
     /Your account has reached the Free plan limit of 1 workspace/,
+  );
+});
+
+test("THE-28.7: user-facing error sanitizer masks RSC render/digest errors, .env.local billing config errors, and SQL/runtime details while preserving clean validation copy", () => {
+  const rscProductionError = new Error(
+    "An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on this error instance which may provide additional details about the nature of the error.",
+  );
+  assert.equal(
+    isTechnicalOrRedactedErrorMessage(
+      rscProductionError.message,
+    ),
+    true,
+  );
+  assert.equal(
+    toUserFacingErrorMessage(rscProductionError),
+    DEFAULT_USER_FACING_ERROR_MESSAGE,
+  );
+
+  // Error object with a React digest property must also be masked even if message differs
+  const digestError = Object.assign(
+    new Error("Internal server error"),
+    { digest: "1948274912" },
+  );
+  assert.equal(
+    toUserFacingErrorMessage(digestError),
+    DEFAULT_USER_FACING_ERROR_MESSAGE,
+  );
+
+  // Unconfigured Lemon Squeezy / .env.local errors map to a polite customer-facing message
+  assert.equal(
+    toUserFacingErrorMessage(
+      new Error(
+        "Lemon Squeezy payment integration is not configured yet. Replace the placeholder LEMONSQUEEZY_* values in .env.local to enable live checkouts and plan changes.",
+      ),
+    ),
+    BILLING_UNAVAILABLE_USER_FACING_MESSAGE,
+  );
+  assert.equal(
+    toUserFacingErrorMessage(
+      new Error(
+        "Lemon Squeezy variant ID is not configured for the Personal (monthly) plan. Set LEMONSQUEEZY_PERSONAL_MONTHLY_VARIANT_ID in .env.local.",
+      ),
+    ),
+    BILLING_UNAVAILABLE_USER_FACING_MESSAGE,
+  );
+
+  // Upstream provider / HTTP failures map to a clean provider connection error
+  assert.equal(
+    toUserFacingErrorMessage(
+      new Error(
+        "Lemon Squeezy checkout creation failed: HTTP 502",
+      ),
+    ),
+    BILLING_PROVIDER_CONNECTION_USER_FACING_MESSAGE,
+  );
+
+  // SQLite / D1 / JS runtime / network errors are masked
+  for (const technicalMessage of [
+    "D1_ERROR: no such table: workspace_subscriptions",
+    "SQLITE_CONSTRAINT: UNIQUE constraint failed: competitors.workspace_id, competitors.domain",
+    "TypeError: Cannot read properties of undefined (reading 'id')",
+    "Failed to fetch",
+  ]) {
+    assert.equal(
+      toUserFacingErrorMessage(new Error(technicalMessage)),
+      DEFAULT_USER_FACING_ERROR_MESSAGE,
+    );
+  }
+
+  // Unauthorized maps to session expired prompt
+  assert.equal(
+    toUserFacingErrorMessage(new Error("Unauthorized")),
+    "Your session has expired. Please sign in again.",
+  );
+
+  // Legitimate user-facing validation and plan-limit messages are preserved cleanly
+  const quotaMessage =
+    "This workspace has reached the Personal plan limit of 3 competitors. Upgrade your workspace plan in Billing to monitor more competitors.";
+  assert.equal(
+    toUserFacingErrorMessage(new Error(quotaMessage)),
+    quotaMessage,
+  );
+
+  assert.equal(
+    toUserFacingErrorMessage(
+      new Error("Slack webhookUrl must use HTTPS."),
+    ),
+    "Slack webhook URL must use HTTPS.",
   );
 });

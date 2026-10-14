@@ -6,6 +6,7 @@ import { betterAuth } from "better-auth";
 import test from "node:test";
 import { createMorrowAuth } from "../lib/auth-config.ts";
 import { sendAuthCode } from "../lib/auth-email.ts";
+import { getAuthErrorMessage } from "../lib/user-facing-error.ts";
 
 // Exercise Better Auth's real D1 dialect against SQLite, including actual migrations.
 function d1Database(sqlite) {
@@ -288,4 +289,40 @@ test("the migration requires codes for existing accounts and revokes password-on
   } finally {
     sqlite.close();
   }
+});
+
+test("signing up with an existing email immediately fails without sending a code", async (t) => {
+  const f = fixture(t);
+  await f.registerAndVerify();
+  assert.equal(f.emails.length, 1);
+
+  const duplicate = await f.call("/sign-up/email", {
+    email: "  PERSON@Example.com ",
+    password: "another-password-456",
+    name: "Another Person",
+  });
+  assert.equal(duplicate.status, 422);
+  assert.equal(duplicate.body.code, "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL");
+  assert.equal(duplicate.body.message, "A user with this email already exists.");
+  assert.equal(getAuthErrorMessage(duplicate.body), "A user with this email already exists.");
+  assert.equal(f.emails.length, 1);
+  assert.equal(f.sqlite.prepare("SELECT COUNT(*) AS count FROM users").get().count, 1);
+  assert.equal(f.sqlite.prepare("SELECT COUNT(*) AS count FROM workspaces").get().count, 1);
+});
+
+test("signing up with an existing unverified email immediately fails without sending another code", async (t) => {
+  const f = fixture(t);
+  const firstSignup = await f.call("/sign-up/email", { ...f.credentials, name: "Test Person" });
+  assert.equal(firstSignup.status, 200);
+  assert.equal(f.emails.length, 1);
+
+  const secondSignup = await f.call("/sign-up/email", {
+    email: f.credentials.email,
+    password: "different-password-789",
+    name: "Second Attempt",
+  });
+  assert.equal(secondSignup.status, 422);
+  assert.equal(secondSignup.body.code, "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL");
+  assert.equal(getAuthErrorMessage(secondSignup.body), "A user with this email already exists.");
+  assert.equal(f.emails.length, 1);
 });

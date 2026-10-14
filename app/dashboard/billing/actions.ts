@@ -7,6 +7,10 @@ import {
 } from "@/lib/lemonsqueezy";
 import { requireActiveWorkspaceMembership } from "@/lib/team-workspaces";
 import {
+  toUserFacingErrorMessage,
+  type WorkspaceActionResult,
+} from "@/lib/user-facing-error";
+import {
   getWorkspaceSubscription,
   updateWorkspaceBillingInterval,
 } from "@/lib/workspace-billing";
@@ -45,78 +49,34 @@ function revalidateBillingAndWorkspacePaths(): void {
 
 export async function changeSubscriptionPlanAction(
   formData: FormData,
-): Promise<{ checkoutUrl?: string }> {
-  const user = await requireAuthenticatedUser();
-  const activeWorkspace =
-    await requireActiveWorkspaceMembership(
-      env.DB,
-      user.id,
+): Promise<WorkspaceActionResult> {
+  try {
+    const user = await requireAuthenticatedUser();
+    const activeWorkspace =
+      await requireActiveWorkspaceMembership(
+        env.DB,
+        user.id,
+      );
+
+    const planId = String(
+      formData.get("planId") ?? "",
+    ).trim();
+    const billingIntervalRaw = formData.get(
+      "billingInterval",
     );
+    const billingInterval =
+      typeof billingIntervalRaw === "string" &&
+      billingIntervalRaw.trim().length > 0
+        ? billingIntervalRaw.trim()
+        : undefined;
 
-  const planId = String(
-    formData.get("planId") ?? "",
-  ).trim();
-  const billingIntervalRaw = formData.get(
-    "billingInterval",
-  );
-  const billingInterval =
-    typeof billingIntervalRaw === "string" &&
-    billingIntervalRaw.trim().length > 0
-      ? billingIntervalRaw.trim()
-      : undefined;
-
-  const result =
-    await initiateOrUpdateWorkspaceSubscription(env, {
-      actorUserId: user.id,
-      actorEmail: user.email,
-      actorName: user.name,
-      workspaceId: activeWorkspace.id,
-      planId,
-      billingInterval,
-    });
-
-  revalidateBillingAndWorkspacePaths();
-
-  if (result.mode === "checkout_redirect") {
-    return { checkoutUrl: result.checkoutUrl };
-  }
-
-  return {};
-}
-
-export async function updateBillingIntervalAction(
-  formData: FormData,
-): Promise<{ checkoutUrl?: string }> {
-  const user = await requireAuthenticatedUser();
-  const activeWorkspace =
-    await requireActiveWorkspaceMembership(
-      env.DB,
-      user.id,
-    );
-
-  const billingInterval = String(
-    formData.get("billingInterval") ?? "",
-  ).trim();
-
-  const currentSubscription =
-    await getWorkspaceSubscription(
-      env.DB,
-      activeWorkspace.id,
-    );
-
-  // If the workspace has an active Lemon Squeezy subscription, switching billing interval
-  // must update the variant on Lemon Squeezy first.
-  if (
-    currentSubscription.providerSubscriptionId &&
-    currentSubscription.status !== "canceled"
-  ) {
     const result =
       await initiateOrUpdateWorkspaceSubscription(env, {
         actorUserId: user.id,
         actorEmail: user.email,
         actorName: user.name,
         workspaceId: activeWorkspace.id,
-        planId: currentSubscription.planId,
+        planId,
         billingInterval,
       });
 
@@ -127,42 +87,105 @@ export async function updateBillingIntervalAction(
     }
 
     return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
   }
+}
 
-  // When on the unsubscribed default Starter plan, toggling the interval only updates
-  // the workspace's preferred billing interval for plan comparison and checkout.
-  await updateWorkspaceBillingInterval(env.DB, {
-    actorUserId: user.id,
-    workspaceId: activeWorkspace.id,
-    billingInterval,
-  });
+export async function updateBillingIntervalAction(
+  formData: FormData,
+): Promise<WorkspaceActionResult> {
+  try {
+    const user = await requireAuthenticatedUser();
+    const activeWorkspace =
+      await requireActiveWorkspaceMembership(
+        env.DB,
+        user.id,
+      );
 
-  revalidateBillingAndWorkspacePaths();
-  return {};
+    const billingInterval = String(
+      formData.get("billingInterval") ?? "",
+    ).trim();
+
+    const currentSubscription =
+      await getWorkspaceSubscription(
+        env.DB,
+        activeWorkspace.id,
+      );
+
+    // If the workspace has an active Lemon Squeezy subscription, switching billing interval
+    // must update the variant on Lemon Squeezy first.
+    if (
+      currentSubscription.providerSubscriptionId &&
+      currentSubscription.status !== "canceled"
+    ) {
+      const result =
+        await initiateOrUpdateWorkspaceSubscription(env, {
+          actorUserId: user.id,
+          actorEmail: user.email,
+          actorName: user.name,
+          workspaceId: activeWorkspace.id,
+          planId: currentSubscription.planId,
+          billingInterval,
+        });
+
+      revalidateBillingAndWorkspacePaths();
+
+      if (result.mode === "checkout_redirect") {
+        return { checkoutUrl: result.checkoutUrl };
+      }
+
+      return {};
+    }
+
+    // When on an unsubscribed workspace plan, toggling the interval only updates
+    // the workspace's preferred billing interval for plan comparison and checkout.
+    await updateWorkspaceBillingInterval(env.DB, {
+      actorUserId: user.id,
+      workspaceId: activeWorkspace.id,
+      billingInterval,
+    });
+
+    revalidateBillingAndWorkspacePaths();
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
 }
 
 export async function toggleSubscriptionCancellationAction(
   formData: FormData,
-): Promise<void> {
-  const user = await requireAuthenticatedUser();
-  const activeWorkspace =
-    await requireActiveWorkspaceMembership(
-      env.DB,
-      user.id,
+): Promise<WorkspaceActionResult> {
+  try {
+    const user = await requireAuthenticatedUser();
+    const activeWorkspace =
+      await requireActiveWorkspaceMembership(
+        env.DB,
+        user.id,
+      );
+
+    const mode = String(
+      formData.get("mode") ?? "schedule_cancel",
+    ).trim();
+
+    await updateWorkspaceSubscriptionCancellationWithLemonSqueezy(
+      env,
+      {
+        actorUserId: user.id,
+        workspaceId: activeWorkspace.id,
+        cancelAtPeriodEnd: mode === "schedule_cancel",
+      },
     );
 
-  const mode = String(
-    formData.get("mode") ?? "schedule_cancel",
-  ).trim();
-
-  await updateWorkspaceSubscriptionCancellationWithLemonSqueezy(
-    env,
-    {
-      actorUserId: user.id,
-      workspaceId: activeWorkspace.id,
-      cancelAtPeriodEnd: mode === "schedule_cancel",
-    },
-  );
-
-  revalidateBillingAndWorkspacePaths();
+    revalidateBillingAndWorkspacePaths();
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
 }

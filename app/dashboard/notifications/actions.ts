@@ -8,6 +8,10 @@ import {
   toggleWorkspaceExternalChannelStatus,
   updateWorkspaceExternalChannel,
 } from "@/lib/notification-settings";
+import {
+  toUserFacingErrorMessage,
+  type WorkspaceActionResult,
+} from "@/lib/user-facing-error";
 import { env } from "cloudflare:workers";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -55,175 +59,210 @@ function revalidateNotificationRoutes() {
 
 export async function updateEmailNotificationPreferences(
   formData: FormData,
-) {
-  const userId = await requireAuthenticatedUserId();
+): Promise<WorkspaceActionResult> {
+  try {
+    const userId = await requireAuthenticatedUserId();
 
-  await saveUserEmailNotificationPreferences(env.DB, {
-    userId,
-    emailEnabled: readBooleanCheckbox(
-      formData,
-      "emailEnabled",
-    ),
-    digestEmailEnabled: readBooleanCheckbox(
-      formData,
-      "digestEmailEnabled",
-    ),
-    minSignificance: String(
-      formData.get("minSignificance") || "minor",
-    ).trim(),
-    categories: readStringArray(
-      formData,
-      "categories",
-    ),
-    competitorIds: readStringArray(
-      formData,
-      "competitorIds",
-    ),
-    digestPeriods: readStringArray(
-      formData,
-      "digestPeriods",
-    ),
-  });
+    await saveUserEmailNotificationPreferences(env.DB, {
+      userId,
+      emailEnabled: readBooleanCheckbox(
+        formData,
+        "emailEnabled",
+      ),
+      digestEmailEnabled: readBooleanCheckbox(
+        formData,
+        "digestEmailEnabled",
+      ),
+      minSignificance: String(
+        formData.get("minSignificance") || "minor",
+      ).trim(),
+      categories: readStringArray(
+        formData,
+        "categories",
+      ),
+      competitorIds: readStringArray(
+        formData,
+        "competitorIds",
+      ),
+      digestPeriods: readStringArray(
+        formData,
+        "digestPeriods",
+      ),
+    });
 
-  revalidateNotificationRoutes();
+    revalidateNotificationRoutes();
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
 }
 
 export async function createExternalChannel(
   formData: FormData,
-) {
-  const userId = await requireAuthenticatedUserId();
+): Promise<WorkspaceActionResult> {
+  try {
+    const userId = await requireAuthenticatedUserId();
 
-  await createWorkspaceExternalChannel(env.DB, {
-    userId,
-    name: String(formData.get("name") || "").trim(),
-    channel: String(formData.get("channel") || "").trim(),
-    slackWebhookUrl: String(
-      formData.get("slackWebhookUrl") || "",
-    ).trim(),
-    telegramBotToken: String(
-      formData.get("telegramBotToken") || "",
-    ).trim(),
-    telegramChatId: String(
-      formData.get("telegramChatId") || "",
-    ).trim(),
-    webhookUrl: String(
-      formData.get("webhookUrl") || "",
-    ).trim(),
-    webhookSecret: String(
-      formData.get("webhookSecret") || "",
-    ).trim(),
-    sendChanges: readBooleanCheckbox(
-      formData,
-      "sendChanges",
-    ),
-    sendDigests: readBooleanCheckbox(
-      formData,
-      "sendDigests",
-    ),
-    minSignificance: String(
-      formData.get("minSignificance") || "minor",
-    ).trim(),
-    categories: readStringArray(
-      formData,
-      "categories",
-    ),
-    competitorIds: readStringArray(
-      formData,
-      "competitorIds",
-    ),
-    digestPeriods: readStringArray(
-      formData,
-      "digestPeriods",
-    ),
-  });
+    await createWorkspaceExternalChannel(env.DB, {
+      userId,
+      name: String(formData.get("name") || "").trim(),
+      channel: String(formData.get("channel") || "").trim(),
+      slackWebhookUrl: String(
+        formData.get("slackWebhookUrl") || "",
+      ).trim(),
+      telegramBotToken: String(
+        formData.get("telegramBotToken") || "",
+      ).trim(),
+      telegramChatId: String(
+        formData.get("telegramChatId") || "",
+      ).trim(),
+      webhookUrl: String(
+        formData.get("webhookUrl") || "",
+      ).trim(),
+      webhookSecret: String(
+        formData.get("webhookSecret") || "",
+      ).trim(),
+      sendChanges: readBooleanCheckbox(
+        formData,
+        "sendChanges",
+      ),
+      sendDigests: readBooleanCheckbox(
+        formData,
+        "sendDigests",
+      ),
+      minSignificance: String(
+        formData.get("minSignificance") || "minor",
+      ).trim(),
+      categories: readStringArray(
+        formData,
+        "categories",
+      ),
+      competitorIds: readStringArray(
+        formData,
+        "competitorIds",
+      ),
+      digestPeriods: readStringArray(
+        formData,
+        "digestPeriods",
+      ),
+    });
 
-  revalidateNotificationRoutes();
+    revalidateNotificationRoutes();
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
 }
 
 export async function updateExternalChannel(
   formData: FormData,
-) {
-  const userId = await requireAuthenticatedUserId();
+): Promise<WorkspaceActionResult> {
+  try {
+    const userId = await requireAuthenticatedUserId();
 
-  await updateWorkspaceExternalChannel(env.DB, {
-    userId,
-    channelId: String(
-      formData.get("channelId") || "",
-    ).trim(),
-    name: String(formData.get("name") || "").trim(),
-    channel: String(formData.get("channel") || "").trim(),
-    slackWebhookUrl: String(
-      formData.get("slackWebhookUrl") || "",
-    ).trim(),
-    telegramBotToken: String(
-      formData.get("telegramBotToken") || "",
-    ).trim(),
-    telegramChatId: String(
-      formData.get("telegramChatId") || "",
-    ).trim(),
-    webhookUrl: String(
-      formData.get("webhookUrl") || "",
-    ).trim(),
-    webhookSecret: String(
-      formData.get("webhookSecret") || "",
-    ).trim(),
-    sendChanges: readBooleanCheckbox(
-      formData,
-      "sendChanges",
-    ),
-    sendDigests: readBooleanCheckbox(
-      formData,
-      "sendDigests",
-    ),
-    minSignificance: String(
-      formData.get("minSignificance") || "minor",
-    ).trim(),
-    categories: readStringArray(
-      formData,
-      "categories",
-    ),
-    competitorIds: readStringArray(
-      formData,
-      "competitorIds",
-    ),
-    digestPeriods: readStringArray(
-      formData,
-      "digestPeriods",
-    ),
-  });
+    await updateWorkspaceExternalChannel(env.DB, {
+      userId,
+      channelId: String(
+        formData.get("channelId") || "",
+      ).trim(),
+      name: String(formData.get("name") || "").trim(),
+      channel: String(formData.get("channel") || "").trim(),
+      slackWebhookUrl: String(
+        formData.get("slackWebhookUrl") || "",
+      ).trim(),
+      telegramBotToken: String(
+        formData.get("telegramBotToken") || "",
+      ).trim(),
+      telegramChatId: String(
+        formData.get("telegramChatId") || "",
+      ).trim(),
+      webhookUrl: String(
+        formData.get("webhookUrl") || "",
+      ).trim(),
+      webhookSecret: String(
+        formData.get("webhookSecret") || "",
+      ).trim(),
+      sendChanges: readBooleanCheckbox(
+        formData,
+        "sendChanges",
+      ),
+      sendDigests: readBooleanCheckbox(
+        formData,
+        "sendDigests",
+      ),
+      minSignificance: String(
+        formData.get("minSignificance") || "minor",
+      ).trim(),
+      categories: readStringArray(
+        formData,
+        "categories",
+      ),
+      competitorIds: readStringArray(
+        formData,
+        "competitorIds",
+      ),
+      digestPeriods: readStringArray(
+        formData,
+        "digestPeriods",
+      ),
+    });
 
-  revalidateNotificationRoutes();
+    revalidateNotificationRoutes();
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
 }
 
 export async function toggleExternalChannelStatus(
   formData: FormData,
-) {
-  const userId = await requireAuthenticatedUserId();
+): Promise<WorkspaceActionResult> {
+  try {
+    const userId = await requireAuthenticatedUserId();
 
-  await toggleWorkspaceExternalChannelStatus(env.DB, {
-    userId,
-    channelId: String(
-      formData.get("channelId") || "",
-    ).trim(),
-    currentStatus: String(
-      formData.get("currentStatus") || "",
-    ).trim(),
-  });
+    await toggleWorkspaceExternalChannelStatus(env.DB, {
+      userId,
+      channelId: String(
+        formData.get("channelId") || "",
+      ).trim(),
+      currentStatus: String(
+        formData.get("currentStatus") || "",
+      ).trim(),
+    });
 
-  revalidateNotificationRoutes();
+    revalidateNotificationRoutes();
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
 }
 
 export async function removeExternalChannel(
   formData: FormData,
-) {
-  const userId = await requireAuthenticatedUserId();
+): Promise<WorkspaceActionResult> {
+  try {
+    const userId = await requireAuthenticatedUserId();
 
-  await removeWorkspaceExternalChannel(env.DB, {
-    userId,
-    channelId: String(
-      formData.get("channelId") || "",
-    ).trim(),
-  });
+    await removeWorkspaceExternalChannel(env.DB, {
+      userId,
+      channelId: String(
+        formData.get("channelId") || "",
+      ).trim(),
+    });
 
-  revalidateNotificationRoutes();
+    revalidateNotificationRoutes();
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
 }

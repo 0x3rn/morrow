@@ -2,21 +2,12 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { authClient } from "@/lib/auth-client";
+import { getAuthErrorMessage } from "@/lib/user-facing-error";
 import { PasswordField } from "./password-field";
 import styles from "./auth-shell.module.css";
 
 type Step = "credentials" | "email-verification" | "two-factor";
-type AuthError = { code?: string; status?: number; message?: string };
-
-function errorMessage(error: AuthError, verifying = false) {
-  if (error.code === "ACCOUNT_TEMPORARILY_LOCKED") return "Too many incorrect codes. Please try logging in again in 15 minutes.";
-  if (error.status === 429) return "Too many requests. Please wait a minute before trying again.";
-  if (error.code === "EMAIL_DELIVERY_UNAVAILABLE") return "We couldn't send your code. Please try again shortly.";
-  if (error.code?.includes("TOO_MANY_ATTEMPTS")) return "Too many incorrect codes. Request a new code and try again.";
-  if (error.code === "INVALID_TWO_FACTOR_COOKIE") return "Your login attempt expired. Go back and enter your password again.";
-  if (verifying) return "That code is incorrect or has expired. Try again or request a new code.";
-  return "We couldn't continue with those details. Please check them and try again.";
-}
+const errorMessage = getAuthErrorMessage;
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [name, setName] = useState("");

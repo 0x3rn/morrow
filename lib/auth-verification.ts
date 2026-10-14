@@ -133,6 +133,18 @@ export function createEmailVerificationOptions(
     advanced: { ipAddress: { ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"] } },
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path === "/sign-up/email" && typeof ctx.body?.email === "string") {
+          const normalizedEmail = ctx.body.email.trim().toLowerCase();
+          if (normalizedEmail) {
+            const existing = await ctx.context.internalAdapter.findUserByEmail(normalizedEmail);
+            if (existing?.user) {
+              throw new APIError("UNPROCESSABLE_ENTITY", {
+                code: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL",
+                message: "A user with this email already exists.",
+              });
+            }
+          }
+        }
         if (ctx.path === "/email-otp/verify-email") {
           const password = ctx.body?.password;
           const email = ctx.body?.email;
@@ -170,3 +182,5 @@ export function createEmailVerificationOptions(
     },
   } satisfies BetterAuthOptions;
 }
+
+export { getAuthErrorMessage, type AuthErrorShape } from "./user-facing-error.ts";

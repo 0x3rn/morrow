@@ -12,6 +12,10 @@ import {
   updateWorkspaceMemberRole,
   updateWorkspaceName,
 } from "@/lib/team-workspaces";
+import {
+  toUserFacingErrorMessage,
+  type WorkspaceActionResult,
+} from "@/lib/user-facing-error";
 import { env } from "cloudflare:workers";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -30,158 +34,214 @@ async function requireAuthenticatedUser() {
 
 export async function switchWorkspaceAction(
   formData: FormData,
-): Promise<void> {
-  const user = await requireAuthenticatedUser();
-  const workspaceId = String(
-    formData.get("workspaceId") ?? "",
-  );
+): Promise<WorkspaceActionResult> {
+  try {
+    const user = await requireAuthenticatedUser();
+    const workspaceId = String(
+      formData.get("workspaceId") ?? "",
+    );
 
-  await switchActiveWorkspace(env.DB, {
-    userId: user.id,
-    workspaceId,
-  });
+    await switchActiveWorkspace(env.DB, {
+      userId: user.id,
+      workspaceId,
+    });
 
-  revalidatePath("/dashboard", "layout");
+    revalidatePath("/dashboard", "layout");
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
 }
 
 export async function createWorkspaceAction(
   formData: FormData,
-): Promise<void> {
-  const user = await requireAuthenticatedUser();
-  const name = String(formData.get("name") ?? "");
+): Promise<WorkspaceActionResult> {
+  try {
+    const user = await requireAuthenticatedUser();
+    const name = String(formData.get("name") ?? "");
 
-  await createTeamWorkspace(env.DB, {
-    userId: user.id,
-    name,
-  });
+    await createTeamWorkspace(env.DB, {
+      userId: user.id,
+      name,
+    });
 
-  revalidatePath("/dashboard", "layout");
+    revalidatePath("/dashboard", "layout");
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
 }
 
 export async function renameWorkspaceAction(
   formData: FormData,
-): Promise<void> {
-  const user = await requireAuthenticatedUser();
-  const active =
-    await requireActiveWorkspaceMembership(
-      env.DB,
-      user.id,
-    );
-  const name = String(formData.get("name") ?? "");
+): Promise<WorkspaceActionResult> {
+  try {
+    const user = await requireAuthenticatedUser();
+    const active =
+      await requireActiveWorkspaceMembership(
+        env.DB,
+        user.id,
+      );
+    const name = String(formData.get("name") ?? "");
 
-  await updateWorkspaceName(env.DB, {
-    userId: user.id,
-    workspaceId: active.id,
-    name,
-  });
+    await updateWorkspaceName(env.DB, {
+      userId: user.id,
+      workspaceId: active.id,
+      name,
+    });
 
-  revalidatePath("/dashboard", "layout");
+    revalidatePath("/dashboard", "layout");
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
 }
 
 export async function inviteWorkspaceMemberAction(
   formData: FormData,
-): Promise<void> {
-  const user = await requireAuthenticatedUser();
-  const active =
-    await requireActiveWorkspaceMembership(
-      env.DB,
-      user.id,
+): Promise<WorkspaceActionResult> {
+  try {
+    const user = await requireAuthenticatedUser();
+    const active =
+      await requireActiveWorkspaceMembership(
+        env.DB,
+        user.id,
+      );
+    const email = String(formData.get("email") ?? "");
+    const role = String(
+      formData.get("role") ?? "member",
     );
-  const email = String(formData.get("email") ?? "");
-  const role = String(
-    formData.get("role") ?? "member",
-  );
 
-  await inviteOrAddWorkspaceMember(env.DB, {
-    actorUserId: user.id,
-    workspaceId: active.id,
-    email,
-    role,
-  });
+    await inviteOrAddWorkspaceMember(env.DB, {
+      actorUserId: user.id,
+      workspaceId: active.id,
+      email,
+      role,
+    });
 
-  revalidatePath("/dashboard", "layout");
+    revalidatePath("/dashboard", "layout");
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
 }
 
 export async function updateMemberRoleAction(
   formData: FormData,
-): Promise<void> {
-  const user = await requireAuthenticatedUser();
-  const active =
-    await requireActiveWorkspaceMembership(
-      env.DB,
-      user.id,
+): Promise<WorkspaceActionResult> {
+  try {
+    const user = await requireAuthenticatedUser();
+    const active =
+      await requireActiveWorkspaceMembership(
+        env.DB,
+        user.id,
+      );
+    const targetUserId = String(
+      formData.get("targetUserId") ?? "",
     );
-  const targetUserId = String(
-    formData.get("targetUserId") ?? "",
-  );
-  const nextRole = String(formData.get("role") ?? "");
+    const nextRole = String(formData.get("role") ?? "");
 
-  await updateWorkspaceMemberRole(env.DB, {
-    actorUserId: user.id,
-    workspaceId: active.id,
-    targetUserId,
-    nextRole,
-  });
+    await updateWorkspaceMemberRole(env.DB, {
+      actorUserId: user.id,
+      workspaceId: active.id,
+      targetUserId,
+      nextRole,
+    });
 
-  revalidatePath("/dashboard", "layout");
+    revalidatePath("/dashboard", "layout");
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
 }
 
 export async function removeMemberAction(
   formData: FormData,
-): Promise<void> {
-  const user = await requireAuthenticatedUser();
-  const active =
-    await requireActiveWorkspaceMembership(
-      env.DB,
-      user.id,
+): Promise<WorkspaceActionResult> {
+  try {
+    const user = await requireAuthenticatedUser();
+    const active =
+      await requireActiveWorkspaceMembership(
+        env.DB,
+        user.id,
+      );
+    const targetUserId = String(
+      formData.get("targetUserId") ?? "",
     );
-  const targetUserId = String(
-    formData.get("targetUserId") ?? "",
-  );
 
-  await removeWorkspaceMember(env.DB, {
-    actorUserId: user.id,
-    workspaceId: active.id,
-    targetUserId,
-  });
+    await removeWorkspaceMember(env.DB, {
+      actorUserId: user.id,
+      workspaceId: active.id,
+      targetUserId,
+    });
 
-  revalidatePath("/dashboard", "layout");
+    revalidatePath("/dashboard", "layout");
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
 }
 
 export async function revokeInvitationAction(
   formData: FormData,
-): Promise<void> {
-  const user = await requireAuthenticatedUser();
-  const active =
-    await requireActiveWorkspaceMembership(
-      env.DB,
-      user.id,
+): Promise<WorkspaceActionResult> {
+  try {
+    const user = await requireAuthenticatedUser();
+    const active =
+      await requireActiveWorkspaceMembership(
+        env.DB,
+        user.id,
+      );
+    const invitationId = String(
+      formData.get("invitationId") ?? "",
     );
-  const invitationId = String(
-    formData.get("invitationId") ?? "",
-  );
 
-  await revokeWorkspaceInvitation(env.DB, {
-    actorUserId: user.id,
-    workspaceId: active.id,
-    invitationId,
-  });
+    await revokeWorkspaceInvitation(env.DB, {
+      actorUserId: user.id,
+      workspaceId: active.id,
+      invitationId,
+    });
 
-  revalidatePath("/dashboard", "layout");
+    revalidatePath("/dashboard", "layout");
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
 }
 
 export async function acceptInvitationAction(
   formData: FormData,
-): Promise<void> {
-  const user = await requireAuthenticatedUser();
-  const invitationId = String(
-    formData.get("invitationId") ?? "",
-  );
+): Promise<WorkspaceActionResult> {
+  try {
+    const user = await requireAuthenticatedUser();
+    const invitationId = String(
+      formData.get("invitationId") ?? "",
+    );
 
-  await acceptWorkspaceInvitation(env.DB, {
-    userId: user.id,
-    invitationId,
-  });
+    await acceptWorkspaceInvitation(env.DB, {
+      userId: user.id,
+      invitationId,
+    });
 
-  revalidatePath("/dashboard", "layout");
+    revalidatePath("/dashboard", "layout");
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
 }

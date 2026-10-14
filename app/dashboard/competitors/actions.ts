@@ -2,6 +2,10 @@
 
 import { auth } from "@/lib/auth";
 import { getActiveWorkspaceMembership } from "@/lib/team-workspaces";
+import {
+  toUserFacingErrorMessage,
+  type WorkspaceActionResult,
+} from "@/lib/user-facing-error";
 import { getWorkspaceEntitlements } from "@/lib/workspace-billing";
 import {
   canDeleteMonitoringResources,
@@ -12,6 +16,19 @@ import { env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+
+async function runCompetitorAction(
+  operation: () => Promise<void>,
+): Promise<WorkspaceActionResult> {
+  try {
+    await operation();
+    return {};
+  } catch (error) {
+    return {
+      error: toUserFacingErrorMessage(error),
+    };
+  }
+}
 
 interface IdRow {
   id: string;
@@ -200,7 +217,8 @@ async function getWorkspaceCompetitorCount(
 
 export async function createCompetitor(
   formData: FormData
-) {
+): Promise<WorkspaceActionResult> {
+  return runCompetitorAction(async () => {
   const session =
     await auth.api.getSession({
       headers:
@@ -315,7 +333,7 @@ export async function createCompetitor(
     competitorLimit
   ) {
     throw new Error(
-      `This workspace has reached the ${entitlements.planName} plan limit of ${competitorLimit} competitors. Upgrade your workspace plan in Billing to monitor more competitors.`
+      `This workspace has reached the ${entitlements.planName} plan limit of ${competitorLimit} ${competitorLimit === 1 ? "competitor" : "competitors"}. Upgrade your workspace plan in Billing to monitor more competitors.`
     );
   }
 
@@ -399,7 +417,7 @@ export async function createCompetitor(
     ) === 0
   ) {
     throw new Error(
-      `This workspace has reached the ${entitlements.planName} plan limit of ${competitorLimit} competitors. Upgrade your workspace plan in Billing to monitor more competitors.`
+      `This workspace has reached the ${entitlements.planName} plan limit of ${competitorLimit} ${competitorLimit === 1 ? "competitor" : "competitors"}. Upgrade your workspace plan in Billing to monitor more competitors.`
     );
   }
 
@@ -414,11 +432,13 @@ export async function createCompetitor(
   revalidatePath(
     "/dashboard/billing"
   );
+  });
 }
 
 export async function toggleCompetitorStatus(
   formData: FormData
-) {
+): Promise<WorkspaceActionResult> {
+  return runCompetitorAction(async () => {
   const session =
     await auth.api.getSession({
       headers:
@@ -554,11 +574,13 @@ export async function toggleCompetitorStatus(
   revalidatePath(
     `/dashboard/competitors/${competitorId}`
   );
+  });
 }
 
 export async function updateCompetitor(
   formData: FormData
-) {
+): Promise<WorkspaceActionResult> {
+  return runCompetitorAction(async () => {
   const session =
     await auth.api.getSession({
       headers:
@@ -756,11 +778,13 @@ export async function updateCompetitor(
   revalidatePath(
     `/dashboard/competitors/${competitorId}`
   );
+  });
 }
 
 export async function removeCompetitor(
   formData: FormData
-) {
+): Promise<WorkspaceActionResult> {
+  return runCompetitorAction(async () => {
   const session =
     await auth.api.getSession({
       headers:
@@ -909,4 +933,5 @@ export async function removeCompetitor(
   revalidatePath(
     "/dashboard/competitors"
   );
+  });
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { toUserFacingErrorMessage } from "@/lib/user-facing-error";
 import { WorkspacePanel } from "./workspace-panel";
 import { useWorkspaceFeedback } from "./workspace-feedback";
 
@@ -37,7 +38,7 @@ export function AccountSettings({ name: initialName, email: initialEmail }: { na
         return;
       }
       if (result.challenge) { setChallenge(result.challenge); setNow(Date.now()); setCode(""); }
-      if (!response.ok) { setError(result.error || "We couldn't save this change. Please try again."); return; }
+      if (!response.ok) { setError(toUserFacingErrorMessage(result.error, "We couldn't save this change. Please try again.")); return; }
       setMessage(result.challenge && body.action !== "resend-code"
         ? `A code has been sent to ${result.challenge.email} and expires in 5 minutes.` : result.message || "");
       if (result.user) {

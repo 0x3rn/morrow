@@ -1,6 +1,7 @@
 "use client";
 
 import { WorkspaceActionForm } from "@/components/workspace-feedback";
+import { toUserFacingErrorMessage } from "@/lib/user-facing-error";
 
 import {
   useState,
@@ -483,9 +484,10 @@ export function MonitoringScopeForm({
               </p>
 
               <p className="mt-1 text-xs leading-5 text-slate-500">
-                {
-                  preview.message
-                }
+                {toUserFacingErrorMessage(
+                  preview.message,
+                  "Morrow couldn't test these selectors.",
+                )}
               </p>
             </div>
           ) : (
