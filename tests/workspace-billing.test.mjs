@@ -1031,11 +1031,10 @@ function createLemonSqueezyTestEnv(db, overrides = {}) {
   return {
     DB: db,
     MORROW_APP_URL: "https://morrow.example.com",
-    LEMONSQUEEZY_API_KEY:
-      "lsq_live_test_key_9f8e7d6c5b4a3210",
+    LEMONSQUEEZY_API_KEY: "unit-test-billing-api-key",
     LEMONSQUEEZY_STORE_ID: "44001",
     LEMONSQUEEZY_WEBHOOK_SECRET:
-      "whsec_lemonsqueezy_test_secret_0123456789abcdef",
+      "unit-test-billing-webhook-secret",
     LEMONSQUEEZY_PERSONAL_MONTHLY_VARIANT_ID: "501",
     LEMONSQUEEZY_PERSONAL_ANNUAL_VARIANT_ID: "502",
     LEMONSQUEEZY_STARTER_MONTHLY_VARIANT_ID: "1001",
@@ -1064,7 +1063,7 @@ test("THE-28.5: Lemon Squeezy config validation, placeholder rejection, duplicat
     true,
   );
   assert.equal(
-    isPlaceholderEnvValue("lsq_live_real_token_123"),
+    isPlaceholderEnvValue("unit-test-billing-api-key"),
     false,
   );
 
@@ -1088,10 +1087,10 @@ test("THE-28.5: Lemon Squeezy config validation, placeholder rejection, duplicat
   assert.throws(
     () =>
       resolveLemonSqueezyConfig({
-        LEMONSQUEEZY_API_KEY: "lsq_live_123456",
+        LEMONSQUEEZY_API_KEY: "unit-test-billing-api-key",
         LEMONSQUEEZY_STORE_ID: "44001",
         LEMONSQUEEZY_WEBHOOK_SECRET:
-          "whsec_0123456789abcdef0123456789",
+          "unit-test-billing-webhook-secret",
         LEMONSQUEEZY_GROWTH_MONTHLY_VARIANT_ID: "2001",
         LEMONSQUEEZY_SCALE_MONTHLY_VARIANT_ID: "2001",
       }),
@@ -1135,8 +1134,7 @@ test("THE-28.5: Lemon Squeezy config validation, placeholder rejection, duplicat
     meta: { event_name: "subscription_created" },
     data: { id: "7001" },
   });
-  const secret =
-    "whsec_lemonsqueezy_test_secret_0123456789abcdef";
+  const secret = "unit-test-billing-webhook-secret";
   const validSig = computeLemonSqueezySignature(
     rawBody,
     secret,
@@ -1166,8 +1164,7 @@ test("THE-28.5: Lemon Squeezy config validation, placeholder rejection, duplicat
     verifyLemonSqueezyWebhookSignature({
       rawBody,
       signatureHeader: validSig,
-      webhookSecret:
-        "whsec_wrong_secret_0123456789abcdef",
+      webhookSecret: "unit-test-wrong-webhook-secret",
     }),
     false,
   );

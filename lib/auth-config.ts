@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 
 import { createEmailVerificationOptions } from "./auth-verification.ts";
 import { acceptPendingWorkspaceInvitationsForUser } from "./team-workspaces.ts";
+import { ensureWorkspaceSubscription } from "./workspace-billing.ts";
 
 const LOCAL_AUTH_URL =
   "http://localhost:3001";
@@ -215,6 +216,14 @@ return betterAuth({
                     user.id
                   ),
                 ]
+              );
+
+              await ensureWorkspaceSubscription(
+                runtimeEnv.DB,
+                {
+                  workspaceId,
+                  actorUserId: user.id,
+                }
               );
 
               if (user.email) {
