@@ -178,6 +178,20 @@ function createD1Fixture(t) {
     )
     .run();
 
+  sqlite
+    .prepare(
+      `
+        INSERT INTO workspace_subscriptions (workspace_id, plan_id, status, billing_interval)
+        VALUES
+          ('ws_acme', 'growth', 'active', 'monthly'),
+          ('ws_admin_home', 'growth', 'active', 'monthly'),
+          ('ws_member_home', 'growth', 'active', 'monthly'),
+          ('ws_viewer_home', 'growth', 'active', 'monthly'),
+          ('ws_external_home', 'growth', 'active', 'monthly')
+      `,
+    )
+    .run();
+
   return { sqlite, db };
 }
 

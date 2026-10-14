@@ -1,4 +1,6 @@
 export const BILLING_PLAN_IDS = [
+  "free",
+  "personal",
   "starter",
   "growth",
   "scale",
@@ -7,8 +9,18 @@ export const BILLING_PLAN_IDS = [
 export type BillingPlanId =
   (typeof BILLING_PLAN_IDS)[number];
 
+export const PAID_BILLING_PLAN_IDS = [
+  "personal",
+  "starter",
+  "growth",
+  "scale",
+] as const;
+
+export type PaidBillingPlanId =
+  (typeof PAID_BILLING_PLAN_IDS)[number];
+
 export const DEFAULT_BILLING_PLAN_ID: BillingPlanId =
-  "starter";
+  "free";
 
 export const BILLING_SUBSCRIPTION_STATUSES = [
   "trialing",
@@ -45,7 +57,13 @@ export const MONITORING_FREQUENCY_OPTIONS = [
 export type MonitoringFrequencyMinutes =
   (typeof MONITORING_FREQUENCY_OPTIONS)[number];
 
+export type BillingDigestPeriod =
+  | "daily"
+  | "weekly"
+  | "monthly";
+
 export interface BillingPlanLimits {
+  workspacesPerAccount: number;
   competitorsPerWorkspace: number;
   monitoredPagesPerWorkspace: number;
   monitoredPagesPerCompetitor: number;
@@ -60,6 +78,7 @@ export interface BillingPlanFeatures {
   visualComparison: boolean;
   sectionLevelMonitoring: boolean;
   scheduledDigests: boolean;
+  allowedDigestPeriods: readonly BillingDigestPeriod[];
   priorityQueue: boolean;
 }
 
@@ -79,21 +98,88 @@ export const BILLING_PLAN_CATALOG: Record<
   BillingPlanId,
   BillingPlanDefinition
 > = {
+  free: {
+    id: "free",
+    name: "Free",
+    tagline:
+      "Baseline competitor monitoring for non-subscribing users exploring Morrow.",
+    tierRank: 1,
+    monthlyPriceUsd: 0,
+    annualMonthlyPriceUsd: 0,
+    limits: {
+      workspacesPerAccount: 1,
+      competitorsPerWorkspace: 1,
+      monitoredPagesPerWorkspace: 3,
+      monitoredPagesPerCompetitor: 3,
+      minFrequencyMinutes: 1440,
+      historyRetentionDays: 7,
+      teamMembersPerWorkspace: 1,
+      externalChannelsPerWorkspace: 0,
+    },
+    features: {
+      hourlyMonitoring: false,
+      visualComparison: true,
+      sectionLevelMonitoring: false,
+      scheduledDigests: false,
+      allowedDigestPeriods: [],
+      priorityQueue: false,
+    },
+    highlights: [
+      "1 workspace and 1 seat (owner only)",
+      "1 competitor and up to 3 monitored pages",
+      "Checks every 24 hours with 7-day retention",
+      "Visual screenshot diffs and instant email alerts",
+    ],
+  },
+  personal: {
+    id: "personal",
+    name: "Personal",
+    tagline:
+      "Focused competitor tracking for solo founders, indie hackers, and small projects.",
+    tierRank: 2,
+    monthlyPriceUsd: 5,
+    annualMonthlyPriceUsd: 4,
+    limits: {
+      workspacesPerAccount: 1,
+      competitorsPerWorkspace: 3,
+      monitoredPagesPerWorkspace: 10,
+      monitoredPagesPerCompetitor: 4,
+      minFrequencyMinutes: 720,
+      historyRetentionDays: 14,
+      teamMembersPerWorkspace: 3,
+      externalChannelsPerWorkspace: 1,
+    },
+    features: {
+      hourlyMonitoring: false,
+      visualComparison: true,
+      sectionLevelMonitoring: false,
+      scheduledDigests: true,
+      allowedDigestPeriods: ["weekly"],
+      priorityQueue: false,
+    },
+    highlights: [
+      "1 workspace and up to 3 team seats (owner + 2 invited)",
+      "Up to 3 competitors and 10 monitored pages (max 4/competitor)",
+      "Checks as frequent as every 12 hours with 14-day retention",
+      "1 external notification channel and weekly scheduled digests",
+    ],
+  },
   starter: {
     id: "starter",
     name: "Starter",
     tagline:
-      "Essential competitor intelligence for solo founders and lean product teams.",
-    tierRank: 1,
+      "Essential competitor intelligence for early-stage startups and small product teams.",
+    tierRank: 3,
     monthlyPriceUsd: 19,
     annualMonthlyPriceUsd: 15,
     limits: {
+      workspacesPerAccount: 5,
       competitorsPerWorkspace: 10,
       monitoredPagesPerWorkspace: 50,
       monitoredPagesPerCompetitor: 10,
       minFrequencyMinutes: 360,
       historyRetentionDays: 30,
-      teamMembersPerWorkspace: 6,
+      teamMembersPerWorkspace: 5,
       externalChannelsPerWorkspace: 3,
     },
     features: {
@@ -101,13 +187,14 @@ export const BILLING_PLAN_CATALOG: Record<
       visualComparison: true,
       sectionLevelMonitoring: true,
       scheduledDigests: true,
+      allowedDigestPeriods: ["daily", "weekly", "monthly"],
       priorityQueue: false,
     },
     highlights: [
-      "Up to 10 competitors and 50 monitored pages",
-      "Checks as frequent as every 6 hours",
-      "30-day change and snapshot retention window",
-      "Up to 6 workspace team seats and 3 external channels",
+      "Up to 5 workspaces and 5 team seats per workspace",
+      "Up to 10 competitors and 50 monitored pages (max 10/competitor)",
+      "Checks every 6 hours, CSS section selectors, and 30-day retention",
+      "Up to 3 external channels plus daily & weekly digests",
     ],
   },
   growth: {
@@ -115,10 +202,11 @@ export const BILLING_PLAN_CATALOG: Record<
     name: "Growth",
     tagline:
       "High-frequency monitoring and deeper historical retention for scaling GTM and PMM teams.",
-    tierRank: 2,
+    tierRank: 4,
     monthlyPriceUsd: 49,
     annualMonthlyPriceUsd: 39,
     limits: {
+      workspacesPerAccount: 25,
       competitorsPerWorkspace: 25,
       monitoredPagesPerWorkspace: 150,
       monitoredPagesPerCompetitor: 25,
@@ -132,13 +220,14 @@ export const BILLING_PLAN_CATALOG: Record<
       visualComparison: true,
       sectionLevelMonitoring: true,
       scheduledDigests: true,
+      allowedDigestPeriods: ["daily", "weekly", "monthly"],
       priorityQueue: false,
     },
     highlights: [
-      "Up to 25 competitors and 150 monitored pages",
-      "Hourly monitoring unlocked (60-minute interval)",
-      "90-day change and snapshot retention window",
-      "Up to 15 workspace team seats and 10 external channels",
+      "Up to 25 workspaces and 15 team seats per workspace",
+      "Up to 25 competitors and 150 monitored pages (max 25/competitor)",
+      "Hourly monitoring unlocked (60-minute interval) and 90-day retention",
+      "Up to 10 external notification channels",
     ],
   },
   scale: {
@@ -146,10 +235,11 @@ export const BILLING_PLAN_CATALOG: Record<
     name: "Scale",
     tagline:
       "Full-market coverage, 1-year intelligence archive, and priority capture capacity for multi-product orgs.",
-    tierRank: 3,
+    tierRank: 5,
     monthlyPriceUsd: 99,
     annualMonthlyPriceUsd: 79,
     limits: {
+      workspacesPerAccount: 50,
       competitorsPerWorkspace: 100,
       monitoredPagesPerWorkspace: 500,
       monitoredPagesPerCompetitor: 50,
@@ -163,13 +253,14 @@ export const BILLING_PLAN_CATALOG: Record<
       visualComparison: true,
       sectionLevelMonitoring: true,
       scheduledDigests: true,
+      allowedDigestPeriods: ["daily", "weekly", "monthly"],
       priorityQueue: true,
     },
     highlights: [
-      "Up to 100 competitors and 500 monitored pages",
-      "Hourly monitoring with priority queue scheduling",
-      "365-day change and snapshot retention archive",
-      "Up to 50 workspace team seats and 25 external channels",
+      "Up to 50 workspaces and 50 team seats per workspace",
+      "Up to 100 competitors and 500 monitored pages (max 50/competitor)",
+      "Hourly monitoring with priority queue and 365-day retention archive",
+      "Up to 25 external notification channels",
     ],
   },
 };
@@ -192,12 +283,14 @@ export interface WorkspaceEntitlements {
 }
 
 export interface WorkspaceMeteredUsage {
+  ownedWorkspaces?: number;
   competitors: number;
   monitoredPages: number;
   maxPagesOnSingleCompetitor: number;
   teamSeats: number;
   externalChannels: number;
   fasterThanTargetMinFrequencyPages?: number;
+  pagesWithCssSelectors?: number;
 }
 
 export interface PlanTransitionEvaluation {
@@ -205,6 +298,7 @@ export interface PlanTransitionEvaluation {
   allowed: boolean;
   blockingReasons: string[];
   pagesRequiringFrequencyAdjustment: number;
+  pagesRequiringSelectorClear?: number;
 }
 
 export function isBillingPlanId(
@@ -215,6 +309,17 @@ export function isBillingPlanId(
     (BILLING_PLAN_IDS as readonly string[]).includes(
       value,
     )
+  );
+}
+
+export function isPaidBillingPlanId(
+  value: unknown,
+): value is PaidBillingPlanId {
+  return (
+    typeof value === "string" &&
+    (
+      PAID_BILLING_PLAN_IDS as readonly string[]
+    ).includes(value)
   );
 }
 
@@ -297,30 +402,78 @@ export function getAllowedFrequenciesForMinInterval(
   );
 }
 
+export function parseBillingTimestampMs(
+  value: unknown,
+): number | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const normalized =
+    trimmed.endsWith("Z") ||
+    /[+-]\d{2}:\d{2}$/.test(trimmed)
+      ? trimmed
+      : `${trimmed.replace(" ", "T")}Z`;
+
+  const parsed = Date.parse(normalized);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
 export function resolveWorkspaceEntitlements(input?: {
   planId?: unknown;
   subscriptionStatus?: unknown;
   billingInterval?: unknown;
   cancelAtPeriodEnd?: boolean;
+  currentPeriodEnd?: string | null;
+  referenceDate?: Date;
 }): WorkspaceEntitlements {
   const configuredPlanId = normalizeBillingPlanId(
     input?.planId,
   );
-  const subscriptionStatus =
+  const rawSubscriptionStatus =
     normalizeBillingSubscriptionStatus(
       input?.subscriptionStatus,
     );
   const billingInterval = normalizeBillingInterval(
     input?.billingInterval,
   );
-  const cancelAtPeriodEnd = Boolean(
+  const rawCancelAtPeriodEnd = Boolean(
     input?.cancelAtPeriodEnd,
   );
 
-  // Canceled subscriptions fall back to Starter entitlements while retaining workspace data.
+  const periodEndMs = parseBillingTimestampMs(
+    input?.currentPeriodEnd,
+  );
+  const referenceMs = (
+    input?.referenceDate ?? new Date()
+  ).getTime();
+
+  // If a subscription was scheduled to cancel at period end (or is trialing/past_due) and the period end has passed,
+  // treat it as expired/canceled immediately even if the external webhook is delayed.
+  const isPeriodExpired =
+    periodEndMs !== null &&
+    periodEndMs <= referenceMs &&
+    (rawCancelAtPeriodEnd ||
+      rawSubscriptionStatus === "trialing" ||
+      rawSubscriptionStatus === "past_due");
+
+  const subscriptionStatus: BillingSubscriptionStatus =
+    isPeriodExpired
+      ? "canceled"
+      : rawSubscriptionStatus;
+  const cancelAtPeriodEnd = isPeriodExpired
+    ? false
+    : rawCancelAtPeriodEnd;
+
+  // Canceled subscriptions fall back to Free entitlements while retaining workspace data.
   const effectivePlanId: BillingPlanId =
     subscriptionStatus === "canceled"
-      ? "starter"
+      ? "free"
       : configuredPlanId;
 
   const plan =
@@ -344,7 +497,12 @@ export function resolveWorkspaceEntitlements(input?: {
     annualTotalPriceUsd:
       plan.annualMonthlyPriceUsd * 12,
     limits: { ...plan.limits },
-    features: { ...plan.features },
+    features: {
+      ...plan.features,
+      allowedDigestPeriods: [
+        ...plan.features.allowedDigestPeriods,
+      ],
+    },
     allowedFrequencies:
       getAllowedFrequenciesForMinInterval(
         plan.limits.minFrequencyMinutes,
@@ -395,7 +553,7 @@ export function getDefaultFrequencyForPlan(
     MONITORING_FREQUENCY_OPTIONS.find(
       (interval) =>
         interval >= Math.max(360, minFrequencyMinutes),
-    ) ?? 360
+    ) ?? 1440
   );
 }
 
@@ -437,6 +595,7 @@ export function evaluatePlanTransition(input: {
   targetPlanId: BillingPlanId;
   usage: WorkspaceMeteredUsage;
   fasterThanTargetMinFrequencyPages?: number;
+  pagesWithCssSelectors?: number;
 }): PlanTransitionEvaluation {
   const currentPlan = getBillingPlanDefinition(
     input.currentPlanId,
@@ -458,6 +617,16 @@ export function evaluatePlanTransition(input: {
   const blockingReasons: string[] = [];
   const { limits } = targetPlan;
   const { usage } = input;
+
+  if (
+    typeof usage.ownedWorkspaces === "number" &&
+    usage.ownedWorkspaces >
+      limits.workspacesPerAccount
+  ) {
+    blockingReasons.push(
+      `Your account currently owns ${usage.ownedWorkspaces} workspaces, which exceeds the ${targetPlan.name} plan limit of ${limits.workspacesPerAccount}.`,
+    );
+  }
 
   if (
     usage.competitors >
@@ -512,10 +681,22 @@ export function evaluatePlanTransition(input: {
         0,
     );
 
+  const rawPagesWithSelectors = Math.max(
+    0,
+    input.pagesWithCssSelectors ??
+      usage.pagesWithCssSelectors ??
+      0,
+  );
+  const pagesRequiringSelectorClear =
+    !targetPlan.features.sectionLevelMonitoring
+      ? rawPagesWithSelectors
+      : 0;
+
   return {
     direction,
     allowed: blockingReasons.length === 0,
     blockingReasons,
     pagesRequiringFrequencyAdjustment,
+    pagesRequiringSelectorClear,
   };
 }

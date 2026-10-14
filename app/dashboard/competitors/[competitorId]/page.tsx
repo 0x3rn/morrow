@@ -2,6 +2,7 @@ import { CompetitorIcon } from "@/components/competitor-icon";
 import { WorkspaceActionForm } from "@/components/workspace-feedback";
 import { WorkspacePanel } from "@/components/workspace-panel";
 import { auth } from "@/lib/auth";
+import { formatFrequencyIntervalLabel } from "@/lib/billing-plans";
 import { getWorkspaceEntitlements } from "@/lib/workspace-billing";
 import {
   getWorkspaceRolePermissions,
@@ -1131,24 +1132,46 @@ export default async function CompetitorPage({
                                     <option
                                       value="60"
                                       disabled={
-                                        !entitlements
-                                          .features
-                                          .hourlyMonitoring
+                                        !entitlements.allowedFrequencies.includes(
+                                          60
+                                        )
                                       }
                                     >
-                                      {entitlements
-                                        .features
-                                        .hourlyMonitoring
+                                      {entitlements.allowedFrequencies.includes(
+                                        60
+                                      )
                                         ? "Every hour"
                                         : "Every hour (Growth & Scale plans)"}
                                     </option>
 
-                                    <option value="360">
-                                      Every 6 hours
+                                    <option
+                                      value="360"
+                                      disabled={
+                                        !entitlements.allowedFrequencies.includes(
+                                          360
+                                        )
+                                      }
+                                    >
+                                      {entitlements.allowedFrequencies.includes(
+                                        360
+                                      )
+                                        ? "Every 6 hours"
+                                        : "Every 6 hours (Starter+ plans)"}
                                     </option>
 
-                                    <option value="720">
-                                      Every 12 hours
+                                    <option
+                                      value="720"
+                                      disabled={
+                                        !entitlements.allowedFrequencies.includes(
+                                          720
+                                        )
+                                      }
+                                    >
+                                      {entitlements.allowedFrequencies.includes(
+                                        720
+                                      )
+                                        ? "Every 12 hours"
+                                        : "Every 12 hours (Personal+ plans)"}
                                     </option>
 
                                     <option value="1440">
@@ -1177,35 +1200,54 @@ export default async function CompetitorPage({
                                         entitlements.planName
                                       }
                                     </strong>{" "}
-                                    plan supports checks as frequent as every 6 hours.{" "}
+                                    plan supports checks as frequent as{" "}
+                                    {formatFrequencyIntervalLabel(
+                                      entitlements
+                                        .limits
+                                        .minFrequencyMinutes
+                                    ).toLowerCase()}
+                                    .{" "}
                                     <Link
                                       href="/dashboard/billing"
                                       className="font-medium text-indigo-600"
                                     >
                                       Upgrade in Billing
                                     </Link>{" "}
-                                    for hourly monitoring.
+                                    for faster monitoring.
                                   </p>
                                 ) : null}
                               </WorkspaceActionForm></div>
-    <MonitoringScopeForm
-                            monitoredPageId={
-                              page.id
-                            }
-                            competitorId={
-                              competitor.id
-                            }
-                            initialIncludeSelectors={
-                              formatSelectorConfiguration(
-                                page.include_selectors_json
-                              )
-                            }
-                            initialIgnoreSelectors={
-                              formatSelectorConfiguration(
-                                page.ignore_selectors_json
-                              )
-                            }
-                          />
+    {entitlements.features.sectionLevelMonitoring ? (
+      <MonitoringScopeForm
+        monitoredPageId={page.id}
+        competitorId={competitor.id}
+        initialIncludeSelectors={formatSelectorConfiguration(
+          page.include_selectors_json
+        )}
+        initialIgnoreSelectors={formatSelectorConfiguration(
+          page.ignore_selectors_json
+        )}
+      />
+    ) : (
+      <div className="workspace-panel-section space-y-2">
+        <h4 className="text-sm font-semibold text-slate-900">
+          Monitoring scope (CSS selectors)
+        </h4>
+        <p className="text-xs leading-5 text-slate-500">
+          Section-level CSS selector filtering is included on{" "}
+          <strong>Starter</strong>, <strong>Growth</strong>, and{" "}
+          <strong>Scale</strong> plans. Your workspace is currently on{" "}
+          <strong>{entitlements.planName}</strong> (full-page monitoring).{" "}
+          <Link
+            href="/dashboard/billing"
+            className="font-medium text-indigo-600"
+          >
+            Upgrade in Billing
+          </Link>{" "}
+          to target or ignore specific page sections.
+        </p>
+      </div>
+    )}
     {permissions.canDeleteMonitoringResources ? (
     <div className="workspace-destructive">
                                 <h4 className="text-sm font-semibold text-red-700">

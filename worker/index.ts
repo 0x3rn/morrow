@@ -30,6 +30,7 @@ import {
   notifyChangeByExternalChannels,
   notifyDigestByExternalChannels,
 } from "./external-notifications";
+import { getWorkspaceEntitlements } from "../lib/workspace-billing";
 
 interface Env {
   DB: D1Database;
@@ -62,10 +63,28 @@ interface Env {
   RESEND_API_KEY?: string;
   MORROW_EMAIL_FROM?: string;
   MORROW_APP_URL?: string;
+
+  /*
+   * THE-28
+   *
+   * Lemon Squeezy billing and webhook configuration.
+   */
+  LEMONSQUEEZY_API_KEY?: string;
+  LEMONSQUEEZY_STORE_ID?: string;
+  LEMONSQUEEZY_WEBHOOK_SECRET?: string;
+  LEMONSQUEEZY_PERSONAL_MONTHLY_VARIANT_ID?: string;
+  LEMONSQUEEZY_PERSONAL_ANNUAL_VARIANT_ID?: string;
+  LEMONSQUEEZY_STARTER_MONTHLY_VARIANT_ID?: string;
+  LEMONSQUEEZY_STARTER_ANNUAL_VARIANT_ID?: string;
+  LEMONSQUEEZY_GROWTH_MONTHLY_VARIANT_ID?: string;
+  LEMONSQUEEZY_GROWTH_ANNUAL_VARIANT_ID?: string;
+  LEMONSQUEEZY_SCALE_MONTHLY_VARIANT_ID?: string;
+  LEMONSQUEEZY_SCALE_ANNUAL_VARIANT_ID?: string;
 }
 
 interface MonitoredPageRow {
   id: string;
+  workspace_id: string;
   url: string;
   frequency_minutes: number;
   last_checked_at: string | null;
@@ -1055,6 +1074,12 @@ async function processCapturedPage(
   const capturedAt =
     new Date().toISOString();
 
+  const entitlements =
+    await getWorkspaceEntitlements(
+      env.DB,
+      pageToCapture.workspace_id
+    );
+
   const includeConfiguration =
     parseSelectorListJson(
       pageToCapture
@@ -1068,14 +1093,22 @@ async function processCapturedPage(
     );
 
   const monitoringConfigurationValid =
-    includeConfiguration.valid &&
-    ignoreConfiguration.valid;
+    !entitlements.features
+      .sectionLevelMonitoring ||
+    (includeConfiguration.valid &&
+      ignoreConfiguration.valid);
 
   const includeSelectors =
-    includeConfiguration.selectors;
+    entitlements.features
+      .sectionLevelMonitoring
+      ? includeConfiguration.selectors
+      : [];
 
   const ignoreSelectors =
-    ignoreConfiguration.selectors;
+    entitlements.features
+      .sectionLevelMonitoring
+      ? ignoreConfiguration.selectors
+      : [];
 
   const hasConfiguredScope =
     includeSelectors.length > 0 ||
@@ -1833,9 +1866,15 @@ async function updateCaptureSchedule(
     MonitoredPageRow,
   capturedAt: string
 ) {
+  const entitlements =
+    await getWorkspaceEntitlements(
+      env.DB,
+      pageToCapture.workspace_id
+    );
   const frequencyMinutes =
     Math.max(
-      1,
+      entitlements.limits
+        .minFrequencyMinutes,
       Number(
         pageToCapture.frequency_minutes
       ) || 1440
@@ -1898,6 +1937,7 @@ async function getDueMonitoredPages(
       `
         SELECT
           monitored_pages.id,
+          competitors.workspace_id,
           monitored_pages.url,
           monitored_pages.frequency_minutes,
           monitored_pages.last_checked_at,

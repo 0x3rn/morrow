@@ -20,7 +20,11 @@ import {
   type NotificationSignificanceLevel,
 } from "../worker/notification-routing.ts";
 import { getActiveWorkspaceMembership } from "./team-workspaces.ts";
-import { assertWorkspaceExternalChannelCapacity } from "./workspace-billing.ts";
+import {
+  assertWorkspaceDigestScheduleAllowed,
+  assertWorkspaceExternalChannelCapacity,
+  enforceExternalChannelCapacityAfterInsert,
+} from "./workspace-billing.ts";
 import {
   canManageWorkspaceChannels,
   normalizeWorkspaceRole,
@@ -628,6 +632,12 @@ export async function saveUserEmailNotificationPreferences(
     );
   }
 
+  await assertWorkspaceDigestScheduleAllowed(db, {
+    workspaceId: workspace.id,
+    enabled: input.digestEmailEnabled,
+    digestPeriods: normalizedDigestPeriods,
+  });
+
   const digestPeriodsJson = serializeAllowedDigestPeriods(
     normalizedDigestPeriods,
     ["weekly"],
@@ -895,6 +905,12 @@ export async function createWorkspaceExternalChannel(
     );
   }
 
+  await assertWorkspaceDigestScheduleAllowed(db, {
+    workspaceId: workspace.id,
+    enabled: input.sendDigests,
+    digestPeriods: normalizedDigestPeriods,
+  });
+
   const competitors = await getWorkspaceCompetitors(
     db,
     workspace.id,
@@ -922,7 +938,7 @@ export async function createWorkspaceExternalChannel(
   );
   const digestPeriodsJson = serializeAllowedDigestPeriods(
     normalizedDigestPeriods,
-    ["daily", "weekly", "monthly"],
+    ["weekly"],
   );
 
   const channelId = randomUUID();
@@ -987,6 +1003,11 @@ export async function createWorkspaceExternalChannel(
     }
     throw error;
   }
+
+  await enforceExternalChannelCapacityAfterInsert(db, {
+    workspaceId: workspace.id,
+    channelId,
+  });
 
   return { id: channelId };
 }
@@ -1076,6 +1097,12 @@ export async function updateWorkspaceExternalChannel(
       "Choose at least one digest schedule when scheduled digests are enabled for this channel.",
     );
   }
+
+  await assertWorkspaceDigestScheduleAllowed(db, {
+    workspaceId: existing.workspace_id,
+    enabled: input.sendDigests,
+    digestPeriods: normalizedDigestPeriods,
+  });
 
   const competitors = await getWorkspaceCompetitors(
     db,

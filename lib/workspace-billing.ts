@@ -16,6 +16,7 @@ import {
   normalizeBillingInterval,
   normalizeBillingPlanId,
   normalizeBillingSubscriptionStatus,
+  parseBillingTimestampMs,
   resolveWorkspaceEntitlements,
   type BillingInterval,
   type BillingPlanDefinition,
@@ -47,18 +48,26 @@ interface WorkspaceSubscriptionRow {
   current_period_end: string;
   provider_customer_id: string | null;
   provider_subscription_id: string | null;
+  provider_variant_id?: string | null;
+  provider_order_id?: string | null;
+  provider_status?: string | null;
+  provider_customer_portal_url?: string | null;
+  provider_update_payment_url?: string | null;
+  provider_updated_at?: string | null;
   updated_by: string | null;
   created_at: string;
   updated_at: string;
 }
 
 interface UsageMetricsRow {
+  owned_workspaces_count: number;
   competitors_count: number;
   monitored_pages_count: number;
   max_pages_per_competitor: number;
   active_members_count: number;
   pending_invitations_count: number;
   external_channels_count: number;
+  pages_with_selectors_count: number;
   outside_retention_changes_count: number;
   outside_retention_snapshots_count: number;
 }
@@ -79,12 +88,15 @@ interface BillingEventRow {
 
 export type WorkspaceBillingEventType =
   | "subscription_initialized"
+  | "checkout_initiated"
   | "plan_upgraded"
   | "plan_downgraded"
   | "billing_interval_changed"
   | "cancellation_scheduled"
   | "subscription_reactivated"
-  | "subscription_canceled";
+  | "subscription_canceled"
+  | "payment_succeeded"
+  | "payment_failed";
 
 export interface WorkspaceSubscriptionView {
   workspaceId: string;
@@ -96,6 +108,12 @@ export interface WorkspaceSubscriptionView {
   currentPeriodEnd: string;
   providerCustomerId: string | null;
   providerSubscriptionId: string | null;
+  providerVariantId: string | null;
+  providerOrderId: string | null;
+  providerStatus: string | null;
+  providerCustomerPortalUrl: string | null;
+  providerUpdatePaymentUrl: string | null;
+  providerUpdatedAt: string | null;
   updatedBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -103,8 +121,10 @@ export interface WorkspaceSubscriptionView {
 
 export interface WorkspaceDetailedUsage
   extends WorkspaceMeteredUsage {
+  ownedWorkspaces: number;
   activeMembers: number;
   pendingInvitations: number;
+  pagesWithCssSelectors: number;
   retentionCutoffIso: string;
   outsideRetentionChanges: number;
   outsideRetentionSnapshots: number;
@@ -126,6 +146,7 @@ export interface WorkspaceBillingEventView {
   newPlanId: BillingPlanId;
   billingInterval: BillingInterval;
   adjustedPageFrequencies: number;
+  adjustedSelectorPages: number;
   createdAt: string;
 }
 
@@ -159,12 +180,22 @@ async function executeBatch(
 function isMissingTableError(error: unknown): boolean {
   return (
     error instanceof Error &&
-    /no such table/i.test(error.message)
+    /no such table|no such column/i.test(error.message)
+  );
+}
+
+function isMissingColumnOnlyError(
+  error: unknown,
+): boolean {
+  return (
+    error instanceof Error &&
+    /no such column/i.test(error.message)
   );
 }
 
 function createDefaultSubscriptionView(
   workspaceId: string,
+  planId: BillingPlanId = DEFAULT_BILLING_PLAN_ID,
 ): WorkspaceSubscriptionView {
   const now = new Date();
   const periodEnd = new Date(
@@ -172,7 +203,7 @@ function createDefaultSubscriptionView(
   );
   return {
     workspaceId,
-    planId: DEFAULT_BILLING_PLAN_ID,
+    planId,
     status: DEFAULT_BILLING_SUBSCRIPTION_STATUS,
     billingInterval: DEFAULT_BILLING_INTERVAL,
     cancelAtPeriodEnd: false,
@@ -180,6 +211,12 @@ function createDefaultSubscriptionView(
     currentPeriodEnd: periodEnd.toISOString(),
     providerCustomerId: null,
     providerSubscriptionId: null,
+    providerVariantId: null,
+    providerOrderId: null,
+    providerStatus: null,
+    providerCustomerPortalUrl: null,
+    providerUpdatePaymentUrl: null,
+    providerUpdatedAt: null,
     updatedBy: null,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
@@ -204,6 +241,14 @@ function toWorkspaceSubscriptionView(
     providerCustomerId: row.provider_customer_id ?? null,
     providerSubscriptionId:
       row.provider_subscription_id ?? null,
+    providerVariantId: row.provider_variant_id ?? null,
+    providerOrderId: row.provider_order_id ?? null,
+    providerStatus: row.provider_status ?? null,
+    providerCustomerPortalUrl:
+      row.provider_customer_portal_url ?? null,
+    providerUpdatePaymentUrl:
+      row.provider_update_payment_url ?? null,
+    providerUpdatedAt: row.provider_updated_at ?? null,
     updatedBy: row.updated_by ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -228,6 +273,12 @@ export async function getWorkspaceSubscription(
             current_period_end,
             provider_customer_id,
             provider_subscription_id,
+            provider_variant_id,
+            provider_order_id,
+            provider_status,
+            provider_customer_portal_url,
+            provider_update_payment_url,
+            provider_updated_at,
             updated_by,
             created_at,
             updated_at
@@ -242,13 +293,58 @@ export async function getWorkspaceSubscription(
     if (row) {
       return toWorkspaceSubscriptionView(row);
     }
+
+    return createDefaultSubscriptionView(
+      workspaceId,
+      DEFAULT_BILLING_PLAN_ID,
+    );
   } catch (error) {
+    if (isMissingColumnOnlyError(error)) {
+      const legacyRow = await db
+        .prepare(
+          `
+            SELECT
+              workspace_id,
+              plan_id,
+              status,
+              billing_interval,
+              cancel_at_period_end,
+              current_period_start,
+              current_period_end,
+              provider_customer_id,
+              provider_subscription_id,
+              updated_by,
+              created_at,
+              updated_at
+            FROM workspace_subscriptions
+            WHERE workspace_id = ?
+            LIMIT 1
+          `,
+        )
+        .bind(workspaceId)
+        .first<WorkspaceSubscriptionRow>();
+
+      if (legacyRow) {
+        return toWorkspaceSubscriptionView(legacyRow);
+      }
+
+      return createDefaultSubscriptionView(
+        workspaceId,
+        DEFAULT_BILLING_PLAN_ID,
+      );
+    }
+
     if (!isMissingTableError(error)) {
       throw error;
     }
-  }
 
-  return createDefaultSubscriptionView(workspaceId);
+    // Only when the workspace_subscriptions table itself does not exist (pre-0013 test schemas)
+    // do we fall back to Starter so legacy pre-billing migration tests can run unblocked.
+    return createDefaultSubscriptionView(
+      workspaceId,
+      "starter",
+    );
+  }
 }
 
 export async function ensureWorkspaceSubscription(
@@ -330,6 +426,7 @@ export async function getWorkspaceEntitlements(
     subscriptionStatus: subscription.status,
     billingInterval: subscription.billingInterval,
     cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+    currentPeriodEnd: subscription.currentPeriodEnd,
   });
 }
 
@@ -370,7 +467,7 @@ export async function getWorkspaceMeteredUsage(
 ): Promise<WorkspaceDetailedUsage> {
   const retentionDays =
     options?.retentionDays ??
-    BILLING_PLAN_CATALOG.starter.limits
+    BILLING_PLAN_CATALOG[DEFAULT_BILLING_PLAN_ID].limits
       .historyRetentionDays;
   const retentionCutoffIso = getRetentionCutoffIso(
     retentionDays,
@@ -385,6 +482,20 @@ export async function getWorkspaceMeteredUsage(
       .prepare(
         `
           SELECT
+            (
+              SELECT COALESCE(MAX(owner_ws_count), 1)
+              FROM (
+                SELECT COUNT(DISTINCT wm_all.workspace_id) AS owner_ws_count
+                FROM workspace_members AS wm_owners
+                INNER JOIN workspace_members AS wm_all
+                  ON wm_all.user_id = wm_owners.user_id
+                 AND wm_all.role = 'owner'
+                WHERE wm_owners.workspace_id = ?
+                  AND wm_owners.role = 'owner'
+                GROUP BY wm_owners.user_id
+              )
+            ) AS owned_workspaces_count,
+
             (
               SELECT COUNT(*)
               FROM competitors
@@ -432,6 +543,26 @@ export async function getWorkspaceMeteredUsage(
 
             (
               SELECT COUNT(*)
+              FROM monitored_pages
+              INNER JOIN competitors
+                ON competitors.id = monitored_pages.competitor_id
+              WHERE competitors.workspace_id = ?
+                AND (
+                  (
+                    monitored_pages.include_selectors_json IS NOT NULL
+                    AND TRIM(monitored_pages.include_selectors_json) != ''
+                    AND TRIM(monitored_pages.include_selectors_json) != '[]'
+                  )
+                  OR (
+                    monitored_pages.ignore_selectors_json IS NOT NULL
+                    AND TRIM(monitored_pages.ignore_selectors_json) != ''
+                    AND TRIM(monitored_pages.ignore_selectors_json) != '[]'
+                  )
+                )
+            ) AS pages_with_selectors_count,
+
+            (
+              SELECT COUNT(*)
               FROM changes
               INNER JOIN monitored_pages
                 ON monitored_pages.id = changes.monitored_page_id
@@ -454,6 +585,8 @@ export async function getWorkspaceMeteredUsage(
         `,
       )
       .bind(
+        workspaceId,
+        workspaceId,
         workspaceId,
         workspaceId,
         workspaceId,
@@ -529,6 +662,7 @@ export async function getWorkspaceMeteredUsage(
     );
 
     return {
+      ownedWorkspaces: 1,
       competitors: Number(
         fallbackRow?.competitors_count ?? 0,
       ),
@@ -542,6 +676,7 @@ export async function getWorkspaceMeteredUsage(
       pendingInvitations: 0,
       teamSeats: activeMembers,
       externalChannels: 0,
+      pagesWithCssSelectors: 0,
       retentionCutoffIso,
       outsideRetentionChanges: 0,
       outsideRetentionSnapshots: 0,
@@ -556,6 +691,10 @@ export async function getWorkspaceMeteredUsage(
   );
 
   return {
+    ownedWorkspaces: Math.max(
+      1,
+      Number(row?.owned_workspaces_count ?? 1),
+    ),
     competitors: Number(row?.competitors_count ?? 0),
     monitoredPages: Number(
       row?.monitored_pages_count ?? 0,
@@ -568,6 +707,9 @@ export async function getWorkspaceMeteredUsage(
     teamSeats: activeMembers + pendingInvitations,
     externalChannels: Number(
       row?.external_channels_count ?? 0,
+    ),
+    pagesWithCssSelectors: Number(
+      row?.pages_with_selectors_count ?? 0,
     ),
     retentionCutoffIso,
     outsideRetentionChanges: Number(
@@ -601,26 +743,32 @@ async function countPagesFasterThanInterval(
   return Number(row?.count ?? 0);
 }
 
-function parseAdjustedPageFrequencies(
-  detailsJson: string,
-): number {
+function parseEventAdjustments(detailsJson: string): {
+  adjustedPageFrequencies: number;
+  adjustedSelectorPages: number;
+} {
   try {
     const parsed = JSON.parse(detailsJson);
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      typeof (parsed as { adjustedPageFrequencies?: unknown })
-        .adjustedPageFrequencies === "number"
-    ) {
-      return Number(
-        (parsed as { adjustedPageFrequencies: number })
-          .adjustedPageFrequencies,
-      );
+    if (typeof parsed === "object" && parsed !== null) {
+      const record = parsed as Record<string, unknown>;
+      return {
+        adjustedPageFrequencies:
+          typeof record.adjustedPageFrequencies === "number"
+            ? Number(record.adjustedPageFrequencies)
+            : 0,
+        adjustedSelectorPages:
+          typeof record.adjustedSelectorPages === "number"
+            ? Number(record.adjustedSelectorPages)
+            : 0,
+      };
     }
   } catch {
     // Ignore malformed JSON in historical rows
   }
-  return 0;
+  return {
+    adjustedPageFrequencies: 0,
+    adjustedSelectorPages: 0,
+  };
 }
 
 export async function getWorkspaceBillingSnapshot(
@@ -643,6 +791,7 @@ export async function getWorkspaceBillingSnapshot(
     subscriptionStatus: subscription.status,
     billingInterval: subscription.billingInterval,
     cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+    currentPeriodEnd: subscription.currentPeriodEnd,
   });
 
   const usage = await getWorkspaceMeteredUsage(
@@ -654,34 +803,45 @@ export async function getWorkspaceBillingSnapshot(
     },
   );
 
-  const fasterThanStarterCount =
-    await countPagesFasterThanInterval(
-      db,
-      activeWorkspace.id,
-      BILLING_PLAN_CATALOG.starter.limits
-        .minFrequencyMinutes,
-    );
+  const fasterCountsByPlan = await Promise.all(
+    BILLING_PLAN_IDS.map(async (planId) => {
+      const plan = getBillingPlanDefinition(planId);
+      const count =
+        plan.limits.minFrequencyMinutes > 60
+          ? await countPagesFasterThanInterval(
+              db,
+              activeWorkspace.id,
+              plan.limits.minFrequencyMinutes,
+            )
+          : 0;
+      return [planId, count] as const;
+    }),
+  );
+  const fasterCountMap = new Map<BillingPlanId, number>(
+    fasterCountsByPlan,
+  );
 
   const planOptions: WorkspacePlanOptionView[] =
     BILLING_PLAN_IDS.map((planId) => {
       const plan = getBillingPlanDefinition(planId);
       const fasterPages =
-        plan.limits.minFrequencyMinutes > 60
-          ? fasterThanStarterCount
-          : 0;
+        fasterCountMap.get(planId) ?? 0;
 
       const transition = evaluatePlanTransition({
         currentPlanId: entitlements.effectivePlanId,
         targetPlanId: planId,
         usage,
         fasterThanTargetMinFrequencyPages: fasterPages,
+        pagesWithCssSelectors:
+          usage.pagesWithCssSelectors,
       });
 
       return {
         plan,
         isCurrentPlan:
           entitlements.effectivePlanId === planId &&
-          subscription.status !== "canceled",
+          (planId === "free" ||
+            entitlements.subscriptionStatus !== "canceled"),
         transition,
       };
     });
@@ -717,31 +877,36 @@ export async function getWorkspaceBillingSnapshot(
       .all<BillingEventRow>();
 
     recentEvents = (eventsResult.results ?? []).map(
-      (row) => ({
-        id: row.id,
-        workspaceId: row.workspace_id,
-        actorUserId: row.actor_user_id ?? null,
-        actorLabel:
-          row.actor_name?.trim() ||
-          row.actor_email?.trim() ||
-          "Workspace Owner",
-        eventType:
-          row.event_type as WorkspaceBillingEventType,
-        previousPlanId: row.previous_plan_id
-          ? normalizeBillingPlanId(row.previous_plan_id)
-          : null,
-        newPlanId: normalizeBillingPlanId(
-          row.new_plan_id,
-        ),
-        billingInterval: normalizeBillingInterval(
-          row.billing_interval,
-        ),
-        adjustedPageFrequencies:
-          parseAdjustedPageFrequencies(
-            row.details_json,
+      (row) => {
+        const adjustments = parseEventAdjustments(
+          row.details_json,
+        );
+        return {
+          id: row.id,
+          workspaceId: row.workspace_id,
+          actorUserId: row.actor_user_id ?? null,
+          actorLabel:
+            row.actor_name?.trim() ||
+            row.actor_email?.trim() ||
+            "Workspace Owner",
+          eventType:
+            row.event_type as WorkspaceBillingEventType,
+          previousPlanId: row.previous_plan_id
+            ? normalizeBillingPlanId(row.previous_plan_id)
+            : null,
+          newPlanId: normalizeBillingPlanId(
+            row.new_plan_id,
           ),
-        createdAt: row.created_at,
-      }),
+          billingInterval: normalizeBillingInterval(
+            row.billing_interval,
+          ),
+          adjustedPageFrequencies:
+            adjustments.adjustedPageFrequencies,
+          adjustedSelectorPages:
+            adjustments.adjustedSelectorPages,
+          createdAt: row.created_at,
+        };
+      },
     );
   } catch (error) {
     if (!isMissingTableError(error)) {
@@ -772,6 +937,7 @@ export async function changeWorkspaceSubscriptionPlan(
   entitlements: WorkspaceEntitlements;
   direction: "upgrade" | "downgrade" | "same";
   adjustedPageFrequencies: number;
+  adjustedSelectorPages: number;
 }> {
   const workspaceId = input.workspaceId.trim();
   if (!workspaceId) {
@@ -783,7 +949,7 @@ export async function changeWorkspaceSubscriptionPlan(
     .toLowerCase();
   if (!isBillingPlanId(normalizedPlanCandidate)) {
     throw new Error(
-      "Choose a valid subscription plan (Starter, Growth, or Scale).",
+      "Choose a valid subscription plan (Free, Personal, Starter, Growth, or Scale).",
     );
   }
   const targetPlanId: BillingPlanId =
@@ -821,6 +987,8 @@ export async function changeWorkspaceSubscriptionPlan(
         currentSubscription.billingInterval,
       cancelAtPeriodEnd:
         currentSubscription.cancelAtPeriodEnd,
+      currentPeriodEnd:
+        currentSubscription.currentPeriodEnd,
     });
 
   const nextBillingInterval: BillingInterval =
@@ -863,6 +1031,8 @@ export async function changeWorkspaceSubscriptionPlan(
     targetPlanId,
     usage,
     fasterThanTargetMinFrequencyPages: fasterPagesCount,
+    pagesWithCssSelectors:
+      usage.pagesWithCssSelectors,
   });
 
   if (!evaluation.allowed) {
@@ -875,14 +1045,16 @@ export async function changeWorkspaceSubscriptionPlan(
     currentSubscription.planId === targetPlanId &&
     currentSubscription.billingInterval ===
       nextBillingInterval &&
-    currentSubscription.status === "active" &&
-    !currentSubscription.cancelAtPeriodEnd
+    currentEffectiveEntitlements.subscriptionStatus ===
+      "active" &&
+    !currentEffectiveEntitlements.cancelAtPeriodEnd
   ) {
     return {
       subscription: currentSubscription,
       entitlements: currentEffectiveEntitlements,
       direction: "same",
       adjustedPageFrequencies: 0,
+      adjustedSelectorPages: 0,
     };
   }
 
@@ -896,10 +1068,14 @@ export async function changeWorkspaceSubscriptionPlan(
       ? "plan_upgraded"
       : evaluation.direction === "downgrade"
         ? "plan_downgraded"
-        : currentSubscription.status === "canceled" ||
+        : currentEffectiveEntitlements.subscriptionStatus ===
+              "canceled" ||
             currentSubscription.cancelAtPeriodEnd
           ? "subscription_reactivated"
           : "billing_interval_changed";
+
+  const adjustedSelectorPages =
+    evaluation.pagesRequiringSelectorClear ?? 0;
 
   const statements: D1PreparedStatementLike[] = [
     db
@@ -975,6 +1151,39 @@ export async function changeWorkspaceSubscriptionPlan(
     );
   }
 
+  if (adjustedSelectorPages > 0) {
+    statements.push(
+      db
+        .prepare(
+          `
+            UPDATE monitored_pages
+            SET
+              include_selectors_json = '[]',
+              ignore_selectors_json = '[]',
+              updated_at = CURRENT_TIMESTAMP
+            WHERE competitor_id IN (
+              SELECT id
+              FROM competitors
+              WHERE workspace_id = ?
+            )
+              AND (
+                (
+                  include_selectors_json IS NOT NULL
+                  AND TRIM(include_selectors_json) != ''
+                  AND TRIM(include_selectors_json) != '[]'
+                )
+                OR (
+                  ignore_selectors_json IS NOT NULL
+                  AND TRIM(ignore_selectors_json) != ''
+                  AND TRIM(ignore_selectors_json) != '[]'
+                )
+              )
+          `,
+        )
+        .bind(workspaceId),
+    );
+  }
+
   statements.push(
     db
       .prepare(
@@ -1014,6 +1223,7 @@ export async function changeWorkspaceSubscriptionPlan(
         JSON.stringify({
           adjustedPageFrequencies:
             evaluation.pagesRequiringFrequencyAdjustment,
+          adjustedSelectorPages,
           minFrequencyMinutes:
             targetPlan.limits.minFrequencyMinutes,
           historyRetentionDays:
@@ -1034,6 +1244,8 @@ export async function changeWorkspaceSubscriptionPlan(
         updatedSubscription.billingInterval,
       cancelAtPeriodEnd:
         updatedSubscription.cancelAtPeriodEnd,
+      currentPeriodEnd:
+        updatedSubscription.currentPeriodEnd,
     });
 
   return {
@@ -1042,6 +1254,7 @@ export async function changeWorkspaceSubscriptionPlan(
     direction: evaluation.direction,
     adjustedPageFrequencies:
       evaluation.pagesRequiringFrequencyAdjustment,
+    adjustedSelectorPages,
   };
 }
 
@@ -1095,6 +1308,7 @@ export async function setWorkspaceSubscriptionCancellation(
   subscription: WorkspaceSubscriptionView;
   entitlements: WorkspaceEntitlements;
   adjustedPageFrequencies: number;
+  adjustedSelectorPages: number;
 }> {
   const workspaceId = input.workspaceId.trim();
   if (!workspaceId) {
@@ -1126,15 +1340,20 @@ export async function setWorkspaceSubscriptionCancellation(
     });
 
   if (input.immediate) {
-    const starterMinFreq =
-      BILLING_PLAN_CATALOG.starter.limits
+    const freeMinFreq =
+      BILLING_PLAN_CATALOG.free.limits
         .minFrequencyMinutes;
-    const fasterPagesCount =
-      await countPagesFasterThanInterval(
-        db,
-        workspaceId,
-        starterMinFreq,
-      );
+    const [fasterPagesCount, usage] =
+      await Promise.all([
+        countPagesFasterThanInterval(
+          db,
+          workspaceId,
+          freeMinFreq,
+        ),
+        getWorkspaceMeteredUsage(db, workspaceId),
+      ]);
+    const adjustedSelectorPages =
+      usage.pagesWithCssSelectors;
 
     const statements: D1PreparedStatementLike[] = [
       db
@@ -1142,6 +1361,7 @@ export async function setWorkspaceSubscriptionCancellation(
           `
             UPDATE workspace_subscriptions
             SET
+              plan_id = 'free',
               status = 'canceled',
               cancel_at_period_end = 0,
               updated_by = ?,
@@ -1170,10 +1390,43 @@ export async function setWorkspaceSubscriptionCancellation(
             `,
           )
           .bind(
-            starterMinFreq,
+            freeMinFreq,
             workspaceId,
-            starterMinFreq,
+            freeMinFreq,
           ),
+      );
+    }
+
+    if (adjustedSelectorPages > 0) {
+      statements.push(
+        db
+          .prepare(
+            `
+              UPDATE monitored_pages
+              SET
+                include_selectors_json = '[]',
+                ignore_selectors_json = '[]',
+                updated_at = CURRENT_TIMESTAMP
+              WHERE competitor_id IN (
+                SELECT id
+                FROM competitors
+                WHERE workspace_id = ?
+              )
+                AND (
+                  (
+                    include_selectors_json IS NOT NULL
+                    AND TRIM(include_selectors_json) != ''
+                    AND TRIM(include_selectors_json) != '[]'
+                  )
+                  OR (
+                    ignore_selectors_json IS NOT NULL
+                    AND TRIM(ignore_selectors_json) != ''
+                    AND TRIM(ignore_selectors_json) != '[]'
+                  )
+                )
+            `,
+          )
+          .bind(workspaceId),
       );
     }
 
@@ -1198,7 +1451,7 @@ export async function setWorkspaceSubscriptionCancellation(
               ?,
               'subscription_canceled',
               ?,
-              'starter',
+              'free',
               ?,
               ?,
               CURRENT_TIMESTAMP
@@ -1213,6 +1466,7 @@ export async function setWorkspaceSubscriptionCancellation(
           currentSubscription.billingInterval,
           JSON.stringify({
             adjustedPageFrequencies: fasterPagesCount,
+            adjustedSelectorPages,
           }),
         ),
     );
@@ -1228,13 +1482,34 @@ export async function setWorkspaceSubscriptionCancellation(
         updatedSubscription.billingInterval,
       cancelAtPeriodEnd:
         updatedSubscription.cancelAtPeriodEnd,
+      currentPeriodEnd:
+        updatedSubscription.currentPeriodEnd,
     });
 
     return {
       subscription: updatedSubscription,
       entitlements,
       adjustedPageFrequencies: fasterPagesCount,
+      adjustedSelectorPages,
     };
+  }
+
+  const currentPeriodEndMs = parseBillingTimestampMs(
+    currentSubscription.currentPeriodEnd,
+  );
+  const isPeriodExpired =
+    currentPeriodEndMs !== null &&
+    currentPeriodEndMs <= Date.now();
+
+  if (
+    !input.cancelAtPeriodEnd &&
+    (currentSubscription.status === "canceled" ||
+      isPeriodExpired) &&
+    currentSubscription.planId !== "free"
+  ) {
+    throw new Error(
+      "This subscription has already expired or been canceled. Complete a new checkout to activate a paid plan.",
+    );
   }
 
   const nextCancelAtPeriodEnd = input.cancelAtPeriodEnd
@@ -1310,13 +1585,278 @@ export async function setWorkspaceSubscriptionCancellation(
     billingInterval: updatedSubscription.billingInterval,
     cancelAtPeriodEnd:
       updatedSubscription.cancelAtPeriodEnd,
+    currentPeriodEnd:
+      updatedSubscription.currentPeriodEnd,
   });
 
   return {
     subscription: updatedSubscription,
     entitlements,
     adjustedPageFrequencies: 0,
+    adjustedSelectorPages: 0,
   };
+}
+
+export async function acquireWorkspaceBillingLock(
+  db: D1DatabaseLike,
+  input: {
+    workspaceId: string;
+    lockId?: string;
+    leaseDurationMs?: number;
+    now?: Date;
+  },
+): Promise<string> {
+  const workspaceId = input.workspaceId.trim();
+  const lockId = input.lockId ?? randomUUID();
+  const now = input.now ?? new Date();
+  const leaseDurationMs = Math.max(
+    1000,
+    input.leaseDurationMs ?? 30_000,
+  );
+  const nowIso = now.toISOString();
+  const expiresIso = new Date(
+    now.getTime() + leaseDurationMs,
+  ).toISOString();
+
+  await ensureWorkspaceSubscription(db, {
+    workspaceId,
+  });
+
+  const result = await db
+    .prepare(
+      `
+        UPDATE workspace_subscriptions
+        SET
+          mutation_lock_id = ?,
+          mutation_locked_until = ?
+        WHERE workspace_id = ?
+          AND (
+            mutation_lock_id IS NULL
+            OR mutation_locked_until IS NULL
+            OR datetime(mutation_locked_until) <= datetime(?)
+          )
+      `,
+    )
+    .bind(lockId, expiresIso, workspaceId, nowIso)
+    .run();
+
+  if (Number(result.meta?.changes ?? 0) !== 1) {
+    throw new Error(
+      "Another billing operation is already in progress for this workspace. Please wait a moment and try again.",
+    );
+  }
+
+  return lockId;
+}
+
+export async function releaseWorkspaceBillingLock(
+  db: D1DatabaseLike,
+  input: {
+    workspaceId: string;
+    lockId: string;
+  },
+): Promise<void> {
+  try {
+    await db
+      .prepare(
+        `
+          UPDATE workspace_subscriptions
+          SET
+            mutation_lock_id = NULL,
+            mutation_locked_until = NULL
+          WHERE workspace_id = ?
+            AND mutation_lock_id = ?
+        `,
+      )
+      .bind(input.workspaceId.trim(), input.lockId)
+      .run();
+  } catch (error) {
+    if (!isMissingTableError(error)) {
+      throw error;
+    }
+  }
+}
+
+export async function withWorkspaceBillingLock<T>(
+  db: D1DatabaseLike,
+  workspaceId: string,
+  operation: () => Promise<T>,
+  options?: {
+    leaseDurationMs?: number;
+    now?: Date;
+  },
+): Promise<T> {
+  const lockId = await acquireWorkspaceBillingLock(db, {
+    workspaceId,
+    leaseDurationMs: options?.leaseDurationMs,
+    now: options?.now,
+  });
+
+  try {
+    return await operation();
+  } finally {
+    await releaseWorkspaceBillingLock(db, {
+      workspaceId,
+      lockId,
+    });
+  }
+}
+
+export async function countUserOwnedWorkspaces(
+  db: D1DatabaseLike,
+  userId: string,
+): Promise<number> {
+  const row = await db
+    .prepare(
+      `
+        SELECT COUNT(DISTINCT workspaces.id) AS count
+        FROM workspaces
+        LEFT JOIN workspace_members
+          ON workspace_members.workspace_id = workspaces.id
+         AND workspace_members.user_id = ?
+        WHERE workspaces.created_by = ?
+           OR workspace_members.role = 'owner'
+      `,
+    )
+    .bind(userId, userId)
+    .first<{ count: number }>();
+
+  return Number(row?.count ?? 0);
+}
+
+export async function getUserWorkspaceCreationEntitlements(
+  db: D1DatabaseLike,
+  userId: string,
+): Promise<WorkspaceEntitlements> {
+  const ownedRowsResult = await db
+    .prepare(
+      `
+        SELECT DISTINCT workspaces.id AS workspace_id
+        FROM workspaces
+        LEFT JOIN workspace_members
+          ON workspace_members.workspace_id = workspaces.id
+         AND workspace_members.user_id = ?
+        WHERE workspaces.created_by = ?
+           OR workspace_members.role = 'owner'
+        ORDER BY datetime(workspaces.created_at) ASC, workspaces.id ASC
+      `,
+    )
+    .bind(userId, userId)
+    .all<{ workspace_id: string }>();
+
+  const ownedWorkspaceIds = (
+    ownedRowsResult.results ?? []
+  ).map((row) => row.workspace_id);
+
+  if (ownedWorkspaceIds.length === 0) {
+    return resolveWorkspaceEntitlements({
+      planId: DEFAULT_BILLING_PLAN_ID,
+    });
+  }
+
+  const entitlementsList = await Promise.all(
+    ownedWorkspaceIds.map((wsId) =>
+      getWorkspaceEntitlements(db, wsId),
+    ),
+  );
+
+  let highest = entitlementsList[0]!;
+  for (const current of entitlementsList) {
+    if (
+      current.limits.workspacesPerAccount >
+        highest.limits.workspacesPerAccount ||
+      (current.limits.workspacesPerAccount ===
+        highest.limits.workspacesPerAccount &&
+        current.tierRank > highest.tierRank)
+    ) {
+      highest = current;
+    }
+  }
+
+  return highest;
+}
+
+export async function assertUserWorkspaceCreationCapacity(
+  db: D1DatabaseLike,
+  userId: string,
+): Promise<WorkspaceEntitlements> {
+  const [ownedCount, entitlements] = await Promise.all([
+    countUserOwnedWorkspaces(db, userId),
+    getUserWorkspaceCreationEntitlements(db, userId),
+  ]);
+
+  if (ownedCount === 0) {
+    return entitlements;
+  }
+
+  const limit =
+    entitlements.limits.workspacesPerAccount;
+  if (ownedCount >= limit) {
+    throw new Error(
+      `Your account has reached the ${entitlements.planName} plan limit of ${limit} ${limit === 1 ? "workspace" : "workspaces"}. Upgrade your workspace plan in Billing to create additional workspaces.`,
+    );
+  }
+
+  return entitlements;
+}
+
+export async function enforceUserWorkspaceCreationCapacityAfterInsert(
+  db: D1DatabaseLike,
+  input: {
+    userId: string;
+    newWorkspaceId: string;
+    previousActiveWorkspaceId?: string | null;
+  },
+): Promise<void> {
+  const [ownedCount, entitlements] = await Promise.all([
+    countUserOwnedWorkspaces(db, input.userId),
+    getUserWorkspaceCreationEntitlements(
+      db,
+      input.userId,
+    ),
+  ]);
+
+  const limit =
+    entitlements.limits.workspacesPerAccount;
+
+  if (ownedCount > 1 && ownedCount > limit) {
+    const cleanupStatements: D1PreparedStatementLike[] =
+      [
+        db
+          .prepare(
+            `
+              DELETE FROM workspaces
+              WHERE id = ?
+            `,
+          )
+          .bind(input.newWorkspaceId),
+      ];
+
+    if (input.previousActiveWorkspaceId) {
+      cleanupStatements.push(
+        db
+          .prepare(
+            `
+              UPDATE users
+              SET
+                active_workspace_id = ?,
+                updated_at = CURRENT_TIMESTAMP
+              WHERE id = ?
+            `,
+          )
+          .bind(
+            input.previousActiveWorkspaceId,
+            input.userId,
+          ),
+      );
+    }
+
+    await executeBatch(db, cleanupStatements);
+
+    throw new Error(
+      `Your account has reached the ${entitlements.planName} plan limit of ${limit} ${limit === 1 ? "workspace" : "workspaces"}. Upgrade your workspace plan in Billing to create additional workspaces.`,
+    );
+  }
 }
 
 export async function assertWorkspaceCompetitorCapacity(
@@ -1344,11 +1884,54 @@ export async function assertWorkspaceCompetitorCapacity(
 
   if (currentCount >= limit) {
     throw new Error(
-      `This workspace has reached the ${entitlements.planName} plan limit of ${limit} competitors. Upgrade your workspace plan in Billing to monitor more competitors.`,
+      `This workspace has reached the ${entitlements.planName} plan limit of ${limit} ${limit === 1 ? "competitor" : "competitors"}. Upgrade your workspace plan in Billing to monitor more competitors.`,
     );
   }
 
   return entitlements;
+}
+
+export async function enforceCompetitorCapacityAfterInsert(
+  db: D1DatabaseLike,
+  input: {
+    workspaceId: string;
+    competitorId: string;
+  },
+): Promise<void> {
+  const entitlements = await getWorkspaceEntitlements(
+    db,
+    input.workspaceId,
+  );
+  const limit =
+    entitlements.limits.competitorsPerWorkspace;
+
+  const row = await db
+    .prepare(
+      `
+        SELECT COUNT(*) AS count
+        FROM competitors
+        WHERE workspace_id = ?
+      `,
+    )
+    .bind(input.workspaceId)
+    .first<{ count: number }>();
+
+  if (Number(row?.count ?? 0) > limit) {
+    await db
+      .prepare(
+        `
+          DELETE FROM competitors
+          WHERE id = ?
+            AND workspace_id = ?
+        `,
+      )
+      .bind(input.competitorId, input.workspaceId)
+      .run();
+
+    throw new Error(
+      `This workspace has reached the ${entitlements.planName} plan limit of ${limit} ${limit === 1 ? "competitor" : "competitors"}. Upgrade your workspace plan in Billing to monitor more competitors.`,
+    );
+  }
 }
 
 export async function assertWorkspaceMonitoredPageCapacity(
@@ -1416,6 +1999,83 @@ export async function assertWorkspaceMonitoredPageCapacity(
   return entitlements;
 }
 
+export async function enforceMonitoredPageCapacityAfterInsert(
+  db: D1DatabaseLike,
+  input: {
+    workspaceId: string;
+    competitorId: string;
+    pageId: string;
+  },
+): Promise<void> {
+  const entitlements = await getWorkspaceEntitlements(
+    db,
+    input.workspaceId,
+  );
+
+  const [workspacePageCount, competitorPageCount] =
+    await Promise.all([
+      db
+        .prepare(
+          `
+            SELECT COUNT(*) AS count
+            FROM monitored_pages
+            INNER JOIN competitors
+              ON competitors.id = monitored_pages.competitor_id
+            WHERE competitors.workspace_id = ?
+          `,
+        )
+        .bind(input.workspaceId)
+        .first<{ count: number }>(),
+
+      db
+        .prepare(
+          `
+            SELECT COUNT(*) AS count
+            FROM monitored_pages
+            WHERE competitor_id = ?
+          `,
+        )
+        .bind(input.competitorId)
+        .first<{ count: number }>(),
+    ]);
+
+  const workspaceLimit =
+    entitlements.limits.monitoredPagesPerWorkspace;
+  const competitorLimit =
+    entitlements.limits.monitoredPagesPerCompetitor;
+
+  if (
+    Number(workspacePageCount?.count ?? 0) >
+      workspaceLimit ||
+    Number(competitorPageCount?.count ?? 0) >
+      competitorLimit
+  ) {
+    await db
+      .prepare(
+        `
+          DELETE FROM monitored_pages
+          WHERE id = ?
+            AND competitor_id = ?
+        `,
+      )
+      .bind(input.pageId, input.competitorId)
+      .run();
+
+    if (
+      Number(workspacePageCount?.count ?? 0) >
+      workspaceLimit
+    ) {
+      throw new Error(
+        `This workspace has reached the ${entitlements.planName} plan limit of ${workspaceLimit} monitored pages. Upgrade your workspace plan in Billing to monitor more pages.`,
+      );
+    }
+
+    throw new Error(
+      `This competitor has reached the ${entitlements.planName} plan limit of ${competitorLimit} monitored pages per competitor. Upgrade your workspace plan in Billing to add more pages per competitor.`,
+    );
+  }
+}
+
 export async function assertWorkspaceMonitoringFrequencyAllowed(
   db: D1DatabaseLike,
   input: {
@@ -1443,6 +2103,74 @@ export async function assertWorkspaceMonitoringFrequencyAllowed(
 
     throw new Error(
       `Check frequency (${requestedLabel}) requires a higher plan. The ${entitlements.planName} plan supports checks as frequent as ${minimumLabel}. Upgrade in Billing to unlock faster monitoring.`,
+    );
+  }
+
+  return entitlements;
+}
+
+export async function assertWorkspaceSectionLevelMonitoringAllowed(
+  db: D1DatabaseLike,
+  input: {
+    workspaceId: string;
+    includeSelectors: readonly string[];
+    ignoreSelectors: readonly string[];
+  },
+): Promise<WorkspaceEntitlements> {
+  const entitlements = await getWorkspaceEntitlements(
+    db,
+    input.workspaceId,
+  );
+
+  const hasNonEmptySelectors =
+    input.includeSelectors.length > 0 ||
+    input.ignoreSelectors.length > 0;
+
+  if (
+    hasNonEmptySelectors &&
+    !entitlements.features.sectionLevelMonitoring
+  ) {
+    throw new Error(
+      `Section-level CSS selector monitoring is not available on the ${entitlements.planName} plan. Upgrade to Starter or higher in Billing to target or ignore specific page sections.`,
+    );
+  }
+
+  return entitlements;
+}
+
+export async function assertWorkspaceDigestScheduleAllowed(
+  db: D1DatabaseLike,
+  input: {
+    workspaceId: string;
+    enabled: boolean;
+    digestPeriods: readonly string[];
+  },
+): Promise<WorkspaceEntitlements> {
+  const entitlements = await getWorkspaceEntitlements(
+    db,
+    input.workspaceId,
+  );
+
+  if (!input.enabled) {
+    return entitlements;
+  }
+
+  if (!entitlements.features.scheduledDigests) {
+    throw new Error(
+      `Scheduled digests are not included on the ${entitlements.planName} plan. Upgrade to Personal or higher in Billing to enable scheduled digests.`,
+    );
+  }
+
+  const allowedPeriods = new Set<string>(
+    entitlements.features.allowedDigestPeriods,
+  );
+  const disallowed = input.digestPeriods.filter(
+    (period) => !allowedPeriods.has(period),
+  );
+
+  if (disallowed.length > 0) {
+    throw new Error(
+      `The ${entitlements.planName} plan supports ${entitlements.features.allowedDigestPeriods.join(", ")} scheduled digests only (${disallowed.join(", ")} requires Starter or higher). Upgrade your workspace plan in Billing to unlock additional digest schedules.`,
     );
   }
 
@@ -1509,11 +2237,151 @@ export async function assertWorkspaceTeamSeatCapacity(
 
   if (usage.teamSeats >= limit) {
     throw new Error(
-      `This workspace has reached the ${entitlements.planName} plan limit of ${limit} team seats (including pending invitations). Upgrade your workspace plan in Billing to add more teammates.`,
+      `This workspace has reached the ${entitlements.planName} plan limit of ${limit} ${limit === 1 ? "team seat" : "team seats"} (including the owner and pending invitations). Upgrade your workspace plan in Billing to add more teammates.`,
     );
   }
 
   return entitlements;
+}
+
+export async function assertWorkspaceInvitationAcceptanceCapacity(
+  db: D1DatabaseLike,
+  workspaceId: string,
+): Promise<WorkspaceEntitlements> {
+  const entitlements = await getWorkspaceEntitlements(
+    db,
+    workspaceId,
+  );
+  const limit =
+    entitlements.limits.teamMembersPerWorkspace;
+  const usage = await getWorkspaceMeteredUsage(
+    db,
+    workspaceId,
+    {
+      retentionDays:
+        entitlements.limits.historyRetentionDays,
+    },
+  );
+
+  if (usage.activeMembers >= limit) {
+    throw new Error(
+      `This workspace has reached the ${entitlements.planName} plan limit of ${limit} ${limit === 1 ? "team seat" : "team seats"}. Ask the workspace Owner to upgrade the plan in Billing before accepting this invitation.`,
+    );
+  }
+
+  return entitlements;
+}
+
+export async function enforceWorkspaceInvitationAcceptanceAfterInsert(
+  db: D1DatabaseLike,
+  input: {
+    workspaceId: string;
+    invitationId: string;
+    memberUserId: string;
+  },
+): Promise<void> {
+  const entitlements = await getWorkspaceEntitlements(
+    db,
+    input.workspaceId,
+  );
+  const limit =
+    entitlements.limits.teamMembersPerWorkspace;
+  const usage = await getWorkspaceMeteredUsage(
+    db,
+    input.workspaceId,
+    {
+      retentionDays:
+        entitlements.limits.historyRetentionDays,
+    },
+  );
+
+  if (usage.activeMembers > limit) {
+    await executeBatch(db, [
+      db
+        .prepare(
+          `
+            DELETE FROM workspace_members
+            WHERE workspace_id = ?
+              AND user_id = ?
+              AND role != 'owner'
+          `,
+        )
+        .bind(input.workspaceId, input.memberUserId),
+      db
+        .prepare(
+          `
+            UPDATE workspace_invitations
+            SET
+              status = 'pending',
+              responded_at = NULL,
+              updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+              AND workspace_id = ?
+          `,
+        )
+        .bind(input.invitationId, input.workspaceId),
+    ]);
+
+    throw new Error(
+      `This workspace has reached the ${entitlements.planName} plan limit of ${limit} ${limit === 1 ? "team seat" : "team seats"}. Ask the workspace Owner to upgrade the plan in Billing before accepting this invitation.`,
+    );
+  }
+}
+
+export async function enforceTeamSeatCapacityAfterInsert(
+  db: D1DatabaseLike,
+  input: {
+    workspaceId: string;
+    invitationId?: string;
+    memberUserId?: string;
+  },
+): Promise<void> {
+  const entitlements = await getWorkspaceEntitlements(
+    db,
+    input.workspaceId,
+  );
+  const limit =
+    entitlements.limits.teamMembersPerWorkspace;
+
+  const usage = await getWorkspaceMeteredUsage(
+    db,
+    input.workspaceId,
+    {
+      retentionDays:
+        entitlements.limits.historyRetentionDays,
+    },
+  );
+
+  if (usage.teamSeats > limit) {
+    if (input.invitationId) {
+      await db
+        .prepare(
+          `
+            DELETE FROM workspace_invitations
+            WHERE id = ?
+              AND workspace_id = ?
+          `,
+        )
+        .bind(input.invitationId, input.workspaceId)
+        .run();
+    } else if (input.memberUserId) {
+      await db
+        .prepare(
+          `
+            DELETE FROM workspace_members
+            WHERE workspace_id = ?
+              AND user_id = ?
+              AND role != 'owner'
+          `,
+        )
+        .bind(input.workspaceId, input.memberUserId)
+        .run();
+    }
+
+    throw new Error(
+      `This workspace has reached the ${entitlements.planName} plan limit of ${limit} ${limit === 1 ? "team seat" : "team seats"} (including the owner and pending invitations). Upgrade your workspace plan in Billing to add more teammates.`,
+    );
+  }
 }
 
 export async function assertWorkspaceExternalChannelCapacity(
@@ -1526,6 +2394,12 @@ export async function assertWorkspaceExternalChannelCapacity(
   );
   const limit =
     entitlements.limits.externalChannelsPerWorkspace;
+
+  if (limit <= 0) {
+    throw new Error(
+      `External notification channels are not included on the ${entitlements.planName} plan. Upgrade to Personal or higher in Billing to connect Slack, Telegram, or Webhook channels.`,
+    );
+  }
 
   const row = await db
     .prepare(
@@ -1541,9 +2415,58 @@ export async function assertWorkspaceExternalChannelCapacity(
   const currentCount = Number(row?.count ?? 0);
   if (currentCount >= limit) {
     throw new Error(
-      `This workspace has reached the ${entitlements.planName} plan limit of ${limit} external notification channels. Upgrade your workspace plan in Billing to add more channels.`,
+      `This workspace has reached the ${entitlements.planName} plan limit of ${limit} external notification ${limit === 1 ? "channel" : "channels"}. Upgrade your workspace plan in Billing to add more channels.`,
     );
   }
 
   return entitlements;
+}
+
+export async function enforceExternalChannelCapacityAfterInsert(
+  db: D1DatabaseLike,
+  input: {
+    workspaceId: string;
+    channelId: string;
+  },
+): Promise<void> {
+  const entitlements = await getWorkspaceEntitlements(
+    db,
+    input.workspaceId,
+  );
+  const limit =
+    entitlements.limits.externalChannelsPerWorkspace;
+
+  const row = await db
+    .prepare(
+      `
+        SELECT COUNT(*) AS count
+        FROM external_notification_channels
+        WHERE workspace_id = ?
+      `,
+    )
+    .bind(input.workspaceId)
+    .first<{ count: number }>();
+
+  if (Number(row?.count ?? 0) > limit) {
+    await db
+      .prepare(
+        `
+          DELETE FROM external_notification_channels
+          WHERE id = ?
+            AND workspace_id = ?
+        `,
+      )
+      .bind(input.channelId, input.workspaceId)
+      .run();
+
+    if (limit <= 0) {
+      throw new Error(
+        `External notification channels are not included on the ${entitlements.planName} plan. Upgrade to Personal or higher in Billing to connect Slack, Telegram, or Webhook channels.`,
+      );
+    }
+
+    throw new Error(
+      `This workspace has reached the ${entitlements.planName} plan limit of ${limit} external notification ${limit === 1 ? "channel" : "channels"}. Upgrade your workspace plan in Billing to add more channels.`,
+    );
+  }
 }

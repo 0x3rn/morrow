@@ -2,7 +2,12 @@ import { randomUUID } from "node:crypto";
 
 import type { D1DatabaseLike } from "../worker/external-notifications.ts";
 import {
+  assertUserWorkspaceCreationCapacity,
+  assertWorkspaceInvitationAcceptanceCapacity,
   assertWorkspaceTeamSeatCapacity,
+  enforceTeamSeatCapacityAfterInsert,
+  enforceUserWorkspaceCreationCapacityAfterInsert,
+  enforceWorkspaceInvitationAcceptanceAfterInsert,
   ensureWorkspaceSubscription,
 } from "./workspace-billing.ts";
 import {
@@ -413,6 +418,17 @@ export async function createTeamWorkspace(
     );
   }
 
+  const previousActive =
+    await getActiveWorkspaceMembership(
+      db,
+      input.userId,
+    );
+
+  await assertUserWorkspaceCreationCapacity(
+    db,
+    input.userId,
+  );
+
   const workspaceId = randomUUID();
 
   await executeBatch(db, [
@@ -473,6 +489,16 @@ export async function createTeamWorkspace(
     workspaceId,
     actorUserId: input.userId,
   });
+
+  await enforceUserWorkspaceCreationCapacityAfterInsert(
+    db,
+    {
+      userId: input.userId,
+      newWorkspaceId: workspaceId,
+      previousActiveWorkspaceId:
+        previousActive?.id ?? null,
+    },
+  );
 
   const created =
     await getWorkspaceMembershipById(
@@ -720,12 +746,19 @@ export async function inviteOrAddWorkspaceMember(
         ),
     ]);
 
+    await enforceTeamSeatCapacityAfterInsert(db, {
+      workspaceId,
+      memberUserId: existingUser.id,
+    });
+
     return {
       outcome: "member_added",
       email,
       role: rawRole,
     };
   }
+
+  const invitationId = randomUUID();
 
   await db
     .prepare(
@@ -761,13 +794,18 @@ export async function inviteOrAddWorkspaceMember(
       `,
     )
     .bind(
-      randomUUID(),
+      invitationId,
       workspaceId,
       email,
       rawRole,
       input.actorUserId,
     )
     .run();
+
+  await enforceTeamSeatCapacityAfterInsert(db, {
+    workspaceId,
+    invitationId,
+  });
 
   return {
     outcome: "invitation_sent",
@@ -813,14 +851,23 @@ export async function acceptPendingWorkspaceInvitationsForUser(
     return 0;
   }
 
-  const statements = [];
+  let acceptedCount = 0;
   for (const invitation of pending) {
+    try {
+      await assertWorkspaceInvitationAcceptanceCapacity(
+        db,
+        invitation.workspace_id,
+      );
+    } catch {
+      continue;
+    }
+
     const role = normalizeWorkspaceRole(
       invitation.role,
       "member",
     );
 
-    statements.push(
+    await executeBatch(db, [
       db
         .prepare(
           `
@@ -855,11 +902,24 @@ export async function acceptPendingWorkspaceInvitationsForUser(
           `,
         )
         .bind(invitation.id),
-    );
+    ]);
+
+    try {
+      await enforceWorkspaceInvitationAcceptanceAfterInsert(
+        db,
+        {
+          workspaceId: invitation.workspace_id,
+          invitationId: invitation.id,
+          memberUserId: input.userId,
+        },
+      );
+      acceptedCount += 1;
+    } catch {
+      // Skip if concurrent acceptance filled the last seat
+    }
   }
 
-  await executeBatch(db, statements);
-  return pending.length;
+  return acceptedCount;
 }
 
 export async function acceptWorkspaceInvitation(
@@ -928,6 +988,11 @@ export async function acceptWorkspaceInvitation(
     );
   }
 
+  await assertWorkspaceInvitationAcceptanceCapacity(
+    db,
+    invitation.workspace_id,
+  );
+
   const role = normalizeWorkspaceRole(
     invitation.role,
     "member",
@@ -985,6 +1050,15 @@ export async function acceptWorkspaceInvitation(
         input.userId,
       ),
   ]);
+
+  await enforceWorkspaceInvitationAcceptanceAfterInsert(
+    db,
+    {
+      workspaceId: invitation.workspace_id,
+      invitationId: invitation.id,
+      memberUserId: input.userId,
+    },
+  );
 
   const joined =
     await getWorkspaceMembershipById(
@@ -1192,6 +1266,16 @@ export async function updateWorkspaceMemberRole(
 
   if (target.role === rawNextRole) {
     return rawNextRole;
+  }
+
+  if (
+    target.role !== "owner" &&
+    rawNextRole === "owner"
+  ) {
+    await assertUserWorkspaceCreationCapacity(
+      db,
+      targetUserId,
+    );
   }
 
   if (

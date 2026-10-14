@@ -78,7 +78,7 @@ function getSubscriptionStatusBadge(
 } {
   if (status === "canceled") {
     return {
-      label: "Canceled (Starter fallback)",
+      label: "Canceled (Free fallback)",
       className: "workspace-badge health-paused",
     };
   }
@@ -132,6 +132,25 @@ function formatBillingEventDescription(input: {
       : "monthly billing";
 
   switch (input.eventType) {
+    case "checkout_initiated":
+      return {
+        title: `Started Lemon Squeezy checkout for ${newPlan.name}`,
+        detail: `Checkout session created for ${newPlan.name} on ${intervalLabel}. Plan activates once payment is confirmed.`,
+      };
+
+    case "payment_succeeded":
+      return {
+        title: `Confirmed Lemon Squeezy payment for ${newPlan.name}`,
+        detail: `Subscription verified on ${intervalLabel}.`,
+      };
+
+    case "payment_failed":
+      return {
+        title: `Payment failed for ${newPlan.name}`,
+        detail:
+          "Lemon Squeezy reported a failed renewal charge. Update your payment method to avoid interruption.",
+      };
+
     case "plan_upgraded":
       return {
         title: `Upgraded workspace plan to ${newPlan.name}`,
@@ -177,11 +196,11 @@ function formatBillingEventDescription(input: {
 
     case "subscription_canceled":
       return {
-        title: "Subscription canceled immediately",
+        title: "Subscription canceled",
         detail: [
-          "Workspace fell back to Starter plan limits.",
+          "Workspace fell back to Free plan limits.",
           input.adjustedPageFrequencies > 0
-            ? `Adjusted ${input.adjustedPageFrequencies} monitored page(s) to 6-hour checks.`
+            ? `Adjusted ${input.adjustedPageFrequencies} monitored page(s) to 24-hour checks.`
             : "",
         ]
           .filter(Boolean)
@@ -278,11 +297,11 @@ export default async function BillingPage() {
             </div>
             <div className="workspace-meta">
               ${entitlements.effectiveMonthlyPriceUsd}/mo
-              ({entitlements.billingInterval} billing) ·
-              period ends{" "}
-              {formatDateOnly(
-                subscription.currentPeriodEnd,
-              )}
+              {entitlements.effectivePlanId === "free"
+                ? " · Free tier"
+                : ` (${entitlements.billingInterval} billing) · period ends ${formatDateOnly(
+                    subscription.currentPeriodEnd,
+                  )}`}
             </div>
           </article>
 
@@ -363,7 +382,7 @@ export default async function BillingPage() {
                   Compare plans for {activeWorkspace.name}
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Plan changes take effect immediately. Upgrading unlocks higher page caps, hourly checks, and extended historical retention.
+                  Plan changes take effect immediately. Upgrading unlocks higher page caps, faster check intervals, CSS selector scoping, and extended historical retention.
                 </p>
               </div>
 
@@ -412,7 +431,7 @@ export default async function BillingPage() {
               </div>
             ) : null}
 
-            <div className="mt-6 grid gap-5 lg:grid-cols-3">
+            <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
               {planOptions.map(
                 ({
                   plan,
@@ -466,19 +485,33 @@ export default async function BillingPage() {
                             </span>
                           </div>
                           <div className="mt-1 text-xs text-slate-500">
-                            {subscription.billingInterval ===
-                            "annual"
-                              ? `Billed annually ($${
-                                  plan.annualMonthlyPriceUsd *
-                                  12
-                                }/yr) · $${
-                                  plan.monthlyPriceUsd
-                                }/mo when billed monthly`
-                              : `Billed monthly · or $${plan.annualMonthlyPriceUsd}/mo billed annually`}
+                            {plan.id === "free"
+                              ? "Free forever · No credit card required"
+                              : subscription.billingInterval ===
+                                  "annual"
+                                ? `Billed annually ($${
+                                    plan.annualMonthlyPriceUsd *
+                                    12
+                                  }/yr) · $${
+                                    plan.monthlyPriceUsd
+                                  }/mo monthly`
+                                : `Billed monthly · or $${plan.annualMonthlyPriceUsd}/mo billed annually`}
                           </div>
                         </div>
 
                         <dl className="workspace-usage-summary">
+                          <div>
+                            <dt>Workspaces</dt>
+                            <dd>
+                              <strong>
+                                {plan.limits
+                                  .workspacesPerAccount ===
+                                1
+                                  ? "1 workspace"
+                                  : `Up to ${plan.limits.workspacesPerAccount}`}
+                              </strong>
+                            </dd>
+                          </div>
                           <div>
                             <dt>Competitors</dt>
                             <dd>
@@ -537,11 +570,11 @@ export default async function BillingPage() {
                             <dt>Team seats</dt>
                             <dd>
                               <strong>
-                                Up to{" "}
-                                {
-                                  plan.limits
-                                    .teamMembersPerWorkspace
-                                }
+                                {plan.limits
+                                  .teamMembersPerWorkspace ===
+                                1
+                                  ? "1 (owner only)"
+                                  : `Up to ${plan.limits.teamMembersPerWorkspace}`}
                               </strong>
                             </dd>
                           </div>
@@ -549,11 +582,37 @@ export default async function BillingPage() {
                             <dt>External channels</dt>
                             <dd>
                               <strong>
-                                Up to{" "}
-                                {
-                                  plan.limits
-                                    .externalChannelsPerWorkspace
-                                }
+                                {plan.limits
+                                  .externalChannelsPerWorkspace ===
+                                0
+                                  ? "Disabled"
+                                  : `Up to ${plan.limits.externalChannelsPerWorkspace}`}
+                              </strong>
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>CSS selector scope</dt>
+                            <dd>
+                              <strong>
+                                {plan.features
+                                  .sectionLevelMonitoring
+                                  ? "Included"
+                                  : "Full-page only"}
+                              </strong>
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Scheduled digests</dt>
+                            <dd>
+                              <strong>
+                                {!plan.features
+                                  .scheduledDigests
+                                  ? "Instant email only"
+                                  : plan.features
+                                        .allowedDigestPeriods
+                                        .length === 1
+                                    ? "Weekly digest"
+                                    : "Daily, weekly & monthly"}
                               </strong>
                             </dd>
                           </div>
@@ -570,7 +629,7 @@ export default async function BillingPage() {
                               {
                                 transition.pagesRequiringFrequencyAdjustment
                               }{" "}
-                              hourly page(s)
+                              page(s)
                             </strong>{" "}
                             to{" "}
                             {formatFrequencyIntervalLabel(
@@ -578,6 +637,23 @@ export default async function BillingPage() {
                                 .minFrequencyMinutes,
                             ).toLowerCase()}
                             .
+                          </div>
+                        ) : null}
+
+                        {!isCurrentPlan &&
+                        (transition.pagesRequiringSelectorClear ??
+                          0) > 0 ? (
+                          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800">
+                            Switching to{" "}
+                            <strong>{plan.name}</strong>{" "}
+                            will clear CSS selectors on{" "}
+                            <strong>
+                              {
+                                transition.pagesRequiringSelectorClear
+                              }{" "}
+                              page(s)
+                            </strong>{" "}
+                            (reverts to full-page monitoring).
                           </div>
                         ) : null}
 
@@ -608,8 +684,9 @@ export default async function BillingPage() {
                             <strong>
                               {activeWorkspace.name}
                             </strong>{" "}
-                            ({subscription.billingInterval}{" "}
-                            billing)
+                            {plan.id === "free"
+                              ? "(Free tier)"
+                              : `(${subscription.billingInterval} billing)`}
                           </div>
                         ) : canManageBilling ? (
                           <WorkspaceActionForm
@@ -677,6 +754,29 @@ export default async function BillingPage() {
               </p>
 
               <dl className="workspace-usage-summary">
+                <div>
+                  <dt>
+                    Workspaces owned
+                    <span className="workspace-meta">
+                      Workspaces created or owned by this workspace&apos;s Owner account
+                    </span>
+                  </dt>
+                  <dd>
+                    <strong>
+                      {usage.ownedWorkspaces} /{" "}
+                      {
+                        entitlements.limits
+                          .workspacesPerAccount
+                      }
+                    </strong>
+                    <span className="workspace-meta">
+                      <Link href="/dashboard/team">
+                        Manage workspaces
+                      </Link>
+                    </span>
+                  </dd>
+                </div>
+
                 <div>
                   <dt>
                     Competitors
@@ -857,6 +957,16 @@ export default async function BillingPage() {
                   </dd>
                 </div>
                 <div>
+                  <dt>Payment provider</dt>
+                  <dd>
+                    <strong>
+                      {subscription.providerSubscriptionId
+                        ? `Lemon Squeezy (#${subscription.providerSubscriptionId})`
+                        : "Lemon Squeezy (not yet subscribed)"}
+                    </strong>
+                  </dd>
+                </div>
+                <div>
                   <dt>Billing cycle</dt>
                   <dd className="workspace-category">
                     <strong>
@@ -888,46 +998,78 @@ export default async function BillingPage() {
 
               {canManageBilling ? (
                 <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 pt-4">
-                  {subscription.cancelAtPeriodEnd ||
-                  subscription.status === "canceled" ? (
-                    <WorkspaceActionForm
-                      action={
-                        toggleSubscriptionCancellationAction
-                      }
-                      successMessage="Subscription reactivated."
-                    >
-                      <input
-                        type="hidden"
-                        name="mode"
-                        value="reactivate"
-                      />
-                      <button
-                        type="submit"
-                        className="workspace-primary"
+                  {subscription.providerSubscriptionId &&
+                  subscription.status !== "canceled" ? (
+                    subscription.cancelAtPeriodEnd ? (
+                      <WorkspaceActionForm
+                        action={
+                          toggleSubscriptionCancellationAction
+                        }
+                        successMessage="Subscription reactivated."
                       >
-                        Resume subscription renewal
-                      </button>
-                    </WorkspaceActionForm>
+                        <input
+                          type="hidden"
+                          name="mode"
+                          value="reactivate"
+                        />
+                        <button
+                          type="submit"
+                          className="workspace-primary"
+                        >
+                          Resume subscription renewal
+                        </button>
+                      </WorkspaceActionForm>
+                    ) : (
+                      <WorkspaceActionForm
+                        action={
+                          toggleSubscriptionCancellationAction
+                        }
+                        successMessage="Cancellation scheduled for the end of the current period."
+                      >
+                        <input
+                          type="hidden"
+                          name="mode"
+                          value="schedule_cancel"
+                        />
+                        <button
+                          type="submit"
+                          className="workspace-panel-trigger workspace-panel-secondary"
+                        >
+                          Cancel at period end
+                        </button>
+                      </WorkspaceActionForm>
+                    )
                   ) : (
-                    <WorkspaceActionForm
-                      action={
-                        toggleSubscriptionCancellationAction
-                      }
-                      successMessage="Cancellation scheduled for the end of the current period."
-                    >
-                      <input
-                        type="hidden"
-                        name="mode"
-                        value="schedule_cancel"
-                      />
-                      <button
-                        type="submit"
-                        className="workspace-panel-trigger workspace-panel-secondary"
-                      >
-                        Cancel at period end
-                      </button>
-                    </WorkspaceActionForm>
+                    <p className="text-xs text-slate-500">
+                      Select a plan above to open a secure Lemon Squeezy checkout session.
+                    </p>
                   )}
+
+                  {subscription.providerUpdatePaymentUrl ? (
+                    <a
+                      href={
+                        subscription.providerUpdatePaymentUrl
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="workspace-panel-trigger workspace-panel-secondary"
+                    >
+                      Update payment method
+                    </a>
+                  ) : null}
+
+                  {subscription.providerCustomerPortalUrl ? (
+                    <a
+                      href={
+                        subscription.providerCustomerPortalUrl
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="workspace-panel-trigger workspace-panel-secondary"
+                    >
+                      Lemon Squeezy customer portal
+                    </a>
+                  ) : null}
                 </div>
               ) : null}
             </section>

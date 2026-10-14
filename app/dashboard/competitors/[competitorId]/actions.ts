@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { getDefaultFrequencyForPlan } from "@/lib/billing-plans";
 import {
   assertWorkspaceMonitoringFrequencyAllowed,
+  assertWorkspaceSectionLevelMonitoringAllowed,
   getWorkspaceEntitlements,
 } from "@/lib/workspace-billing";
 import {
@@ -833,6 +834,16 @@ export async function updateMonitoredPageMonitoringScope(
       ignoreSelectorsInput
     );
 
+  await assertWorkspaceSectionLevelMonitoringAllowed(
+    env.DB,
+    {
+      workspaceId:
+        monitoredPage.workspace_id,
+      includeSelectors,
+      ignoreSelectors,
+    }
+  );
+
   const result =
     await env.DB.prepare(
       `
@@ -976,6 +987,29 @@ export async function previewMonitoredPageMonitoringScope(
     throw new Error(
       "Monitored page not found or access denied."
     );
+  }
+
+  try {
+    await assertWorkspaceSectionLevelMonitoringAllowed(
+      env.DB,
+      {
+        workspaceId:
+          monitoredPage.workspace_id,
+        includeSelectors,
+        ignoreSelectors,
+      }
+    );
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Section-level CSS selector monitoring requires Starter or higher.",
+      capturedAt: null,
+      includeMatches: [],
+      ignoreMatches: [],
+    };
   }
 
   const latestSnapshot =

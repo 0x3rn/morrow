@@ -140,6 +140,17 @@ function createD1Fixture(t) {
   sqlite
     .prepare(
       `
+        INSERT INTO workspace_subscriptions (workspace_id, plan_id, status, billing_interval)
+        VALUES
+          ('ws_acme', 'starter', 'active', 'monthly'),
+          ('ws_other', 'starter', 'active', 'monthly')
+      `,
+    )
+    .run();
+
+  sqlite
+    .prepare(
+      `
         INSERT INTO competitors (id, workspace_id, name, domain, status)
         VALUES
           ('comp_stripe', 'ws_acme', 'Stripe', 'stripe.com', 'active'),

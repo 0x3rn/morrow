@@ -65,7 +65,17 @@ export function WorkspaceActionForm({ action, successMessage, children, classNam
     setError("");
     startTransition(async () => {
       try {
-        await action(data);
+        const result = await action(data);
+        if (
+          typeof result === "object" &&
+          result !== null &&
+          "checkoutUrl" in result &&
+          typeof (result as { checkoutUrl?: unknown }).checkoutUrl === "string" &&
+          (result as { checkoutUrl: string }).checkoutUrl.startsWith("https://")
+        ) {
+          window.location.assign((result as { checkoutUrl: string }).checkoutUrl);
+          return;
+        }
         notify(successMessage);
       } catch (error) {
         setError(error instanceof Error && !("digest" in error) ? error.message : "We couldn't save this change. Please try again.");

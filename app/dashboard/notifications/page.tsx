@@ -6,6 +6,7 @@ import {
   type WorkspaceCompetitorOption,
   type WorkspaceExternalChannelView,
 } from "@/lib/notification-settings";
+import { getWorkspaceEntitlements } from "@/lib/workspace-billing";
 import {
   NOTIFICATION_CHANGE_CATEGORIES,
   NOTIFICATION_DIGEST_PERIODS,
@@ -15,6 +16,7 @@ import {
   type NotificationSignificanceLevel,
 } from "@/worker/notification-routing";
 import { env } from "cloudflare:workers";
+import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -447,6 +449,13 @@ export default async function NotificationsPage() {
     externalChannels,
     deliveryMetrics,
   } = settings;
+  const entitlements = await getWorkspaceEntitlements(
+    env.DB,
+    workspace.id,
+  );
+  const allowedDigestPeriodSet = new Set<string>(
+    entitlements.features.allowedDigestPeriods,
+  );
   const canManageExternalChannels =
     workspace.canManageExternalChannels;
 
@@ -568,14 +577,24 @@ export default async function NotificationsPage() {
                         type="checkbox"
                         name="sendDigests"
                         value="1"
-                        defaultChecked
+                        defaultChecked={
+                          entitlements.features
+                            .scheduledDigests
+                        }
+                        disabled={
+                          !entitlements.features
+                            .scheduledDigests
+                        }
                       />
                       <span>
                         <strong className="block text-sm font-medium text-slate-900">
                           Scheduled digests
                         </strong>
                         <span className="block text-xs text-slate-500">
-                          Deliver daily or weekly rollups scoped to this channel’s filters
+                          {entitlements.features
+                            .scheduledDigests
+                            ? "Deliver scheduled rollups scoped to this channel’s filters"
+                            : "Requires Personal plan or higher"}
                         </span>
                       </span>
                     </label>
@@ -588,22 +607,30 @@ export default async function NotificationsPage() {
                   </div>
                   <div className="workspace-choice-grid">
                     {NOTIFICATION_DIGEST_PERIODS.map(
-                      (period) => (
-                        <label
-                          key={period}
-                          className="workspace-choice-option"
-                        >
-                          <input
-                            type="checkbox"
-                            name="digestPeriods"
-                            value={period}
-                            defaultChecked
-                          />
-                          <span className="text-sm font-medium text-slate-900">
-                            {DIGEST_PERIOD_LABELS[period]}
-                          </span>
-                        </label>
-                      ),
+                      (period) => {
+                        const isAllowed =
+                          allowedDigestPeriodSet.has(period);
+                        return (
+                          <label
+                            key={period}
+                            className="workspace-choice-option"
+                          >
+                            <input
+                              type="checkbox"
+                              name="digestPeriods"
+                              value={period}
+                              defaultChecked={isAllowed}
+                              disabled={!isAllowed}
+                            />
+                            <span className="text-sm font-medium text-slate-900">
+                              {DIGEST_PERIOD_LABELS[period]}
+                              {!isAllowed
+                                ? " (Starter+ plans)"
+                                : ""}
+                            </span>
+                          </label>
+                        );
+                      },
                     )}
                   </div>
                 </div>
@@ -657,10 +684,14 @@ export default async function NotificationsPage() {
               External channels
             </div>
             <div className="workspace-metric-value">
-              {externalChannels.length}
+              {externalChannels.length} /{" "}
+              {
+                entitlements.limits
+                  .externalChannelsPerWorkspace
+              }
             </div>
             <div className="workspace-meta">
-              {activeExternalChannels} active in this workspace
+              {activeExternalChannels} active ({entitlements.planName} plan)
             </div>
           </article>
 
@@ -763,7 +794,13 @@ export default async function NotificationsPage() {
                       name="digestEmailEnabled"
                       value="1"
                       defaultChecked={
-                        emailPreferences.digestEmailEnabled
+                        emailPreferences.digestEmailEnabled &&
+                        entitlements.features
+                          .scheduledDigests
+                      }
+                      disabled={
+                        !entitlements.features
+                          .scheduledDigests
                       }
                     />
                     <span>
@@ -771,7 +808,10 @@ export default async function NotificationsPage() {
                         Scheduled digest emails
                       </strong>
                       <span className="block text-xs text-slate-500">
-                        Email me a curated rollup when a daily or weekly digest includes matching changes
+                        {entitlements.features
+                          .scheduledDigests
+                          ? "Email me a curated rollup when a scheduled digest includes matching changes"
+                          : "Scheduled digests require Personal plan or higher"}
                       </span>
                     </span>
                   </label>
@@ -784,26 +824,54 @@ export default async function NotificationsPage() {
                 </div>
                 <div className="workspace-choice-grid">
                   {NOTIFICATION_DIGEST_PERIODS.map(
-                    (period) => (
-                      <label
-                        key={period}
-                        className="workspace-choice-option"
-                      >
-                        <input
-                          type="checkbox"
-                          name="digestPeriods"
-                          value={period}
-                          defaultChecked={selectedEmailDigestPeriods.has(
-                            period,
-                          )}
-                        />
-                        <span className="text-sm font-medium text-slate-900">
-                          {DIGEST_PERIOD_LABELS[period]}
-                        </span>
-                      </label>
-                    ),
+                    (period) => {
+                      const isAllowed =
+                        allowedDigestPeriodSet.has(period);
+                      return (
+                        <label
+                          key={period}
+                          className="workspace-choice-option"
+                        >
+                          <input
+                            type="checkbox"
+                            name="digestPeriods"
+                            value={period}
+                            defaultChecked={
+                              isAllowed &&
+                              selectedEmailDigestPeriods.has(
+                                period,
+                              )
+                            }
+                            disabled={!isAllowed}
+                          />
+                          <span className="text-sm font-medium text-slate-900">
+                            {DIGEST_PERIOD_LABELS[period]}
+                            {!isAllowed
+                              ? entitlements.features
+                                  .scheduledDigests
+                                ? " (Starter+ plans)"
+                                : " (Personal+ plans)"
+                              : ""}
+                          </span>
+                        </label>
+                      );
+                    },
                   )}
                 </div>
+                {!entitlements.features.scheduledDigests ? (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Your workspace is on the{" "}
+                    <strong>{entitlements.planName}</strong>{" "}
+                    plan (instant email alerts included).{" "}
+                    <Link
+                      href="/dashboard/billing"
+                      className="font-medium text-indigo-600"
+                    >
+                      Upgrade in Billing
+                    </Link>{" "}
+                    to enable scheduled digest rollups.
+                  </p>
+                ) : null}
               </div>
 
               <RoutingFilterFields
@@ -852,10 +920,12 @@ export default async function NotificationsPage() {
             </div>
 
             <div className="text-sm font-medium text-slate-500">
-              {externalChannels.length}{" "}
-              {externalChannels.length === 1
-                ? "channel"
-                : "channels"}
+              {externalChannels.length} /{" "}
+              {
+                entitlements.limits
+                  .externalChannelsPerWorkspace
+              }{" "}
+              channels ({entitlements.planName} plan)
             </div>
           </div>
 
