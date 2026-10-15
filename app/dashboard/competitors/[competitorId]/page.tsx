@@ -841,7 +841,7 @@ export default async function CompetitorPage({
                   </p>
                 </div>
               </div>
-            </div></div><h2 className="workspace-profile-status">Status</h2><dl className="workspace-profile-overview">
+            </div></div><dl className="workspace-profile-overview">
     <div><dt>Monitoring status</dt><dd>{competitor.status === "active" ? "Monitoring active" : "Monitoring paused"}</dd></div>
     <div><dt>Active pages</dt><dd>{metrics.activePages} / {metrics.monitoredPages}</dd></div>
     <div><dt>Healthy pages</dt><dd>{healthyPages} / {metrics.monitoredPages}</dd></div>
@@ -850,7 +850,7 @@ export default async function CompetitorPage({
     <div><dt>Major changes</dt><dd>{metrics.majorChanges}<span className="workspace-meta"> recorded as major</span></dd></div>
     <div><dt>Last checked</dt><dd>{formatDateTime(metrics.latestCheckedAt)}</dd></div>
     <div><dt>Latest change</dt><dd>{formatDateTime(metrics.latestChangeAt)}</dd></div>
-    <div><dt>Monitored pages</dt><dd>{metrics.monitoredPages}</dd></div>
+    <div><dt>Monitored pages</dt><dd>{metrics.monitoredPages} / {entitlements.limits.monitoredPagesPerCompetitor}</dd></div>
     <div><dt>Paused</dt><dd>{metrics.pausedPages}</dd></div>
     <div><dt>Latest successful check</dt><dd>{latestCapturedPage ? formatDateTime(latestCapturedPage.latest_captured_at) : "Never"}</dd></div>
   </dl></header>
@@ -858,26 +858,13 @@ export default async function CompetitorPage({
         <section className="workspace-profile-pages">
           <div className="workspace-section-heading">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Pages
-              </div>
-
-              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-slate-950">
+              <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-950">
                 Monitored pages
               </h2>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                 Pages Morrow checks on the schedule you set.
               </p>
-            </div>
-
-            <div className="text-sm font-medium text-slate-500">
-              {metrics.monitoredPages} /{" "}
-              {
-                entitlements.limits
-                  .monitoredPagesPerCompetitor
-              }{" "}
-              pages ({entitlements.planName} plan)
             </div>
           {permissions.canEditMonitoring ? (<WorkspacePanel label="Add monitored page"><p className="text-sm text-slate-500">Enter a page URL to monitor</p><WorkspaceActionForm successMessage="Monitored page added." action={createMonitoredPage}
                 className="space-y-4 border-t border-slate-100 px-5 py-5"
