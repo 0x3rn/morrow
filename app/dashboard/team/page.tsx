@@ -127,6 +127,7 @@ export default async function TeamWorkspacesPage() {
                 </p>
 
                 <WorkspaceActionForm
+                  key={activeWorkspace.id}
                   action={createWorkspaceAction}
                   successMessage="Workspace created and set as active."
                   className="mt-5 grid gap-4"
@@ -173,6 +174,7 @@ export default async function TeamWorkspacesPage() {
                   </p>
 
                   <WorkspaceActionForm
+                    key={activeWorkspace.id}
                     action={inviteWorkspaceMemberAction}
                     successMessage="Team invitation saved."
                     className="mt-5 grid gap-4"
@@ -326,7 +328,7 @@ export default async function TeamWorkspacesPage() {
             <div className="workspace-metric-label">
               Active workspace
             </div>
-            <div className="workspace-metric-value text-xl">
+            <div className="workspace-metric-value">
               {activeWorkspace.name}
             </div>
             <div className="workspace-meta">
@@ -499,6 +501,7 @@ export default async function TeamWorkspacesPage() {
 
             {permissions.canManageWorkspaceSettings ? (
               <WorkspaceActionForm
+                key={`${activeWorkspace.id}:${activeWorkspace.name}`}
                 action={renameWorkspaceAction}
                 successMessage="Workspace name updated."
                 className="mt-5 grid gap-4 border-t border-slate-200 pt-4"
@@ -586,7 +589,7 @@ export default async function TeamWorkspacesPage() {
 
               return (
                 <article
-                  key={member.userId}
+                  key={`${activeWorkspace.id}:${member.userId}:${member.role}`}
                   className="workspace-competitor-record overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
                 >
                   <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-center">

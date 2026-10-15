@@ -332,13 +332,17 @@ export async function listUserWorkspaces(
         WHERE workspace_members.user_id = ?
 
         ORDER BY
+          CASE
+            WHEN workspaces.id = ? THEN 0
+            ELSE 1
+          END ASC,
           datetime(
             workspace_members.joined_at
           ) ASC,
           workspaces.name COLLATE NOCASE ASC
       `,
     )
-    .bind(userId)
+    .bind(userId, active?.id ?? "")
     .all<UserWorkspaceSummaryRow>();
 
   return (result.results ?? []).map((row) => ({

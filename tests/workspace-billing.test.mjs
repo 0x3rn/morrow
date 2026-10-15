@@ -992,7 +992,7 @@ test("THE-28.3: retention window and metered history counts reflect plan history
     await getWorkspaceRetentionWindow(db, "ws_acme", now);
   assert.equal(retentionWindow.retentionDays, 90);
 
-  // Creating a new team workspace automatically provisions its Free subscription
+  // Creating a new team workspace under an Owner on Growth inherits the Owner's Growth plan
   const newWs = await createTeamWorkspace(db, {
     userId: "usr_owner",
     name: "Second Workspace",
@@ -1001,19 +1001,54 @@ test("THE-28.3: retention window and metered history counts reflect plan history
     await getWorkspaceEntitlements(db, newWs.id);
   assert.equal(
     newWsEntitlements.effectivePlanId,
-    "free",
+    "growth",
   );
   assert.equal(
     getBillingPlanDefinition(
       newWsEntitlements.effectivePlanId,
     ).name,
-    "Free",
+    "Growth",
+  );
+
+  // Changing plan on the second workspace updates all workspaces owned by usr_owner
+  await changeWorkspaceSubscriptionPlan(db, {
+    actorUserId: "usr_owner",
+    workspaceId: newWs.id,
+    planId: "scale",
+    billingInterval: "annual",
+  });
+  const acmeAfterSiblingUpgrade =
+    await getWorkspaceEntitlements(db, "ws_acme");
+  assert.equal(
+    acmeAfterSiblingUpgrade.effectivePlanId,
+    "scale",
+  );
+  assert.equal(
+    acmeAfterSiblingUpgrade.billingInterval,
+    "annual",
+  );
+
+  // Creating a workspace for a user with no existing paid subscription provisions Free
+  sqlite
+    .prepare(
+      `INSERT INTO users (id, email, name, email_verified) VALUES (?, ?, ?, 1)`,
+    )
+    .run("usr_fresh", "fresh@acme.com", "Fresh Owner");
+  const freshWs = await createTeamWorkspace(db, {
+    userId: "usr_fresh",
+    name: "Fresh Workspace",
+  });
+  const freshWsEntitlements =
+    await getWorkspaceEntitlements(db, freshWs.id);
+  assert.equal(
+    freshWsEntitlements.effectivePlanId,
+    "free",
   );
   // Free plan allows 1 seat (the owner) and 0 external channels
   await assert.rejects(
     () =>
       assertWorkspaceTeamSeatCapacity(db, {
-        workspaceId: newWs.id,
+        workspaceId: freshWs.id,
       }),
     /reached the Free plan limit of 1 team seat/,
   );
@@ -1021,7 +1056,7 @@ test("THE-28.3: retention window and metered history counts reflect plan history
     () =>
       assertWorkspaceExternalChannelCapacity(
         db,
-        newWs.id,
+        freshWs.id,
       ),
     /External notification channels are not included on the Free plan/,
   );
@@ -1352,9 +1387,9 @@ test("THE-28.5: webhook security, plan-spoofing defense, idempotency under repla
   const webhookHandler =
     createLemonSqueezyWebhookHandler(env);
 
-  // Create a second workspace to test cross-workspace hijack protection
+  // Create a workspace owned by a different user (usr_admin) to test cross-account workspace hijack protection
   await createTeamWorkspace(db, {
-    userId: "usr_owner",
+    userId: "usr_admin",
     name: "Second Org",
   });
   const secondWsRow = sqlite
@@ -2373,3 +2408,190 @@ test("THE-28.7: user-facing error sanitizer masks RSC render/digest errors, .env
     "Slack webhook URL must use HTTPS.",
   );
 });
+
+test("THE-28.8 & THE-28.9: owner_email auto-populates and direct D1 edits to annual billing_interval align current_period_end to 1 year after current_period_start", async (t) => {
+  const { db, sqlite } = createD1Fixture(t);
+
+  // Verify owner_email was populated automatically on insert
+  const initialRow = sqlite
+    .prepare(
+      "SELECT owner_email, billing_interval, current_period_start, current_period_end FROM workspace_subscriptions WHERE workspace_id = 'ws_acme'",
+    )
+    .get();
+  assert.equal(initialRow.owner_email, "owner@acme.test");
+
+  // Simulate a workspace created on 2026-09-04 with a 30-day default period end, then edited in D1 to Scale + annual
+  sqlite
+    .prepare(
+      `
+        UPDATE workspace_subscriptions
+        SET
+          plan_id = 'scale',
+          current_period_start = '2026-09-04 08:25:24',
+          current_period_end = '2026-10-04 08:25:24'
+        WHERE workspace_id = 'ws_acme'
+      `,
+    )
+    .run();
+
+  sqlite
+    .prepare(
+      `
+        UPDATE workspace_subscriptions
+        SET billing_interval = 'annual'
+        WHERE workspace_id = 'ws_acme'
+      `,
+    )
+    .run();
+
+  const updatedRow = sqlite
+    .prepare(
+      "SELECT billing_interval, current_period_start, current_period_end FROM workspace_subscriptions WHERE workspace_id = 'ws_acme'",
+    )
+    .get();
+  assert.equal(updatedRow.billing_interval, "annual");
+  assert.equal(
+    updatedRow.current_period_start,
+    "2026-09-04 08:25:24",
+  );
+  assert.equal(
+    updatedRow.current_period_end,
+    "2027-09-04 08:25:24",
+  );
+
+  const subscription = await getWorkspaceSubscription(
+    db,
+    "ws_acme",
+  );
+  assert.equal(subscription.billingInterval, "annual");
+  assert.equal(
+    subscription.currentPeriodStart,
+    "2026-09-04 08:25:24",
+  );
+  assert.equal(
+    subscription.currentPeriodEnd,
+    "2027-09-04 08:25:24",
+  );
+
+  // Switching back to monthly in D1 aligns current_period_end to 30 days after current_period_start
+  sqlite
+    .prepare(
+      `
+        UPDATE workspace_subscriptions
+        SET billing_interval = 'monthly'
+        WHERE workspace_id = 'ws_acme'
+      `,
+    )
+    .run();
+
+  const monthlyRow = sqlite
+    .prepare(
+      "SELECT billing_interval, current_period_end FROM workspace_subscriptions WHERE workspace_id = 'ws_acme'",
+    )
+    .get();
+  assert.equal(monthlyRow.billing_interval, "monthly");
+  assert.equal(
+    monthlyRow.current_period_end,
+    "2026-10-04 08:25:24",
+  );
+
+  // Updating the owner's email in users syncs owner_email in workspace_subscriptions
+  sqlite
+    .prepare(
+      "UPDATE users SET email = 'new-owner@acme.test' WHERE id = 'usr_owner'",
+    )
+    .run();
+  const syncedRow = sqlite
+    .prepare(
+      "SELECT owner_email FROM workspace_subscriptions WHERE workspace_id = 'ws_acme'",
+    )
+    .get();
+  assert.equal(
+    syncedRow.owner_email,
+    "new-owner@acme.test",
+  );
+});
+
+test("Account-owned subscriptions: sibling workspaces share the Owner's plan, sync on direct D1 edits, and enforce per-workspace limits on downgrade", async (t) => {
+  const { db, sqlite } = createD1Fixture(t);
+
+  // usr_owner starts on Starter (allows up to 2 workspaces, 5 competitors per workspace)
+  const secondWs = await createTeamWorkspace(db, {
+    userId: "usr_owner",
+    name: "Acme Europe",
+  });
+
+  // Newly created workspace inherits usr_owner's Starter plan automatically
+  const secondSub = await getWorkspaceSubscription(
+    db,
+    secondWs.id,
+  );
+  assert.equal(secondSub.planId, "starter");
+
+  // Direct D1 edit on ws_acme to 'growth' + 'annual' automatically syncs to secondWs via trigger
+  sqlite
+    .prepare(
+      `
+        UPDATE workspace_subscriptions
+        SET plan_id = 'growth', billing_interval = 'annual'
+        WHERE workspace_id = 'ws_acme'
+      `,
+    )
+    .run();
+
+  const secondSubAfterD1Edit =
+    await getWorkspaceSubscription(db, secondWs.id);
+  assert.equal(secondSubAfterD1Edit.planId, "growth");
+  assert.equal(
+    secondSubAfterD1Edit.billingInterval,
+    "annual",
+  );
+
+  // Add 4 competitors in secondWs (allowed on Growth/Starter, exceeds Personal's 3-competitor limit)
+  for (let i = 1; i <= 4; i++) {
+    sqlite
+      .prepare(
+        `
+          INSERT INTO competitors (id, workspace_id, name, domain, status)
+          VALUES (?, ?, ?, ?, 'active')
+        `,
+      )
+      .run(
+        `comp_eu_${i}`,
+        secondWs.id,
+        `EU Comp ${i}`,
+        `eu${i}.example.com`,
+      );
+  }
+
+  // Attempting to downgrade to Personal from ws_acme (even though ws_acme has 0 competitors)
+  // is blocked because usr_owner owns 2 workspaces (Personal allows 1) AND secondWs has 4 competitors (Personal allows 3)
+  const ws1Snapshot = await getWorkspaceBillingSnapshot(
+    db,
+    "usr_owner",
+    new Date(),
+    "ws_acme",
+  );
+  const personalOption = ws1Snapshot.planOptions.find(
+    (p) => p.plan.id === "personal",
+  );
+  const starterOption = ws1Snapshot.planOptions.find(
+    (p) => p.plan.id === "starter",
+  );
+
+  assert.equal(personalOption.transition.allowed, false);
+  assert.ok(
+    personalOption.transition.blockingReasons.some((r) =>
+      r.includes("workspaces"),
+    ),
+  );
+  assert.ok(
+    personalOption.transition.blockingReasons.some((r) =>
+      r.includes("competitors"),
+    ),
+  );
+
+  // Downgrading from Growth to Starter is allowed (2 workspaces <= 2, 4 competitors <= 5)
+  assert.equal(starterOption.transition.allowed, true);
+});
+

@@ -739,18 +739,6 @@ export default async function NotificationsPage() {
                   <strong>{session.user.email}</strong>.
                 </p>
               </div>
-
-              <span
-                className={`workspace-badge ${
-                  session.user.emailVerified
-                    ? "health-healthy"
-                    : "health-overdue"
-                }`}
-              >
-                {session.user.emailVerified
-                  ? "Verified email"
-                  : "Verification required"}
-              </span>
             </div>
 
             {!session.user.emailVerified ? (

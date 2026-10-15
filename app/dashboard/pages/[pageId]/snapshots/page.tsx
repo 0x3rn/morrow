@@ -411,7 +411,7 @@ export default async function SnapshotHistory({
               Retained snapshots ({retentionWindow.entitlements.planName} · {retentionWindow.retentionDays}-day retention)
             </div>
 
-            <div className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+            <div className="workspace-metric-value">
               {totalSnapshots}
             </div>
           </div>

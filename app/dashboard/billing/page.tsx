@@ -1,3 +1,4 @@
+import { MobilePlanSelector } from "@/components/mobile-plan-selector";
 import { WorkspaceActionForm } from "@/components/workspace-feedback";
 import { auth } from "@/lib/auth";
 import {
@@ -13,6 +14,7 @@ import { env } from "cloudflare:workers";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
 import {
   changeSubscriptionPlanAction,
   toggleSubscriptionCancellationAction,
@@ -153,7 +155,7 @@ function formatBillingEventDescription(input: {
 
     case "plan_upgraded":
       return {
-        title: `Upgraded workspace plan to ${newPlan.name}`,
+        title: `Upgraded plan to ${newPlan.name}`,
         detail: previousPlan
           ? `Switched from ${previousPlan.name} to ${newPlan.name} on ${intervalLabel}.`
           : `Activated ${newPlan.name} on ${intervalLabel}.`,
@@ -161,7 +163,7 @@ function formatBillingEventDescription(input: {
 
     case "plan_downgraded":
       return {
-        title: `Downgraded workspace plan to ${newPlan.name}`,
+        title: `Downgraded plan to ${newPlan.name}`,
         detail: [
           previousPlan
             ? `Switched from ${previousPlan.name} to ${newPlan.name} on ${intervalLabel}.`
@@ -185,7 +187,7 @@ function formatBillingEventDescription(input: {
     case "cancellation_scheduled":
       return {
         title: "Scheduled cancellation at period end",
-        detail: `Workspace retains ${newPlan.name} entitlements until the current billing period ends.`,
+        detail: `Your account retains ${newPlan.name} entitlements until the current billing period ends.`,
       };
 
     case "subscription_reactivated":
@@ -198,7 +200,7 @@ function formatBillingEventDescription(input: {
       return {
         title: "Subscription canceled",
         detail: [
-          "Workspace fell back to Free plan limits.",
+          "Account fell back to Free plan limits.",
           input.adjustedPageFrequencies > 0
             ? `Adjusted ${input.adjustedPageFrequencies} monitored page(s) to 24-hour checks.`
             : "",
@@ -211,7 +213,7 @@ function formatBillingEventDescription(input: {
     default:
       return {
         title: `Initialized ${newPlan.name} plan`,
-        detail: `Workspace subscription provisioned on ${intervalLabel}.`,
+        detail: `Subscription provisioned on ${intervalLabel}.`,
       };
   }
 }
@@ -246,23 +248,27 @@ export default async function BillingPage() {
     subscription.status,
     subscription.cancelAtPeriodEnd,
   );
+  const hasLifecycleActions =
+    canManageBilling &&
+    Boolean(
+      (subscription.providerSubscriptionId &&
+        subscription.status !== "canceled") ||
+        subscription.providerUpdatePaymentUrl ||
+        subscription.providerCustomerPortalUrl,
+    );
 
   return (
     <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <header className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
-              Subscription &amp; entitlements
-            </div>
 
             <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
               Billing &amp; plan limits
             </h1>
 
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-[15px]">
-              Manage subscription tiers, monitored page capacity, minimum check intervals, and historical retention windows for{" "}
-              <strong>{activeWorkspace.name}</strong>.
+              Manage your subscription plan, billing cycle, and account entitlements.
             </p>
           </div>
 
@@ -273,116 +279,20 @@ export default async function BillingPage() {
             <span className={statusBadge.className}>
               {statusBadge.label}
             </span>
-            <span className="workspace-badge">
-              Your role:{" "}
-              {
-                WORKSPACE_ROLE_DETAILS[
-                  activeWorkspace.role
-                ].label
-              }
-            </span>
           </div>
         </header>
 
-        <section
-          className="workspace-metrics mt-6"
-          aria-label="Workspace plan and capacity summary"
-        >
-          <article>
-            <div className="workspace-metric-label">
-              Active plan
-            </div>
-            <div className="workspace-metric-value">
-              {entitlements.planName}
-            </div>
-            <div className="workspace-meta">
-              ${entitlements.effectiveMonthlyPriceUsd}/mo
-              {entitlements.effectivePlanId === "free"
-                ? " · Free tier"
-                : ` (${entitlements.billingInterval} billing) · period ends ${formatDateOnly(
-                    subscription.currentPeriodEnd,
-                  )}`}
-            </div>
-          </article>
-
-          <article>
-            <div className="workspace-metric-label">
-              Monitored pages
-            </div>
-            <div className="workspace-metric-value">
-              {usage.monitoredPages} /{" "}
-              {
-                entitlements.limits
-                  .monitoredPagesPerWorkspace
-              }
-            </div>
-            <div className="workspace-meta">
-              {usage.competitors} /{" "}
-              {
-                entitlements.limits
-                  .competitorsPerWorkspace
-              }{" "}
-              competitors · up to{" "}
-              {
-                entitlements.limits
-                  .monitoredPagesPerCompetitor
-              }{" "}
-              pages/competitor
-            </div>
-          </article>
-
-          <article>
-            <div className="workspace-metric-label">
-              Minimum check interval
-            </div>
-            <div className="workspace-metric-value">
-              {entitlements.limits.minFrequencyMinutes ===
-              60
-                ? "1h"
-                : `${
-                    entitlements.limits
-                      .minFrequencyMinutes / 60
-                  }h`}
-            </div>
-            <div className="workspace-meta">
-              {formatFrequencyIntervalLabel(
-                entitlements.limits.minFrequencyMinutes,
-              )}{" "}
-              ·{" "}
-              {entitlements.features.hourlyMonitoring
-                ? "Hourly checks enabled"
-                : "Upgrade to Growth for hourly checks"}
-            </div>
-          </article>
-
-          <article>
-            <div className="workspace-metric-label">
-              History retention
-            </div>
-            <div className="workspace-metric-value">
-              {entitlements.limits.historyRetentionDays}d
-            </div>
-            <div className="workspace-meta">
-              {usage.outsideRetentionChanges > 0 ||
-              usage.outsideRetentionSnapshots > 0
-                ? `${usage.outsideRetentionChanges} older changes · ${usage.outsideRetentionSnapshots} snapshots outside window`
-                : `All recorded history within ${entitlements.limits.historyRetentionDays}-day window`}
-            </div>
-          </article>
-        </section>
-
-        <section className="mt-8">
+        <section className="mt-6">
           <div className="workspace-surface">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
-                  Subscription tiers
-                </div>
-                <h2 className="mt-1 text-xl font-semibold text-slate-950">
-                  Compare plans for {activeWorkspace.name}
+                <h2 className="text-xl font-semibold text-slate-950">
+                  Your subscription plan
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Plan changes take effect immediately. Upgrading unlocks higher page caps, faster check intervals, CSS selector scoping, and extended historical retention.
+                  {entitlements.effectivePlanId === "scale"
+                    ? "Plan changes take effect immediately. You are on the highest tier with maximum workspace, competitor, and monitoring allowances."
+                    : "Plan changes take effect immediately. Upgrading unlocks additional workspaces, higher monitoring limits, faster check intervals, and extended history retention."}
                 </p>
               </div>
 
@@ -418,39 +328,39 @@ export default async function BillingPage() {
 
             {!canManageBilling ? (
               <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-                You are viewing billing details as a workspace{" "}
-                <strong>
-                  {
-                    WORKSPACE_ROLE_DETAILS[
-                      activeWorkspace.role
-                    ].label
-                  }
-                </strong>
-                . Only workspace{" "}
-                <strong>Owners</strong> can upgrade, downgrade, or modify subscription billing intervals.
+                Only the account <strong>Owner</strong> can upgrade, downgrade, or modify subscription billing intervals.
               </div>
             ) : null}
 
-            <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
-              {planOptions.map(
-                ({
+            {(() => {
+              const currentPlanOption =
+                planOptions.find((option) => option.isCurrentPlan) ??
+                planOptions[0];
+              const otherPlanOptions = planOptions.filter(
+                (option) => option.plan.id !== currentPlanOption?.plan.id,
+              );
+
+              function renderPlanCard(
+                {
                   plan,
                   isCurrentPlan,
                   transition,
-                }) => {
-                  const displayedMonthlyPrice =
-                    subscription.billingInterval ===
-                    "annual"
-                      ? plan.annualMonthlyPriceUsd
-                      : plan.monthlyPriceUsd;
+                }: (typeof planOptions)[number],
+                headerAction?: ReactNode,
+              ) {
+                const displayedMonthlyPrice =
+                  subscription.billingInterval === "annual"
+                    ? plan.annualMonthlyPriceUsd
+                    : plan.monthlyPriceUsd;
 
-                  return (
-                    <article
-                      key={plan.id}
-                      className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-                    >
-                      <div>
-                        <div className="flex flex-wrap items-center justify-between gap-2">
+                return (
+                  <article
+                    key={plan.id}
+                    className="billing-plan-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                  >
+                    <div className="billing-plan-card-header">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-lg font-semibold text-slate-950">
                             {plan.name}
                           </h3>
@@ -459,283 +369,240 @@ export default async function BillingPage() {
                             <span className="workspace-badge health-healthy">
                               Current plan
                             </span>
-                          ) : transition.direction ===
-                            "upgrade" ? (
-                            <span className="workspace-badge">
-                              Upgrade
-                            </span>
-                          ) : (
-                            <span className="workspace-badge health-paused">
-                              Downgrade
-                            </span>
-                          )}
+                          ) : null}
                         </div>
 
-                        <p className="mt-2 text-xs leading-5 text-slate-500">
-                          {plan.tagline}
-                        </p>
+                        {headerAction}
+                      </div>
 
-                        <div className="mt-4 border-t border-b border-slate-200 py-4">
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="text-3xl font-semibold tracking-tight text-slate-950">
-                              ${displayedMonthlyPrice}
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              / month
-                            </span>
-                          </div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            {plan.id === "free"
-                              ? "Free forever · No credit card required"
-                              : subscription.billingInterval ===
-                                  "annual"
-                                ? `Billed annually ($${
-                                    plan.annualMonthlyPriceUsd *
-                                    12
-                                  }/yr) · $${
-                                    plan.monthlyPriceUsd
-                                  }/mo monthly`
-                                : `Billed monthly · or $${plan.annualMonthlyPriceUsd}/mo billed annually`}
-                          </div>
-                        </div>
+                      <p className="mt-2 text-xs leading-5 text-slate-500">
+                        {plan.tagline}
+                      </p>
+                    </div>
 
-                        <dl className="workspace-usage-summary">
-                          <div>
-                            <dt>Workspaces</dt>
-                            <dd>
-                              <strong>
-                                {plan.limits
-                                  .workspacesPerAccount ===
-                                1
-                                  ? "1 workspace"
-                                  : `Up to ${plan.limits.workspacesPerAccount}`}
-                              </strong>
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>Competitors</dt>
-                            <dd>
-                              <strong>
-                                Up to{" "}
-                                {
-                                  plan.limits
-                                    .competitorsPerWorkspace
-                                }
-                              </strong>
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>Monitored pages</dt>
-                            <dd>
-                              <strong>
-                                Up to{" "}
-                                {
-                                  plan.limits
-                                    .monitoredPagesPerWorkspace
-                                }
-                              </strong>
-                              <span className="workspace-meta">
-                                {
-                                  plan.limits
-                                    .monitoredPagesPerCompetitor
-                                }{" "}
-                                per competitor
-                              </span>
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>Fastest check interval</dt>
-                            <dd>
-                              <strong>
-                                {formatFrequencyIntervalLabel(
-                                  plan.limits
-                                    .minFrequencyMinutes,
-                                )}
-                              </strong>
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>History retention</dt>
-                            <dd>
-                              <strong>
-                                {
-                                  plan.limits
-                                    .historyRetentionDays
-                                }{" "}
-                                days
-                              </strong>
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>Team seats</dt>
-                            <dd>
-                              <strong>
-                                {plan.limits
-                                  .teamMembersPerWorkspace ===
-                                1
-                                  ? "1 (owner only)"
-                                  : `Up to ${plan.limits.teamMembersPerWorkspace}`}
-                              </strong>
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>External channels</dt>
-                            <dd>
-                              <strong>
-                                {plan.limits
-                                  .externalChannelsPerWorkspace ===
-                                0
-                                  ? "Disabled"
-                                  : `Up to ${plan.limits.externalChannelsPerWorkspace}`}
-                              </strong>
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>CSS selector scope</dt>
-                            <dd>
-                              <strong>
-                                {plan.features
-                                  .sectionLevelMonitoring
-                                  ? "Included"
-                                  : "Full-page only"}
-                              </strong>
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>Scheduled digests</dt>
-                            <dd>
-                              <strong>
-                                {!plan.features
-                                  .scheduledDigests
-                                  ? "Instant email only"
-                                  : plan.features
-                                        .allowedDigestPeriods
-                                        .length === 1
-                                    ? "Weekly digest"
-                                    : "Daily, weekly & monthly"}
-                              </strong>
-                            </dd>
-                          </div>
-                        </dl>
+                    <div className="billing-plan-card-price mt-4 border-t border-slate-200 pt-4 pb-3">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="billing-plan-price-value">
+                          ${displayedMonthlyPrice}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          / month
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {plan.id === "free"
+                          ? "Free forever · No credit card required"
+                          : subscription.billingInterval === "annual"
+                            ? `Billed annually ($${
+                                plan.annualMonthlyPriceUsd * 12
+                              }/yr) · $${plan.monthlyPriceUsd}/mo monthly`
+                            : `Billed monthly · or $${plan.annualMonthlyPriceUsd}/mo billed annually`}
+                      </div>
+                    </div>
 
-                        {!isCurrentPlan &&
-                        transition.pagesRequiringFrequencyAdjustment >
-                          0 ? (
-                          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800">
-                            Switching to{" "}
-                            <strong>{plan.name}</strong>{" "}
-                            will automatically adjust{" "}
+                    <dl className="workspace-usage-summary">
+                      <div>
+                        <dt>Workspaces</dt>
+                        <dd>
+                          <strong>
+                            {plan.limits.workspacesPerAccount === 1
+                              ? "1 workspace"
+                              : `Up to ${plan.limits.workspacesPerAccount}`}
+                          </strong>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Competitors</dt>
+                        <dd>
+                          <strong>
+                            Up to {plan.limits.competitorsPerWorkspace}
+                          </strong>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Monitored pages</dt>
+                        <dd>
+                          <strong>
+                            Up to {plan.limits.monitoredPagesPerWorkspace}
+                          </strong>
+                          <span className="workspace-meta">
+                            {plan.limits.monitoredPagesPerCompetitor} per
+                            competitor
+                          </span>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Fastest check interval</dt>
+                        <dd>
+                          <strong>
+                            {formatFrequencyIntervalLabel(
+                              plan.limits.minFrequencyMinutes,
+                            )}
+                          </strong>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>History retention</dt>
+                        <dd>
+                          <strong>
+                            {plan.limits.historyRetentionDays} days
+                          </strong>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Team seats</dt>
+                        <dd>
+                          <strong>
+                            {plan.limits.teamMembersPerWorkspace === 1
+                              ? "1 (owner only)"
+                              : `Up to ${plan.limits.teamMembersPerWorkspace}`}
+                          </strong>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>External channels</dt>
+                        <dd>
+                          <strong>
+                            {plan.limits.externalChannelsPerWorkspace === 0
+                              ? "Disabled"
+                              : `Up to ${plan.limits.externalChannelsPerWorkspace}`}
+                          </strong>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>CSS selector scope</dt>
+                        <dd>
+                          <strong>
+                            {plan.features.sectionLevelMonitoring
+                              ? "Included"
+                              : "Full-page only"}
+                          </strong>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Scheduled digests</dt>
+                        <dd>
+                          <strong>
+                            {!plan.features.scheduledDigests
+                              ? "Instant email only"
+                              : plan.features.allowedDigestPeriods.length ===
+                                  1
+                                ? "Weekly digest"
+                                : "Daily, weekly & monthly"}
+                          </strong>
+                        </dd>
+                      </div>
+                    </dl>
+
+                    {!isCurrentPlan ? (
+                      <div className="billing-plan-card-notice">
+                        {transition.pagesRequiringFrequencyAdjustment > 0 ? (
+                          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800">
+                            Switching to <strong>{plan.name}</strong> will
+                            automatically adjust{" "}
                             <strong>
-                              {
-                                transition.pagesRequiringFrequencyAdjustment
-                              }{" "}
+                              {transition.pagesRequiringFrequencyAdjustment}{" "}
                               page(s)
                             </strong>{" "}
                             to{" "}
                             {formatFrequencyIntervalLabel(
-                              plan.limits
-                                .minFrequencyMinutes,
+                              plan.limits.minFrequencyMinutes,
                             ).toLowerCase()}
                             .
                           </div>
                         ) : null}
+                      </div>
+                    ) : null}
 
-                        {!isCurrentPlan &&
-                        (transition.pagesRequiringSelectorClear ??
-                          0) > 0 ? (
-                          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800">
-                            Switching to{" "}
-                            <strong>{plan.name}</strong>{" "}
-                            will clear CSS selectors on{" "}
+                    {!isCurrentPlan ? (
+                      <div className="billing-plan-card-notice">
+                        {(transition.pagesRequiringSelectorClear ?? 0) > 0 ? (
+                          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800">
+                            Switching to <strong>{plan.name}</strong> will clear
+                            CSS selectors on{" "}
                             <strong>
-                              {
-                                transition.pagesRequiringSelectorClear
-                              }{" "}
-                              page(s)
+                              {transition.pagesRequiringSelectorClear} page(s)
                             </strong>{" "}
                             (reverts to full-page monitoring).
                           </div>
                         ) : null}
+                      </div>
+                    ) : null}
 
-                        {!isCurrentPlan &&
-                        !transition.allowed ? (
-                          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700">
+                    {!isCurrentPlan ? (
+                      <div className="billing-plan-card-notice">
+                        {!transition.allowed ? (
+                          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700">
                             <div className="font-semibold">
-                              Current usage exceeds{" "}
-                              {plan.name} limits:
+                              Current usage exceeds {plan.name} limits:
                             </div>
                             <ul className="mt-1.5 list-disc space-y-1 pl-4">
-                              {transition.blockingReasons.map(
-                                (reason) => (
-                                  <li key={reason}>
-                                    {reason}
-                                  </li>
-                                ),
-                              )}
+                              {transition.blockingReasons.map((reason) => (
+                                <li key={reason}>{reason}</li>
+                              ))}
                             </ul>
                           </div>
                         ) : null}
                       </div>
+                    ) : null}
 
-                      <div className="mt-6 pt-4 border-t border-slate-200">
-                        {isCurrentPlan ? (
-                          <div className="text-xs font-medium text-slate-500">
-                            Active on{" "}
-                            <strong>
-                              {activeWorkspace.name}
-                            </strong>{" "}
-                            {plan.id === "free"
-                              ? "(Free tier)"
-                              : `(${subscription.billingInterval} billing)`}
-                          </div>
-                        ) : canManageBilling ? (
+                    {!isCurrentPlan ? (
+                      <div className="billing-plan-card-cta mt-6 pt-4 border-t border-slate-200">
+                        {canManageBilling ? (
                           <WorkspaceActionForm
-                            action={
-                              changeSubscriptionPlanAction
-                            }
-                            successMessage={`Workspace plan updated to ${plan.name}.`}
+                            action={changeSubscriptionPlanAction}
+                            successMessage={`Subscription plan updated to ${plan.name}.`}
                           >
-                            <input
-                              type="hidden"
-                              name="planId"
-                              value={plan.id}
-                            />
+                            <input type="hidden" name="planId" value={plan.id} />
                             <input
                               type="hidden"
                               name="billingInterval"
-                              value={
-                                subscription.billingInterval
-                              }
+                              value={subscription.billingInterval}
                             />
                             <button
                               type="submit"
-                              disabled={
-                                !transition.allowed
-                              }
+                              disabled={!transition.allowed}
                               className={
-                                transition.direction ===
-                                "upgrade"
+                                transition.direction === "upgrade"
                                   ? "workspace-primary w-full"
                                   : "workspace-panel-trigger workspace-panel-secondary w-full"
                               }
                             >
-                              {transition.direction ===
-                              "upgrade"
+                              {transition.direction === "upgrade"
                                 ? `Upgrade to ${plan.name}`
                                 : `Switch to ${plan.name}`}
                             </button>
                           </WorkspaceActionForm>
                         ) : (
                           <div className="text-xs text-slate-500">
-                            Ask a workspace Owner to switch to {plan.name}.
+                            Only the account Owner can switch to {plan.name}.
                           </div>
                         )}
                       </div>
-                    </article>
-                  );
-                },
-              )}
-            </div>
+                    ) : null}
+                  </article>
+                );
+              }
+
+              return currentPlanOption ? (
+                <div className="billing-current-plan-view mt-6">
+                  {renderPlanCard(
+                    currentPlanOption,
+                    <MobilePlanSelector
+                      title="Change subscription plan"
+                      plans={otherPlanOptions.map((option) => ({
+                        id: option.plan.id,
+                        name: option.plan.name,
+                      }))}
+                      activePlanId={currentPlanOption.plan.id}
+                      billingInterval={subscription.billingInterval}
+                    >
+                      {otherPlanOptions.map((option) => renderPlanCard(option))}
+                    </MobilePlanSelector>,
+                  )}
+                </div>
+              ) : null;
+            })()}
           </div>
         </section>
 
@@ -743,14 +610,10 @@ export default async function BillingPage() {
           <section className="dashboard-changes">
             <div className="workspace-surface">
               <div className="workspace-section-heading">
-                <h2>Metered usage &amp; entitlements</h2>
-                <span className="workspace-meta">
-                  {entitlements.planName} limits
-                </span>
+                <h2>Usage &amp; limits</h2>
               </div>
               <p className="workspace-section-helper">
-                All resource caps, minimum check frequencies, and retention rules are enforced server-side for{" "}
-                <strong>{activeWorkspace.name}</strong>.
+                Resource usage against your {entitlements.planName} plan allowances.
               </p>
 
               <dl className="workspace-usage-summary">
@@ -758,7 +621,7 @@ export default async function BillingPage() {
                   <dt>
                     Workspaces owned
                     <span className="workspace-meta">
-                      Workspaces created or owned by this workspace&apos;s Owner account
+                      Workspaces created under your account
                     </span>
                   </dt>
                   <dd>
@@ -957,16 +820,6 @@ export default async function BillingPage() {
                   </dd>
                 </div>
                 <div>
-                  <dt>Payment provider</dt>
-                  <dd>
-                    <strong>
-                      {subscription.providerSubscriptionId
-                        ? `Lemon Squeezy (#${subscription.providerSubscriptionId})`
-                        : "Lemon Squeezy (not yet subscribed)"}
-                    </strong>
-                  </dd>
-                </div>
-                <div>
                   <dt>Billing cycle</dt>
                   <dd className="workspace-category">
                     <strong>
@@ -996,7 +849,7 @@ export default async function BillingPage() {
                 </div>
               </dl>
 
-              {canManageBilling ? (
+              {hasLifecycleActions ? (
                 <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 pt-4">
                   {subscription.providerSubscriptionId &&
                   subscription.status !== "canceled" ? (
@@ -1039,11 +892,7 @@ export default async function BillingPage() {
                         </button>
                       </WorkspaceActionForm>
                     )
-                  ) : (
-                    <p className="text-xs text-slate-500">
-                      Select a plan above to open a secure Lemon Squeezy checkout session.
-                    </p>
-                  )}
+                  ) : null}
 
                   {subscription.providerUpdatePaymentUrl ? (
                     <a
@@ -1067,7 +916,7 @@ export default async function BillingPage() {
                       rel="noopener noreferrer"
                       className="workspace-panel-trigger workspace-panel-secondary"
                     >
-                      Lemon Squeezy customer portal
+                      Customer portal
                     </a>
                   ) : null}
                 </div>
@@ -1086,9 +935,7 @@ export default async function BillingPage() {
                 <div className="workspace-empty">
                   <h3>No plan changes recorded yet</h3>
                   <p>
-                    Upgrades, downgrades, and billing interval updates for{" "}
-                    <strong>{activeWorkspace.name}</strong>{" "}
-                    will appear here.
+                    Upgrades, downgrades, and billing interval updates on your subscription will appear here.
                   </p>
                 </div>
               ) : (

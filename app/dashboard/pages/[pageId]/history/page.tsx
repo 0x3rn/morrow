@@ -391,7 +391,7 @@ export default async function MonitoredPageHistory({
                 Recorded changes ({retentionWindow.entitlements.planName} · {retentionWindow.retentionDays}-day retention)
               </div>
 
-              <div className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+              <div className="workspace-metric-value">
                 {totalChanges}
               </div>
             </div>

@@ -770,17 +770,17 @@ export default async function CompetitorsPage() {
 
         <section className="workspace-metrics mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-medium text-slate-500">
+            <div className="workspace-metric-label">
               Competitors
             </div>
 
-            <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
+            <div className="workspace-metric-value">
               {
                 usage.competitors
               }
             </div>
 
-            <div className="mt-2 text-xs text-slate-400">
+            <div className="workspace-meta">
               {
                 activeCompetitorCount
               }{" "}
@@ -789,39 +789,39 @@ export default async function CompetitorsPage() {
           </article>
 
           <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-medium text-slate-500">
+            <div className="workspace-metric-label">
               Monitored pages
             </div>
 
-            <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
+            <div className="workspace-metric-value">
               {
                 usage.monitoredPages
               }
             </div>
 
-            <div className="mt-2 text-xs text-slate-400">
+            <div className="workspace-meta">
               across this workspace
             </div>
           </article>
 
           <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-medium text-slate-500">
+            <div className="workspace-metric-label">
               Changes
             </div>
 
-            <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
+            <div className="workspace-metric-value">
               {
                 totalChanges
               }
             </div>
 
-            <div className="mt-2 text-xs text-slate-400">
+            <div className="workspace-meta">
               recorded
             </div>
           </article>
 
           <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-medium text-slate-500">
+            <div className="workspace-metric-label">
               Major changes
             </div>
 
@@ -829,8 +829,8 @@ export default async function CompetitorsPage() {
               className={
                 totalMajorChanges >
                 0
-                  ? "mt-3 text-3xl font-semibold tracking-tight text-red-700"
-                  : "mt-3 text-3xl font-semibold tracking-tight text-slate-950"
+                  ? "workspace-metric-value text-red-700"
+                  : "workspace-metric-value"
               }
             >
               {
@@ -838,7 +838,7 @@ export default async function CompetitorsPage() {
               }
             </div>
 
-            <div className="mt-2 text-xs text-slate-400">
+            <div className="workspace-meta">
               recorded as major
             </div>
           </article>

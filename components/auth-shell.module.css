@@ -244,8 +244,9 @@
 
 .field input:focus,
 .passwordControl input:focus {
-  border-color: var(--purple);
-  box-shadow: 0 0 0 2px rgba(103, 100, 232, 0.22);
+  border-color: var(--coral);
+  box-shadow: 0 0 0 2px rgba(255, 139, 115, 0.25);
+  outline: none;
 }
 
 .passwordControl {
@@ -383,10 +384,15 @@
 }
 
 .shell a:focus-visible,
-.shell button:focus-visible,
-.shell input:focus-visible {
+.shell button:focus-visible {
   outline: 2px solid var(--coral);
   outline-offset: 3px;
+}
+
+.shell input:focus-visible {
+  border-color: var(--coral);
+  box-shadow: 0 0 0 2px rgba(255, 139, 115, 0.25);
+  outline: none;
 }
 
 @media (min-width: 700px) and (max-width: 959px) {

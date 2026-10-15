@@ -83,17 +83,11 @@ const healthLabels = {
 };
 
 export function DashboardOverview({ metrics, usage, monitoringRows, recentChanges }: DashboardOverviewProps) {
-  const metricCells = [
-    ["Competitors", metrics.competitors, `${metrics.activeCompetitors} active`],
-    ["Monitored pages", metrics.monitoredPages, `${metrics.activePages} actively scheduled`],
-    ["Meaningful changes", metrics.changes, `${metrics.majorChanges} major`],
-    ["Needs attention", metrics.overduePages + metrics.errorPages, "overdue or failing pages"],
-  ];
-  const healthCells = [
-    ["Healthy", metrics.healthyPages, "healthy"], ["Overdue", metrics.overduePages, "overdue"],
-    ["Awaiting first capture", metrics.awaitingPages, "awaiting_first_capture"],
-    ["Capture errors", metrics.errorPages, "error"], ["Paused", metrics.pausedPages, "paused"],
-  ];
+  const pausedCount = Math.max(
+    metrics.competitors - metrics.activeCompetitors,
+    metrics.pausedPages,
+  );
+  const needsAttentionCount = metrics.overduePages + metrics.errorPages;
 
   return (
     <main className="workspace-page dashboard-overview">
@@ -102,26 +96,63 @@ export function DashboardOverview({ metrics, usage, monitoringRows, recentChange
         <p>Track your competitors, monitored pages, recent changes, and workspace usage.</p>
       </header>
       <section className="workspace-metrics" aria-label="Monitoring overview">
-        {metricCells.map(([label, value, secondary]) => (
-          <article key={label}>
-            <div className="workspace-metric-label">{label}</div>
-            <div className="workspace-metric-value">{value}</div>
-            <div className="workspace-meta">{secondary}</div>
-          </article>
-        ))}
-      </section>
-      <section className="workspace-health" aria-label="Monitoring health">
-        {healthCells.map(([label, count, health]) => (
-          <div key={label} className={`workspace-health-cell health-${health}`}>
-            <span>{label}</span><strong>{count}</strong>
+        <article>
+          <div className="workspace-metric-label">Competitors</div>
+          <div className="workspace-metric-value">{metrics.competitors}</div>
+          <div className="workspace-meta workspace-meta-inline">
+            <span>{metrics.activeCompetitors} active</span>
+            {pausedCount > 0 ? (
+              <>
+                <span>·</span>
+                <span className="workspace-meta-amber">{pausedCount} paused</span>
+              </>
+            ) : null}
           </div>
-        ))}
+        </article>
+
+        <article>
+          <div className="workspace-metric-label">Monitored pages</div>
+          <div className="workspace-metric-value">{metrics.monitoredPages}</div>
+          <div className="workspace-meta">{metrics.activePages} actively scheduled</div>
+        </article>
+
+        <article>
+          <div className="workspace-metric-label">Meaningful changes</div>
+          <div className="workspace-metric-value">{metrics.changes}</div>
+          <div className="workspace-meta">{metrics.majorChanges} major</div>
+        </article>
+
+        <article>
+          <div className="workspace-metric-label">Needs attention</div>
+          <div className="workspace-metric-value">{needsAttentionCount}</div>
+          <div className="workspace-meta">
+            {metrics.overduePages > 0 && metrics.errorPages > 0 ? (
+              <span className="workspace-meta-inline">
+                <span className="workspace-meta-amber">{metrics.overduePages} overdue</span>
+                <span>·</span>
+                <span className="workspace-meta-red">
+                  {metrics.errorPages} capture {metrics.errorPages === 1 ? "error" : "errors"}
+                </span>
+              </span>
+            ) : metrics.overduePages > 0 ? (
+              <span className="workspace-meta-amber">
+                {metrics.overduePages === 1 ? "overdue page" : "overdue pages"}
+              </span>
+            ) : metrics.errorPages > 0 ? (
+              <span className="workspace-meta-red">
+                {metrics.errorPages === 1 ? "capture error" : "capture errors"}
+              </span>
+            ) : (
+              "overdue or capture errors"
+            )}
+          </div>
+        </article>
       </section>
       <div className="dashboard-columns">
         <div className="dashboard-operations">
         <section className="dashboard-monitoring workspace-surface">
           <div className="workspace-section-heading">
-            <div><div className="workspace-eyebrow">Monitoring</div><h2>Monitoring status</h2></div>
+            <h2>Monitoring status</h2>
             <Link className="workspace-link" href="/dashboard/competitors">Manage competitors<ArrowUpRightIcon /></Link>
           </div>
           <p className="workspace-section-helper">Current health derived from scheduler state and the latest capture.</p>
@@ -156,14 +187,9 @@ export function DashboardOverview({ metrics, usage, monitoringRows, recentChange
           )}
         </section>
         <section className="dashboard-usage workspace-surface">
-          <div className="workspace-eyebrow">Workspace limits</div>
-          <details className="workspace-usage-help">
-            <summary><h2>Workspace usage</h2></summary>
-            <div className="workspace-usage-copy">
-              <p>These are launch safety caps, not subscription or billing limits. The same values are enforced by the server actions that create competitors and monitored pages.</p>
-              <p>Each competitor can contain up to {usage.perCompetitorPageLimit} monitored pages. Paused pages still count toward capacity.</p>
-            </div>
-          </details>
+          <div className="workspace-section-heading">
+            <h2>Workspace usage</h2>
+          </div>
           <dl className="workspace-usage-summary">
             <div><dt>Competitors<span className="workspace-meta">Workspace total</span></dt>
               <dd><strong>{metrics.competitors} / {usage.competitorLimit}</strong><span className="workspace-meta">{usage.competitorRemaining} competitor{usage.competitorRemaining === 1 ? "" : "s"} remaining</span></dd></div>

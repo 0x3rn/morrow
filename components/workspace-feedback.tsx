@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { toUserFacingErrorMessage } from "@/lib/user-facing-error";
 
 const FeedbackContext = createContext<(message: string) => void>(() => {});
@@ -20,7 +21,7 @@ export function WorkspaceFeedback({ children }: { children: ReactNode }) {
     if (!notice) return;
     // Keep feedback above an open modal and move it back when the modal closes
     // or its record disappears after a removal.
-    const updateTarget = () => setTarget(document.querySelector(".workspace-panel[open]") || document.querySelector(".morrow-dashboard"));
+    const updateTarget = () => setTarget(document.querySelector(".workspace-panel[open], .workspace-switcher-dialog[open], .billing-plan-dialog[open]") || document.querySelector(".morrow-dashboard"));
     updateTarget();
     const observer = new MutationObserver(updateTarget);
     observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["open"] });
@@ -54,6 +55,7 @@ export function WorkspaceActionForm({ action, successMessage, children, classNam
   children: ReactNode;
   className?: string;
 }) {
+  const router = useRouter();
   const notify = useWorkspaceFeedback();
   const inFlight = useRef(false);
   const [pending, startTransition] = useTransition();
@@ -88,6 +90,7 @@ export function WorkspaceActionForm({ action, successMessage, children, classNam
           return;
         }
         notify(successMessage);
+        router.refresh();
       } catch (error) {
         setError(toUserFacingErrorMessage(error));
       } finally {

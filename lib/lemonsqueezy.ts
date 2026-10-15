@@ -24,8 +24,9 @@ import type { D1DatabaseLike } from "../worker/external-notifications.ts";
 import { getWorkspaceMembershipById } from "./team-workspaces.ts";
 import {
   ensureWorkspaceSubscription,
-  getWorkspaceMeteredUsage,
+  getOwnerAccountTransitionUsage,
   getWorkspaceSubscription,
+  listOwnerPeerWorkspaceIds,
   withWorkspaceBillingLock,
   type WorkspaceBillingEventType,
   type WorkspaceSubscriptionView,
@@ -981,6 +982,14 @@ async function countPagesFasterThanInterval(
   workspaceId: string,
   minFrequencyMinutes: number,
 ): Promise<number> {
+  const peerWorkspaceIds = await listOwnerPeerWorkspaceIds(
+    db,
+    workspaceId,
+  );
+  const placeholders = peerWorkspaceIds
+    .map(() => "?")
+    .join(", ");
+
   const row = await db
     .prepare(
       `
@@ -988,11 +997,11 @@ async function countPagesFasterThanInterval(
         FROM monitored_pages
         INNER JOIN competitors
           ON competitors.id = monitored_pages.competitor_id
-        WHERE competitors.workspace_id = ?
+        WHERE competitors.workspace_id IN (${placeholders})
           AND monitored_pages.frequency_minutes < ?
       `,
     )
-    .bind(workspaceId, minFrequencyMinutes)
+    .bind(...peerWorkspaceIds, minFrequencyMinutes)
     .first<{ count: number }>();
 
   return Number(row?.count ?? 0);
@@ -1110,14 +1119,22 @@ export async function initiateOrUpdateWorkspaceSubscription(
       const targetPlan =
         getBillingPlanDefinition(targetPlanId);
 
-      const usage = await getWorkspaceMeteredUsage(
+      const transitionUsage =
+        await getOwnerAccountTransitionUsage(
+          db,
+          workspaceId,
+          {
+            retentionDays:
+              targetPlan.limits.historyRetentionDays,
+          },
+        );
+      const peerWorkspaceIds = await listOwnerPeerWorkspaceIds(
         db,
         workspaceId,
-        {
-          retentionDays:
-            targetPlan.limits.historyRetentionDays,
-        },
       );
+      const peerPlaceholders = peerWorkspaceIds
+        .map(() => "?")
+        .join(", ");
 
       const fasterPagesCount =
         await countPagesFasterThanInterval(
@@ -1129,11 +1146,11 @@ export async function initiateOrUpdateWorkspaceSubscription(
       const evaluation = evaluatePlanTransition({
         currentPlanId: currentEntitlements.effectivePlanId,
         targetPlanId,
-        usage,
+        usage: transitionUsage,
         fasterThanTargetMinFrequencyPages:
           fasterPagesCount,
         pagesWithCssSelectors:
-          usage.pagesWithCssSelectors,
+          transitionUsage.pagesWithCssSelectors,
       });
 
       if (!evaluation.allowed) {
@@ -1192,7 +1209,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
                     provider_updated_at = COALESCE(?, provider_updated_at),
                     updated_by = ?,
                     updated_at = CURRENT_TIMESTAMP
-                  WHERE workspace_id = ?
+                  WHERE workspace_id IN (${peerPlaceholders})
                 `,
               )
               .bind(
@@ -1204,7 +1221,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
                 remoteUpdated.updatePaymentMethodUrl,
                 remoteUpdated.updatedAt,
                 input.actorUserId,
-                workspaceId,
+                ...peerWorkspaceIds,
               ),
 
             db
@@ -1287,10 +1304,10 @@ export async function initiateOrUpdateWorkspaceSubscription(
                   cancel_at_period_end = 0,
                   updated_by = ?,
                   updated_at = CURRENT_TIMESTAMP
-                WHERE workspace_id = ?
+                WHERE workspace_id IN (${peerPlaceholders})
               `,
             )
-            .bind(input.actorUserId, workspaceId),
+            .bind(input.actorUserId, ...peerWorkspaceIds),
         ];
 
         if (
@@ -1307,14 +1324,14 @@ export async function initiateOrUpdateWorkspaceSubscription(
                   WHERE competitor_id IN (
                     SELECT id
                     FROM competitors
-                    WHERE workspace_id = ?
+                    WHERE workspace_id IN (${peerPlaceholders})
                   )
                     AND frequency_minutes < ?
                 `,
               )
               .bind(
                 targetPlan.limits.minFrequencyMinutes,
-                workspaceId,
+                ...peerWorkspaceIds,
                 targetPlan.limits.minFrequencyMinutes,
               ),
           );
@@ -1333,7 +1350,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
                   WHERE competitor_id IN (
                     SELECT id
                     FROM competitors
-                    WHERE workspace_id = ?
+                    WHERE workspace_id IN (${peerPlaceholders})
                   )
                     AND (
                       (
@@ -1349,7 +1366,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
                     )
                 `,
               )
-              .bind(workspaceId),
+              .bind(...peerWorkspaceIds),
           );
         }
 
@@ -1726,7 +1743,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
                 provider_updated_at = COALESCE(?, provider_updated_at),
                 updated_by = ?,
                 updated_at = CURRENT_TIMESTAMP
-              WHERE workspace_id = ?
+              WHERE workspace_id IN (${peerPlaceholders})
             `,
           )
           .bind(
@@ -1743,7 +1760,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
             remoteUpdated.updatePaymentMethodUrl,
             remoteUpdated.updatedAt,
             input.actorUserId,
-            workspaceId,
+            ...peerWorkspaceIds,
           ),
       ];
 
@@ -1761,14 +1778,14 @@ export async function initiateOrUpdateWorkspaceSubscription(
                 WHERE competitor_id IN (
                   SELECT id
                   FROM competitors
-                  WHERE workspace_id = ?
+                  WHERE workspace_id IN (${peerPlaceholders})
                 )
                   AND frequency_minutes < ?
               `,
             )
             .bind(
               targetPlan.limits.minFrequencyMinutes,
-              workspaceId,
+              ...peerWorkspaceIds,
               targetPlan.limits.minFrequencyMinutes,
             ),
         );
@@ -1787,7 +1804,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
                 WHERE competitor_id IN (
                   SELECT id
                   FROM competitors
-                  WHERE workspace_id = ?
+                  WHERE workspace_id IN (${peerPlaceholders})
                 )
                   AND (
                     (
@@ -1803,7 +1820,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
                   )
               `,
             )
-            .bind(workspaceId),
+            .bind(...peerWorkspaceIds),
         );
       }
 
@@ -1986,6 +2003,14 @@ export async function updateWorkspaceSubscriptionCancellationWithLemonSqueezy(
           ? "cancellation_scheduled"
           : "subscription_reactivated";
 
+      const peerWorkspaceIds = await listOwnerPeerWorkspaceIds(
+        db,
+        workspaceId,
+      );
+      const peerPlaceholders = peerWorkspaceIds
+        .map(() => "?")
+        .join(", ");
+
       await executeBatch(db, [
         db
           .prepare(
@@ -2001,7 +2026,7 @@ export async function updateWorkspaceSubscriptionCancellationWithLemonSqueezy(
                 provider_updated_at = COALESCE(?, provider_updated_at),
                 updated_by = ?,
                 updated_at = CURRENT_TIMESTAMP
-              WHERE workspace_id = ?
+              WHERE workspace_id IN (${peerPlaceholders})
             `,
           )
           .bind(
@@ -2013,7 +2038,7 @@ export async function updateWorkspaceSubscriptionCancellationWithLemonSqueezy(
             remoteUpdated.updatePaymentMethodUrl,
             remoteUpdated.updatedAt,
             input.actorUserId,
-            workspaceId,
+            ...peerWorkspaceIds,
           ),
 
         db
@@ -2378,10 +2403,19 @@ export async function processLemonSqueezyWebhook(
       customWorkspaceId &&
       boundRow.workspace_id !== customWorkspaceId
     ) {
-      throw new LemonSqueezyWebhookValidationError(
-        "Subscription is already bound to a different workspace.",
-        409,
-      );
+      const boundPeerWorkspaceIds =
+        await listOwnerPeerWorkspaceIds(
+          db,
+          boundRow.workspace_id,
+        );
+      if (
+        !boundPeerWorkspaceIds.includes(customWorkspaceId)
+      ) {
+        throw new LemonSqueezyWebhookValidationError(
+          "Subscription is already bound to a different workspace.",
+          409,
+        );
+      }
     }
 
     let checkoutSessionRow: {
@@ -2404,6 +2438,7 @@ export async function processLemonSqueezyWebhook(
               provider_variant_id
             FROM workspace_checkout_sessions
             WHERE id = ?
+              AND status IN ('pending', 'completed')
             LIMIT 1
           `,
         )
@@ -2739,6 +2774,14 @@ export async function processLemonSqueezyWebhook(
       currentSubscription.updatedBy ||
       null;
 
+    const peerWorkspaceIds = await listOwnerPeerWorkspaceIds(
+      db,
+      workspaceId,
+    );
+    const peerPlaceholders = peerWorkspaceIds
+      .map(() => "?")
+      .join(", ");
+
     const statements: D1PreparedStatementLike[] = [
       db
         .prepare(
@@ -2760,7 +2803,7 @@ export async function processLemonSqueezyWebhook(
               provider_updated_at = COALESCE(?, provider_updated_at),
               updated_by = COALESCE(?, updated_by),
               updated_at = CURRENT_TIMESTAMP
-            WHERE workspace_id = ?
+            WHERE workspace_id IN (${peerPlaceholders})
               AND (
                 provider_updated_at IS NULL
                 OR ? IS NULL
@@ -2783,7 +2826,7 @@ export async function processLemonSqueezyWebhook(
           updatePaymentUrl,
           incomingUpdatedAt,
           actorUserId,
-          workspaceId,
+          ...peerWorkspaceIds,
           incomingUpdatedAt,
           incomingUpdatedAt,
         ),
@@ -2801,12 +2844,12 @@ export async function processLemonSqueezyWebhook(
               WHERE competitor_id IN (
                 SELECT id
                 FROM competitors
-                WHERE workspace_id = ?
+                WHERE workspace_id IN (${peerPlaceholders})
               )
                 AND frequency_minutes < ?
             `,
           )
-          .bind(minFreq, workspaceId, minFreq),
+          .bind(minFreq, ...peerWorkspaceIds, minFreq),
       );
     }
 
@@ -2825,7 +2868,7 @@ export async function processLemonSqueezyWebhook(
               WHERE competitor_id IN (
                 SELECT id
                 FROM competitors
-                WHERE workspace_id = ?
+                WHERE workspace_id IN (${peerPlaceholders})
               )
                 AND (
                   (
@@ -2841,7 +2884,7 @@ export async function processLemonSqueezyWebhook(
                 )
             `,
           )
-          .bind(workspaceId),
+          .bind(...peerWorkspaceIds),
       );
     }
 

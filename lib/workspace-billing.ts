@@ -223,21 +223,76 @@ function createDefaultSubscriptionView(
   };
 }
 
+function resolveNormalizedCurrentPeriodEnd(
+  row: WorkspaceSubscriptionRow,
+  billingInterval: BillingInterval,
+): string {
+  const startMs = parseBillingTimestampMs(
+    row.current_period_start,
+  );
+  const endMs = parseBillingTimestampMs(
+    row.current_period_end,
+  );
+
+  if (
+    startMs !== null &&
+    endMs !== null &&
+    !row.provider_subscription_id
+  ) {
+    const diffDays =
+      (endMs - startMs) / (24 * 60 * 60 * 1000);
+
+    if (
+      billingInterval === "annual" &&
+      diffDays >= 0 &&
+      diffDays < 300
+    ) {
+      const alignedEnd = new Date(startMs);
+      alignedEnd.setUTCFullYear(
+        alignedEnd.getUTCFullYear() + 1,
+      );
+      return alignedEnd
+        .toISOString()
+        .replace("T", " ")
+        .replace(/\.\d{3}Z$/, "");
+    }
+
+    if (
+      billingInterval === "monthly" &&
+      diffDays > 60
+    ) {
+      const alignedEnd = new Date(
+        startMs + 30 * 24 * 60 * 60 * 1000,
+      );
+      return alignedEnd
+        .toISOString()
+        .replace("T", " ")
+        .replace(/\.\d{3}Z$/, "");
+    }
+  }
+
+  return row.current_period_end;
+}
+
 function toWorkspaceSubscriptionView(
   row: WorkspaceSubscriptionRow,
 ): WorkspaceSubscriptionView {
+  const billingInterval = normalizeBillingInterval(
+    row.billing_interval,
+  );
   return {
     workspaceId: row.workspace_id,
     planId: normalizeBillingPlanId(row.plan_id),
     status: normalizeBillingSubscriptionStatus(
       row.status,
     ),
-    billingInterval: normalizeBillingInterval(
-      row.billing_interval,
-    ),
+    billingInterval,
     cancelAtPeriodEnd: row.cancel_at_period_end === 1,
     currentPeriodStart: row.current_period_start,
-    currentPeriodEnd: row.current_period_end,
+    currentPeriodEnd: resolveNormalizedCurrentPeriodEnd(
+      row,
+      billingInterval,
+    ),
     providerCustomerId: row.provider_customer_id ?? null,
     providerSubscriptionId:
       row.provider_subscription_id ?? null,
@@ -253,6 +308,57 @@ function toWorkspaceSubscriptionView(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+export async function listOwnerPeerWorkspaceIds(
+  db: D1DatabaseLike,
+  workspaceId: string,
+): Promise<string[]> {
+  const normalizedId = workspaceId.trim();
+  if (!normalizedId) {
+    return [];
+  }
+
+  try {
+    const rowsResult = await db
+      .prepare(
+        `
+          WITH target_owners AS (
+            SELECT created_by AS user_id
+            FROM workspaces
+            WHERE id = ?
+              AND created_by IS NOT NULL
+            UNION
+            SELECT user_id
+            FROM workspace_members
+            WHERE workspace_id = ?
+              AND role = 'owner'
+          )
+          SELECT DISTINCT workspaces.id AS workspace_id
+          FROM workspaces
+          LEFT JOIN workspace_members
+            ON workspace_members.workspace_id = workspaces.id
+           AND workspace_members.role = 'owner'
+          WHERE workspaces.id = ?
+             OR workspaces.created_by IN (SELECT user_id FROM target_owners)
+             OR workspace_members.user_id IN (SELECT user_id FROM target_owners)
+          ORDER BY datetime(workspaces.created_at) ASC, workspaces.id ASC
+        `,
+      )
+      .bind(normalizedId, normalizedId, normalizedId)
+      .all<{ workspace_id: string }>();
+
+    const ids = (rowsResult.results ?? [])
+      .map((row) => row.workspace_id)
+      .filter(Boolean);
+
+    if (!ids.includes(normalizedId)) {
+      ids.unshift(normalizedId);
+    }
+    return Array.from(new Set(ids));
+  } catch {
+    return [normalizedId];
+  }
 }
 
 export async function getWorkspaceSubscription(
@@ -284,14 +390,42 @@ export async function getWorkspaceSubscription(
             updated_at
           FROM workspace_subscriptions
           WHERE workspace_id = ?
+             OR workspace_id IN (
+               SELECT w_peer.id
+               FROM workspaces w_self
+               INNER JOIN workspaces w_peer
+                 ON w_peer.created_by = w_self.created_by
+               WHERE w_self.id = ?
+                 AND w_self.created_by IS NOT NULL
+             )
+          ORDER BY
+            CASE
+              WHEN status != 'canceled' THEN 1
+              ELSE 0
+            END DESC,
+            CASE plan_id
+              WHEN 'scale' THEN 5
+              WHEN 'growth' THEN 4
+              WHEN 'starter' THEN 3
+              WHEN 'personal' THEN 2
+              ELSE 1
+            END DESC,
+            CASE
+              WHEN workspace_id = ? THEN 1
+              ELSE 0
+            END DESC,
+            datetime(updated_at) DESC
           LIMIT 1
         `,
       )
-      .bind(workspaceId)
+      .bind(workspaceId, workspaceId, workspaceId)
       .first<WorkspaceSubscriptionRow>();
 
     if (row) {
-      return toWorkspaceSubscriptionView(row);
+      return {
+        ...toWorkspaceSubscriptionView(row),
+        workspaceId,
+      };
     }
 
     return createDefaultSubscriptionView(
@@ -325,7 +459,10 @@ export async function getWorkspaceSubscription(
         .first<WorkspaceSubscriptionRow>();
 
       if (legacyRow) {
-        return toWorkspaceSubscriptionView(legacyRow);
+        return {
+          ...toWorkspaceSubscriptionView(legacyRow),
+          workspaceId,
+        };
       }
 
       return createDefaultSubscriptionView(
@@ -356,13 +493,34 @@ export async function ensureWorkspaceSubscription(
     billingInterval?: BillingInterval;
   },
 ): Promise<WorkspaceSubscriptionView> {
-  const planId = normalizeBillingPlanId(input.planId);
-  const billingInterval = normalizeBillingInterval(
-    input.billingInterval,
-  );
+  const existingOwnerSubscription =
+    input.planId === undefined
+      ? await getWorkspaceSubscription(db, input.workspaceId)
+      : null;
+
+  const planId =
+    input.planId !== undefined
+      ? normalizeBillingPlanId(input.planId)
+      : (existingOwnerSubscription?.planId ??
+        DEFAULT_BILLING_PLAN_ID);
+  const billingInterval =
+    input.billingInterval !== undefined
+      ? normalizeBillingInterval(input.billingInterval)
+      : (existingOwnerSubscription?.billingInterval ??
+        DEFAULT_BILLING_INTERVAL);
+  const status =
+    input.planId === undefined && existingOwnerSubscription
+      ? existingOwnerSubscription.status
+      : "active";
+  const cancelAtPeriodEnd =
+    input.planId === undefined && existingOwnerSubscription
+      ? existingOwnerSubscription.cancelAtPeriodEnd
+        ? 1
+        : 0
+      : 0;
   const periodWindowModifier =
     billingInterval === "annual"
-      ? "+365 days"
+      ? "+1 year"
       : "+30 days";
 
   try {
@@ -377,6 +535,14 @@ export async function ensureWorkspaceSubscription(
             cancel_at_period_end,
             current_period_start,
             current_period_end,
+            provider_customer_id,
+            provider_subscription_id,
+            provider_variant_id,
+            provider_order_id,
+            provider_status,
+            provider_customer_portal_url,
+            provider_update_payment_url,
+            provider_updated_at,
             updated_by,
             created_at,
             updated_at
@@ -384,11 +550,19 @@ export async function ensureWorkspaceSubscription(
           VALUES (
             ?,
             ?,
-            'active',
             ?,
-            0,
-            CURRENT_TIMESTAMP,
-            datetime('now', ?),
+            ?,
+            ?,
+            COALESCE(?, CURRENT_TIMESTAMP),
+            COALESCE(?, datetime('now', ?)),
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
             ?,
             CURRENT_TIMESTAMP,
             CURRENT_TIMESTAMP
@@ -398,13 +572,68 @@ export async function ensureWorkspaceSubscription(
       .bind(
         input.workspaceId,
         planId,
+        status,
         billingInterval,
+        cancelAtPeriodEnd,
+        existingOwnerSubscription?.currentPeriodStart ?? null,
+        existingOwnerSubscription?.currentPeriodEnd ?? null,
         periodWindowModifier,
+        existingOwnerSubscription?.providerCustomerId ?? null,
+        existingOwnerSubscription?.providerSubscriptionId ??
+          null,
+        existingOwnerSubscription?.providerVariantId ?? null,
+        existingOwnerSubscription?.providerOrderId ?? null,
+        existingOwnerSubscription?.providerStatus ?? null,
+        existingOwnerSubscription?.providerCustomerPortalUrl ??
+          null,
+        existingOwnerSubscription?.providerUpdatePaymentUrl ??
+          null,
+        existingOwnerSubscription?.providerUpdatedAt ?? null,
         input.actorUserId ?? null,
       )
       .run();
   } catch (error) {
-    if (!isMissingTableError(error)) {
+    if (isMissingColumnOnlyError(error)) {
+      await db
+        .prepare(
+          `
+            INSERT OR IGNORE INTO workspace_subscriptions (
+              workspace_id,
+              plan_id,
+              status,
+              billing_interval,
+              cancel_at_period_end,
+              current_period_start,
+              current_period_end,
+              updated_by,
+              created_at,
+              updated_at
+            )
+            VALUES (
+              ?,
+              ?,
+              ?,
+              ?,
+              ?,
+              CURRENT_TIMESTAMP,
+              datetime('now', ?),
+              ?,
+              CURRENT_TIMESTAMP,
+              CURRENT_TIMESTAMP
+            )
+          `,
+        )
+        .bind(
+          input.workspaceId,
+          planId,
+          status,
+          billingInterval,
+          cancelAtPeriodEnd,
+          periodWindowModifier,
+          input.actorUserId ?? null,
+        )
+        .run();
+    } else if (!isMissingTableError(error)) {
       throw error;
     }
   }
@@ -726,6 +955,14 @@ async function countPagesFasterThanInterval(
   workspaceId: string,
   minFrequencyMinutes: number,
 ): Promise<number> {
+  const peerWorkspaceIds = await listOwnerPeerWorkspaceIds(
+    db,
+    workspaceId,
+  );
+  const placeholders = peerWorkspaceIds
+    .map(() => "?")
+    .join(", ");
+
   const row = await db
     .prepare(
       `
@@ -733,14 +970,95 @@ async function countPagesFasterThanInterval(
         FROM monitored_pages
         INNER JOIN competitors
           ON competitors.id = monitored_pages.competitor_id
-        WHERE competitors.workspace_id = ?
+        WHERE competitors.workspace_id IN (${placeholders})
           AND monitored_pages.frequency_minutes < ?
       `,
     )
-    .bind(workspaceId, minFrequencyMinutes)
+    .bind(...peerWorkspaceIds, minFrequencyMinutes)
     .first<{ count: number }>();
 
   return Number(row?.count ?? 0);
+}
+
+export async function getOwnerAccountTransitionUsage(
+  db: D1DatabaseLike,
+  workspaceId: string,
+  options?: {
+    retentionDays?: number;
+    referenceDate?: Date;
+  },
+): Promise<WorkspaceDetailedUsage> {
+  const peerWorkspaceIds = await listOwnerPeerWorkspaceIds(
+    db,
+    workspaceId,
+  );
+  const usages = await Promise.all(
+    peerWorkspaceIds.map((wsId) =>
+      getWorkspaceMeteredUsage(db, wsId, options),
+    ),
+  );
+
+  const primary =
+    usages[0] ??
+    (await getWorkspaceMeteredUsage(
+      db,
+      workspaceId,
+      options,
+    ));
+
+  if (usages.length <= 1) {
+    return primary;
+  }
+
+  return usages.reduce(
+    (acc, item) => ({
+      ownedWorkspaces: Math.max(
+        acc.ownedWorkspaces,
+        item.ownedWorkspaces,
+      ),
+      competitors: Math.max(
+        acc.competitors,
+        item.competitors,
+      ),
+      monitoredPages: Math.max(
+        acc.monitoredPages,
+        item.monitoredPages,
+      ),
+      maxPagesOnSingleCompetitor: Math.max(
+        acc.maxPagesOnSingleCompetitor,
+        item.maxPagesOnSingleCompetitor,
+      ),
+      activeMembers: Math.max(
+        acc.activeMembers,
+        item.activeMembers,
+      ),
+      pendingInvitations: Math.max(
+        acc.pendingInvitations,
+        item.pendingInvitations,
+      ),
+      teamSeats: Math.max(acc.teamSeats, item.teamSeats),
+      externalChannels: Math.max(
+        acc.externalChannels,
+        item.externalChannels,
+      ),
+      pagesWithCssSelectors:
+        acc.pagesWithCssSelectors +
+        item.pagesWithCssSelectors,
+      retentionCutoffIso: acc.retentionCutoffIso,
+      outsideRetentionChanges:
+        acc.outsideRetentionChanges +
+        item.outsideRetentionChanges,
+      outsideRetentionSnapshots:
+        acc.outsideRetentionSnapshots +
+        item.outsideRetentionSnapshots,
+    }),
+    {
+      ...primary,
+      pagesWithCssSelectors: 0,
+      outsideRetentionChanges: 0,
+      outsideRetentionSnapshots: 0,
+    },
+  );
 }
 
 function parseEventAdjustments(detailsJson: string): {
@@ -794,14 +1112,20 @@ export async function getWorkspaceBillingSnapshot(
     currentPeriodEnd: subscription.currentPeriodEnd,
   });
 
-  const usage = await getWorkspaceMeteredUsage(
-    db,
-    activeWorkspace.id,
-    {
+  const [usage, transitionUsage] = await Promise.all([
+    getWorkspaceMeteredUsage(db, activeWorkspace.id, {
       retentionDays:
         entitlements.limits.historyRetentionDays,
-    },
-  );
+    }),
+    getOwnerAccountTransitionUsage(
+      db,
+      activeWorkspace.id,
+      {
+        retentionDays:
+          entitlements.limits.historyRetentionDays,
+      },
+    ),
+  ]);
 
   const fasterCountsByPlan = await Promise.all(
     BILLING_PLAN_IDS.map(async (planId) => {
@@ -830,10 +1154,10 @@ export async function getWorkspaceBillingSnapshot(
       const transition = evaluatePlanTransition({
         currentPlanId: entitlements.effectivePlanId,
         targetPlanId: planId,
-        usage,
+        usage: transitionUsage,
         fasterThanTargetMinFrequencyPages: fasterPages,
         pagesWithCssSelectors:
-          usage.pagesWithCssSelectors,
+          transitionUsage.pagesWithCssSelectors,
       });
 
       return {
@@ -1009,21 +1333,19 @@ export async function changeWorkspaceSubscriptionPlan(
   const targetPlan =
     getBillingPlanDefinition(targetPlanId);
 
-  const usage = await getWorkspaceMeteredUsage(
-    db,
-    workspaceId,
-    {
-      retentionDays:
-        targetPlan.limits.historyRetentionDays,
-    },
-  );
-
-  const fasterPagesCount =
-    await countPagesFasterThanInterval(
-      db,
-      workspaceId,
-      targetPlan.limits.minFrequencyMinutes,
-    );
+  const [usage, fasterPagesCount, peerWorkspaceIds] =
+    await Promise.all([
+      getOwnerAccountTransitionUsage(db, workspaceId, {
+        retentionDays:
+          targetPlan.limits.historyRetentionDays,
+      }),
+      countPagesFasterThanInterval(
+        db,
+        workspaceId,
+        targetPlan.limits.minFrequencyMinutes,
+      ),
+      listOwnerPeerWorkspaceIds(db, workspaceId),
+    ]);
 
   const evaluation = evaluatePlanTransition({
     currentPlanId:
@@ -1060,7 +1382,7 @@ export async function changeWorkspaceSubscriptionPlan(
 
   const periodModifier =
     nextBillingInterval === "annual"
-      ? "+365 days"
+      ? "+1 year"
       : "+30 days";
 
   const eventType: WorkspaceBillingEventType =
@@ -1077,54 +1399,59 @@ export async function changeWorkspaceSubscriptionPlan(
   const adjustedSelectorPages =
     evaluation.pagesRequiringSelectorClear ?? 0;
 
-  const statements: D1PreparedStatementLike[] = [
-    db
-      .prepare(
-        `
-          INSERT INTO workspace_subscriptions (
-            workspace_id,
-            plan_id,
-            status,
-            billing_interval,
-            cancel_at_period_end,
-            current_period_start,
-            current_period_end,
-            updated_by,
-            created_at,
-            updated_at
-          )
-          VALUES (
-            ?,
-            ?,
-            'active',
-            ?,
-            0,
-            CURRENT_TIMESTAMP,
-            datetime('now', ?),
-            ?,
-            CURRENT_TIMESTAMP,
-            CURRENT_TIMESTAMP
-          )
-          ON CONFLICT(workspace_id) DO UPDATE SET
-            plan_id = excluded.plan_id,
-            status = 'active',
-            billing_interval = excluded.billing_interval,
-            cancel_at_period_end = 0,
-            current_period_start = CURRENT_TIMESTAMP,
-            current_period_end = datetime('now', ?),
-            updated_by = excluded.updated_by,
-            updated_at = CURRENT_TIMESTAMP
-        `,
-      )
-      .bind(
-        workspaceId,
-        targetPlanId,
-        nextBillingInterval,
-        periodModifier,
-        input.actorUserId,
-        periodModifier,
-      ),
-  ];
+  const statements: D1PreparedStatementLike[] =
+    peerWorkspaceIds.map((peerWorkspaceId) =>
+      db
+        .prepare(
+          `
+            INSERT INTO workspace_subscriptions (
+              workspace_id,
+              plan_id,
+              status,
+              billing_interval,
+              cancel_at_period_end,
+              current_period_start,
+              current_period_end,
+              updated_by,
+              created_at,
+              updated_at
+            )
+            VALUES (
+              ?,
+              ?,
+              'active',
+              ?,
+              0,
+              CURRENT_TIMESTAMP,
+              datetime('now', ?),
+              ?,
+              CURRENT_TIMESTAMP,
+              CURRENT_TIMESTAMP
+            )
+            ON CONFLICT(workspace_id) DO UPDATE SET
+              plan_id = excluded.plan_id,
+              status = 'active',
+              billing_interval = excluded.billing_interval,
+              cancel_at_period_end = 0,
+              current_period_start = CURRENT_TIMESTAMP,
+              current_period_end = datetime('now', ?),
+              updated_by = excluded.updated_by,
+              updated_at = CURRENT_TIMESTAMP
+          `,
+        )
+        .bind(
+          peerWorkspaceId,
+          targetPlanId,
+          nextBillingInterval,
+          periodModifier,
+          input.actorUserId,
+          periodModifier,
+        ),
+    );
+
+  const peerPlaceholders = peerWorkspaceIds
+    .map(() => "?")
+    .join(", ");
 
   if (evaluation.pagesRequiringFrequencyAdjustment > 0) {
     statements.push(
@@ -1138,14 +1465,14 @@ export async function changeWorkspaceSubscriptionPlan(
             WHERE competitor_id IN (
               SELECT id
               FROM competitors
-              WHERE workspace_id = ?
+              WHERE workspace_id IN (${peerPlaceholders})
             )
               AND frequency_minutes < ?
           `,
         )
         .bind(
           targetPlan.limits.minFrequencyMinutes,
-          workspaceId,
+          ...peerWorkspaceIds,
           targetPlan.limits.minFrequencyMinutes,
         ),
     );
@@ -1164,7 +1491,7 @@ export async function changeWorkspaceSubscriptionPlan(
             WHERE competitor_id IN (
               SELECT id
               FROM competitors
-              WHERE workspace_id = ?
+              WHERE workspace_id IN (${peerPlaceholders})
             )
               AND (
                 (
@@ -1180,7 +1507,7 @@ export async function changeWorkspaceSubscriptionPlan(
               )
           `,
         )
-        .bind(workspaceId),
+        .bind(...peerWorkspaceIds),
     );
   }
 
@@ -1333,11 +1660,17 @@ export async function setWorkspaceSubscriptionCancellation(
     );
   }
 
-  const currentSubscription =
-    await ensureWorkspaceSubscription(db, {
-      workspaceId,
-      actorUserId: input.actorUserId,
-    });
+  const [currentSubscription, peerWorkspaceIds] =
+    await Promise.all([
+      ensureWorkspaceSubscription(db, {
+        workspaceId,
+        actorUserId: input.actorUserId,
+      }),
+      listOwnerPeerWorkspaceIds(db, workspaceId),
+    ]);
+  const peerPlaceholders = peerWorkspaceIds
+    .map(() => "?")
+    .join(", ");
 
   if (input.immediate) {
     const freeMinFreq =
@@ -1350,7 +1683,7 @@ export async function setWorkspaceSubscriptionCancellation(
           workspaceId,
           freeMinFreq,
         ),
-        getWorkspaceMeteredUsage(db, workspaceId),
+        getOwnerAccountTransitionUsage(db, workspaceId),
       ]);
     const adjustedSelectorPages =
       usage.pagesWithCssSelectors;
@@ -1366,10 +1699,10 @@ export async function setWorkspaceSubscriptionCancellation(
               cancel_at_period_end = 0,
               updated_by = ?,
               updated_at = CURRENT_TIMESTAMP
-            WHERE workspace_id = ?
+            WHERE workspace_id IN (${peerPlaceholders})
           `,
         )
-        .bind(input.actorUserId, workspaceId),
+        .bind(input.actorUserId, ...peerWorkspaceIds),
     ];
 
     if (fasterPagesCount > 0) {
@@ -1384,14 +1717,14 @@ export async function setWorkspaceSubscriptionCancellation(
               WHERE competitor_id IN (
                 SELECT id
                 FROM competitors
-                WHERE workspace_id = ?
+                WHERE workspace_id IN (${peerPlaceholders})
               )
                 AND frequency_minutes < ?
             `,
           )
           .bind(
             freeMinFreq,
-            workspaceId,
+            ...peerWorkspaceIds,
             freeMinFreq,
           ),
       );
@@ -1410,7 +1743,7 @@ export async function setWorkspaceSubscriptionCancellation(
               WHERE competitor_id IN (
                 SELECT id
                 FROM competitors
-                WHERE workspace_id = ?
+                WHERE workspace_id IN (${peerPlaceholders})
               )
                 AND (
                   (
@@ -1426,7 +1759,7 @@ export async function setWorkspaceSubscriptionCancellation(
                 )
             `,
           )
-          .bind(workspaceId),
+          .bind(...peerWorkspaceIds),
       );
     }
 
@@ -1530,13 +1863,13 @@ export async function setWorkspaceSubscriptionCancellation(
             cancel_at_period_end = ?,
             updated_by = ?,
             updated_at = CURRENT_TIMESTAMP
-          WHERE workspace_id = ?
+          WHERE workspace_id IN (${peerPlaceholders})
         `,
       )
       .bind(
         nextCancelAtPeriodEnd,
         input.actorUserId,
-        workspaceId,
+        ...peerWorkspaceIds,
       ),
 
     db
