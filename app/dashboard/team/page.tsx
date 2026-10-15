@@ -103,11 +103,7 @@ export default async function TeamWorkspacesPage() {
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <header className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
-              Workspaces &amp; access
-            </div>
-
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
+            <h1 className="text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
               Team &amp; workspaces
             </h1>
 
@@ -116,7 +112,7 @@ export default async function TeamWorkspacesPage() {
             </p>
           </div>
 
-          <div className="workspace-record-actions">
+          <div className="workspace-record-actions shrink-0">
             <WorkspacePanel
               label="New workspace"
               title="Create a team workspace"
@@ -249,18 +245,17 @@ export default async function TeamWorkspacesPage() {
           <section className="mt-8">
             <div className="workspace-surface">
               <div className="workspace-section-heading">
-                <div>
-                  <h2>Pending workspace invitations for you</h2>
-                  <p className="workspace-section-helper">
-                    You have been invited to collaborate in the following workspaces with{" "}
-                    <strong>{session.user.email}</strong>.
-                  </p>
-                </div>
+                <h2>Pending workspace invitations for you</h2>
 
                 <span className="workspace-badge significance-moderate">
                   {incomingInvitations.length} pending
                 </span>
               </div>
+
+              <p className="workspace-section-helper">
+                You have been invited to collaborate in the following workspaces with{" "}
+                <strong>{session.user.email}</strong>.
+              </p>
 
               <div className="workspace-records mt-2">
                 {incomingInvitations.map((invitation) => (
@@ -300,22 +295,24 @@ export default async function TeamWorkspacesPage() {
                       </div>
                     </div>
 
-                    <WorkspaceActionForm
-                      action={acceptInvitationAction}
-                      successMessage={`Joined ${invitation.workspaceName}.`}
-                    >
-                      <input
-                        type="hidden"
-                        name="invitationId"
-                        value={invitation.id}
-                      />
-                      <button
-                        type="submit"
-                        className="workspace-primary"
+                    <div className="shrink-0 self-start sm:self-center">
+                      <WorkspaceActionForm
+                        action={acceptInvitationAction}
+                        successMessage={`Joined ${invitation.workspaceName}.`}
                       >
-                        Accept &amp; switch workspace
-                      </button>
-                    </WorkspaceActionForm>
+                        <input
+                          type="hidden"
+                          name="invitationId"
+                          value={invitation.id}
+                        />
+                        <button
+                          type="submit"
+                          className="workspace-primary"
+                        >
+                          Accept &amp; switch workspace
+                        </button>
+                      </WorkspaceActionForm>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -387,13 +384,12 @@ export default async function TeamWorkspacesPage() {
         <section className="mt-10 grid gap-6 lg:grid-cols-2">
           <div className="workspace-surface">
             <div className="workspace-section-heading">
-              <div>
-                <h2>Your workspaces</h2>
-                <p className="workspace-section-helper">
-                  Switch your active workspace to view its competitors, monitored pages, change history, and notification channels.
-                </p>
-              </div>
+              <h2>Your workspaces</h2>
             </div>
+
+            <p className="workspace-section-helper">
+              Switch your active workspace to view its competitors, monitored pages, change history, and notification channels.
+            </p>
 
             <div className="workspace-records mt-2">
               {workspaces.map((item) => (
@@ -401,7 +397,7 @@ export default async function TeamWorkspacesPage() {
                   key={item.id}
                   className="workspace-record flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <strong className="text-base font-semibold text-slate-950">
                         {item.name}
@@ -446,22 +442,24 @@ export default async function TeamWorkspacesPage() {
                   </div>
 
                   {!item.isActive ? (
-                    <WorkspaceActionForm
-                      action={switchWorkspaceAction}
-                      successMessage={`Switched to ${item.name}.`}
-                    >
-                      <input
-                        type="hidden"
-                        name="workspaceId"
-                        value={item.id}
-                      />
-                      <button
-                        type="submit"
-                        className="workspace-panel-trigger workspace-panel-secondary"
+                    <div className="shrink-0 self-start sm:self-center">
+                      <WorkspaceActionForm
+                        action={switchWorkspaceAction}
+                        successMessage={`Switched to ${item.name}.`}
                       >
-                        Switch
-                      </button>
-                    </WorkspaceActionForm>
+                        <input
+                          type="hidden"
+                          name="workspaceId"
+                          value={item.id}
+                        />
+                        <button
+                          type="submit"
+                          className="workspace-panel-trigger workspace-panel-secondary"
+                        >
+                          Switch
+                        </button>
+                      </WorkspaceActionForm>
+                    </div>
                   ) : null}
                 </div>
               ))}
@@ -470,13 +468,7 @@ export default async function TeamWorkspacesPage() {
 
           <div className="workspace-surface">
             <div className="workspace-section-heading">
-              <div>
-                <h2>Active workspace settings</h2>
-                <p className="workspace-section-helper">
-                  Manage the identity and access level of{" "}
-                  <strong>{activeWorkspace.name}</strong>.
-                </p>
-              </div>
+              <h2>Active workspace settings</h2>
 
               <span
                 className={getRoleBadgeClassName(
@@ -490,6 +482,11 @@ export default async function TeamWorkspacesPage() {
                 }
               </span>
             </div>
+
+            <p className="workspace-section-helper">
+              Manage the identity and access level of{" "}
+              <strong>{activeWorkspace.name}</strong>.
+            </p>
 
             <p className="mt-3 text-sm text-slate-600">
               {
