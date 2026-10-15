@@ -493,10 +493,12 @@ export async function getWorkspaceNotificationSettings(
             ),
             competitors,
           ),
+          // Only legacy rows without a stored schedule fall back to weekly;
+          // an explicitly empty selection is respected.
           digestPeriods:
-            parsedEmailDigestPeriods.length > 0
-              ? parsedEmailDigestPeriods
-              : ["weekly"],
+            preferencesRow.digest_periods_json == null
+              ? ["weekly"]
+              : parsedEmailDigestPeriods,
           updatedAt: preferencesRow.updated_at ?? null,
         }
       : {
@@ -647,7 +649,7 @@ export async function saveUserEmailNotificationPreferences(
 
   const digestPeriodsJson = serializeAllowedDigestPeriods(
     normalizedDigestPeriods,
-    ["weekly"],
+    [],
   );
 
   await db

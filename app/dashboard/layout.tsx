@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { SignOutButton } from "@/components/sign-out-button";
 import {
+  WorkspaceAccountMenu,
   WorkspaceAccountMobileLinks,
   WorkspaceNav,
 } from "@/components/workspace-nav";
@@ -36,7 +37,7 @@ export default async function DashboardLayout({
         </div>
         <WorkspaceNav />
         {session && (
-          <details className="workspace-account">
+          <WorkspaceAccountMenu>
             <summary>Account</summary>
             <div className="workspace-account-content">
               <div>{session.user.name || "Morrow user"}</div>
@@ -56,7 +57,7 @@ export default async function DashboardLayout({
               <AccountSettings name={session.user.name} email={session.user.email} />
               <SignOutButton />
             </div>
-          </details>
+          </WorkspaceAccountMenu>
         )}
       </aside>
       <div className="workspace-content">{children}</div>

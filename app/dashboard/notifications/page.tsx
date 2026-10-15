@@ -21,7 +21,6 @@ import {
   type NotificationSignificanceLevel,
 } from "@/worker/notification-routing";
 import { env } from "cloudflare:workers";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -34,6 +33,7 @@ import {
   updateEmailNotificationPreferences,
   updateExternalChannel,
 } from "./actions";
+import { EmailDigestFields } from "./email-digest-fields";
 
 const CATEGORY_LABELS: Record<
   NotificationChangeCategory,
@@ -503,9 +503,15 @@ export default async function NotificationsPage() {
     deliveryMetrics.emailDigestSentCount +
     deliveryMetrics.externalSentCount;
 
-  const selectedEmailDigestPeriods = new Set(
-    emailPreferences.digestPeriods,
-  );
+  const emailDigestPeriodOptions =
+    NOTIFICATION_DIGEST_PERIODS.map((period) => ({
+      period,
+      label: DIGEST_PERIOD_LABELS[period],
+      allowed: allowedDigestPeriodSet.has(period),
+      lockedSuffix: entitlements.features.scheduledDigests
+        ? " (Starter+ plans)"
+        : " (Personal+ plans)",
+    }));
 
   return (
     <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
@@ -698,7 +704,7 @@ export default async function NotificationsPage() {
         <section className="workspace-metrics mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="workspace-metric-label">
-              Email routing
+              Email alerts
             </div>
             <div className="workspace-metric-value">
               {emailPreferences.emailEnabled ||
@@ -729,7 +735,7 @@ export default async function NotificationsPage() {
               }
             </div>
             <div className="workspace-meta">
-              {activeExternalChannels} active ({entitlements.planName} plan)
+              {activeExternalChannels} active
             </div>
           </article>
 
@@ -790,115 +796,21 @@ export default async function NotificationsPage() {
               successMessage="Email notification preferences saved."
               className="mt-5 grid gap-5"
             >
-              <div>
-                <div className="mb-1.5 text-xs font-medium text-slate-600">
-                  Email delivery triggers
-                </div>
-                <div className="workspace-choice-grid">
-                  <label className="workspace-choice-option">
-                    <input
-                      type="checkbox"
-                      name="emailEnabled"
-                      value="1"
-                      defaultChecked={
-                        emailPreferences.emailEnabled
-                      }
-                    />
-                    <span>
-                      <strong className="block text-sm font-medium text-slate-900">
-                        Instant change alert emails
-                      </strong>
-                      <span className="block text-xs text-slate-500">
-                        Email me immediately when a monitored page records a change that matches my filters
-                      </span>
-                    </span>
-                  </label>
-
-                  <label className="workspace-choice-option">
-                    <input
-                      type="checkbox"
-                      name="digestEmailEnabled"
-                      value="1"
-                      defaultChecked={
-                        emailPreferences.digestEmailEnabled &&
-                        entitlements.features
-                          .scheduledDigests
-                      }
-                      disabled={
-                        !entitlements.features
-                          .scheduledDigests
-                      }
-                    />
-                    <span>
-                      <strong className="block text-sm font-medium text-slate-900">
-                        Scheduled digest emails
-                      </strong>
-                      <span className="block text-xs text-slate-500">
-                        {entitlements.features
-                          .scheduledDigests
-                          ? "Email me a curated rollup when a scheduled digest includes matching changes"
-                          : "Scheduled digests require Personal plan or higher"}
-                      </span>
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-1.5 text-xs font-medium text-slate-600">
-                  Digest email schedules
-                </div>
-                <div className="workspace-choice-grid">
-                  {NOTIFICATION_DIGEST_PERIODS.map(
-                    (period) => {
-                      const isAllowed =
-                        allowedDigestPeriodSet.has(period);
-                      return (
-                        <label
-                          key={period}
-                          className="workspace-choice-option"
-                        >
-                          <input
-                            type="checkbox"
-                            name="digestPeriods"
-                            value={period}
-                            defaultChecked={
-                              isAllowed &&
-                              selectedEmailDigestPeriods.has(
-                                period,
-                              )
-                            }
-                            disabled={!isAllowed}
-                          />
-                          <span className="text-sm font-medium text-slate-900">
-                            {DIGEST_PERIOD_LABELS[period]}
-                            {!isAllowed
-                              ? entitlements.features
-                                  .scheduledDigests
-                                ? " (Starter+ plans)"
-                                : " (Personal+ plans)"
-                              : ""}
-                          </span>
-                        </label>
-                      );
-                    },
-                  )}
-                </div>
-                {!entitlements.features.scheduledDigests ? (
-                  <p className="mt-2 text-xs text-slate-500">
-                    Your workspace is on the{" "}
-                    <strong>{entitlements.planName}</strong>{" "}
-                    plan (instant email alerts included).{" "}
-                    <Link
-                      href="/dashboard/billing"
-                      className="font-medium text-indigo-600"
-                    >
-                      Upgrade in Billing
-                    </Link>{" "}
-                    to enable scheduled digest rollups.
-                  </p>
-                ) : null}
-              </div>
+              <EmailDigestFields
+                initialEmailEnabled={
+                  emailPreferences.emailEnabled
+                }
+                initialDigestEnabled={
+                  emailPreferences.digestEmailEnabled
+                }
+                initialDigestPeriods={
+                  emailPreferences.digestPeriods
+                }
+                scheduledDigestsAvailable={
+                  entitlements.features.scheduledDigests
+                }
+                periodOptions={emailDigestPeriodOptions}
+              />
 
               <RoutingFilterFields
                 idPrefix="email-prefs"
@@ -945,7 +857,16 @@ export default async function NotificationsPage() {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+              <div className="text-sm font-medium text-slate-500">
+                {externalChannels.length} /{" "}
+                {
+                  entitlements.limits
+                    .externalChannelsPerWorkspace
+                }{" "}
+                channels
+              </div>
+
               {canManageExternalChannels &&
               isTelegramPlanEligible &&
               externalChannels.length <
@@ -959,19 +880,10 @@ export default async function NotificationsPage() {
                     type="submit"
                     className="workspace-panel-trigger workspace-panel-secondary text-xs"
                   >
-                    Generate Telegram link ID (10 min)
+                    Generate Telegram link ID
                   </button>
                 </WorkspaceActionForm>
               ) : null}
-
-              <div className="text-sm font-medium text-slate-500">
-                {externalChannels.length} /{" "}
-                {
-                  entitlements.limits
-                    .externalChannelsPerWorkspace
-                }{" "}
-                channels ({entitlements.planName} plan)
-              </div>
             </div>
           </div>
 

@@ -334,7 +334,9 @@ body:has(.billing-plan-dialog[open]), body:has(.workspace-switcher-dialog[open])
   .workspace-nav a[aria-current="page"]::before { inset: auto 25% 0; width: auto; height: 3px; }
   .workspace-account { margin: 0; padding: 0; border: 0; }
   .workspace-account summary { padding: 8px 0 8px 12px; }
-  .workspace-account-content { position: absolute; z-index: 40; top: calc(100% - 4px); right: 16px; width: min(300px,calc(100vw - 32px)); border: 1px solid var(--morrow-line); border-radius: 8px; background: var(--morrow-surface); padding: 12px; box-shadow: 0 8px 20px rgba(23,32,29,.08); }
+  .workspace-account-content { position: absolute; z-index: 40; top: calc(100% - 4px); right: 16px; width: max-content; min-width: 172px; max-width: min(224px,calc(100vw - 32px)); border: 1px solid var(--morrow-line); border-radius: 8px; background: var(--morrow-surface); padding: 10px 8px 8px; box-shadow: 0 8px 20px rgba(23,32,29,.08); }
+  .workspace-account-content > div:not(.workspace-account-mobile-links) { padding: 0 10px; }
+  .workspace-account-content > :is(.workspace-panel-trigger, .morrow-signout), .workspace-account-content > .workspace-account-mobile-links > .workspace-panel-trigger { min-height: 40px; padding: 8px 10px; }
   .workspace-account-content > :is(.workspace-panel-trigger, .morrow-signout):hover, .workspace-account-content > .workspace-account-mobile-links > .workspace-panel-trigger:hover { background: var(--morrow-paper); color: var(--morrow-ink); }
   .workspace-account-mobile-links { display: grid; gap: 4px; padding-top: 6px; margin-top: 4px; border-top: 1px solid var(--morrow-line); }
   .workspace-account-mobile-links a { text-decoration: none; }

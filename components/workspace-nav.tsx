@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -51,6 +52,69 @@ export function WorkspaceNav() {
         </Link>
       ))}
     </nav>
+  );
+}
+
+export function WorkspaceAccountMenu({ children }: { children: ReactNode }) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const details = detailsRef.current;
+    if (details) {
+      details.open = false;
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    function handleOutsidePointer(event: PointerEvent | TouchEvent) {
+      const details = detailsRef.current;
+      if (!details || !details.open) return;
+      if (details.querySelector("dialog[open]")) return;
+
+      const target = event.target;
+      if (target instanceof Node && !details.contains(target)) {
+        details.open = false;
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      const details = detailsRef.current;
+      if (!details || !details.open) return;
+      if (details.querySelector("dialog[open]")) return;
+      details.open = false;
+    }
+
+    function handleDialogClose(event: Event) {
+      const details = detailsRef.current;
+      if (!details || !details.open) return;
+      if (
+        event.target instanceof HTMLDialogElement &&
+        window.matchMedia("(max-width: 767px)").matches
+      ) {
+        details.open = false;
+      }
+    }
+
+    const details = detailsRef.current;
+    document.addEventListener("pointerdown", handleOutsidePointer, true);
+    document.addEventListener("touchstart", handleOutsidePointer, true);
+    document.addEventListener("keydown", handleKeyDown);
+    details?.addEventListener("close", handleDialogClose, true);
+
+    return () => {
+      document.removeEventListener("pointerdown", handleOutsidePointer, true);
+      document.removeEventListener("touchstart", handleOutsidePointer, true);
+      document.removeEventListener("keydown", handleKeyDown);
+      details?.removeEventListener("close", handleDialogClose, true);
+    };
+  }, []);
+
+  return (
+    <details ref={detailsRef} className="workspace-account">
+      {children}
+    </details>
   );
 }
 
