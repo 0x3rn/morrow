@@ -223,57 +223,6 @@ function createDefaultSubscriptionView(
   };
 }
 
-function resolveNormalizedCurrentPeriodEnd(
-  row: WorkspaceSubscriptionRow,
-  billingInterval: BillingInterval,
-): string {
-  const startMs = parseBillingTimestampMs(
-    row.current_period_start,
-  );
-  const endMs = parseBillingTimestampMs(
-    row.current_period_end,
-  );
-
-  if (
-    startMs !== null &&
-    endMs !== null &&
-    !row.provider_subscription_id
-  ) {
-    const diffDays =
-      (endMs - startMs) / (24 * 60 * 60 * 1000);
-
-    if (
-      billingInterval === "annual" &&
-      diffDays >= 0 &&
-      diffDays < 300
-    ) {
-      const alignedEnd = new Date(startMs);
-      alignedEnd.setUTCFullYear(
-        alignedEnd.getUTCFullYear() + 1,
-      );
-      return alignedEnd
-        .toISOString()
-        .replace("T", " ")
-        .replace(/\.\d{3}Z$/, "");
-    }
-
-    if (
-      billingInterval === "monthly" &&
-      diffDays > 60
-    ) {
-      const alignedEnd = new Date(
-        startMs + 30 * 24 * 60 * 60 * 1000,
-      );
-      return alignedEnd
-        .toISOString()
-        .replace("T", " ")
-        .replace(/\.\d{3}Z$/, "");
-    }
-  }
-
-  return row.current_period_end;
-}
-
 function toWorkspaceSubscriptionView(
   row: WorkspaceSubscriptionRow,
 ): WorkspaceSubscriptionView {
@@ -289,10 +238,7 @@ function toWorkspaceSubscriptionView(
     billingInterval,
     cancelAtPeriodEnd: row.cancel_at_period_end === 1,
     currentPeriodStart: row.current_period_start,
-    currentPeriodEnd: resolveNormalizedCurrentPeriodEnd(
-      row,
-      billingInterval,
-    ),
+    currentPeriodEnd: row.current_period_end,
     providerCustomerId: row.provider_customer_id ?? null,
     providerSubscriptionId:
       row.provider_subscription_id ?? null,
@@ -1399,59 +1345,124 @@ export async function changeWorkspaceSubscriptionPlan(
   const adjustedSelectorPages =
     evaluation.pagesRequiringSelectorClear ?? 0;
 
+  const preserveExistingBillingWindow =
+    eventType === "billing_interval_changed";
+
   const statements: D1PreparedStatementLike[] =
     peerWorkspaceIds.map((peerWorkspaceId) =>
-      db
-        .prepare(
-          `
-            INSERT INTO workspace_subscriptions (
-              workspace_id,
-              plan_id,
-              status,
-              billing_interval,
-              cancel_at_period_end,
-              current_period_start,
-              current_period_end,
-              updated_by,
-              created_at,
-              updated_at
+      preserveExistingBillingWindow
+        ? db
+            .prepare(
+              `
+                INSERT INTO workspace_subscriptions (
+                  workspace_id,
+                  plan_id,
+                  status,
+                  billing_interval,
+                  cancel_at_period_end,
+                  current_period_start,
+                  current_period_end,
+                  updated_by,
+                  created_at,
+                  updated_at
+                )
+                VALUES (
+                  ?,
+                  ?,
+                  'active',
+                  ?,
+                  0,
+                  CURRENT_TIMESTAMP,
+                  datetime('now', ?),
+                  ?,
+                  CURRENT_TIMESTAMP,
+                  CURRENT_TIMESTAMP
+                )
+                ON CONFLICT(workspace_id) DO UPDATE SET
+                  plan_id = excluded.plan_id,
+                  status = 'active',
+                  billing_interval = excluded.billing_interval,
+                  cancel_at_period_end = 0,
+                  updated_by = excluded.updated_by,
+                  updated_at = CURRENT_TIMESTAMP
+              `,
             )
-            VALUES (
-              ?,
-              ?,
-              'active',
-              ?,
-              0,
-              CURRENT_TIMESTAMP,
-              datetime('now', ?),
-              ?,
-              CURRENT_TIMESTAMP,
-              CURRENT_TIMESTAMP
+            .bind(
+              peerWorkspaceId,
+              targetPlanId,
+              nextBillingInterval,
+              periodModifier,
+              input.actorUserId,
             )
-            ON CONFLICT(workspace_id) DO UPDATE SET
-              plan_id = excluded.plan_id,
-              status = 'active',
-              billing_interval = excluded.billing_interval,
-              cancel_at_period_end = 0,
-              current_period_start = CURRENT_TIMESTAMP,
-              current_period_end = datetime('now', ?),
-              updated_by = excluded.updated_by,
-              updated_at = CURRENT_TIMESTAMP
-          `,
-        )
-        .bind(
-          peerWorkspaceId,
-          targetPlanId,
-          nextBillingInterval,
-          periodModifier,
-          input.actorUserId,
-          periodModifier,
-        ),
+        : db
+            .prepare(
+              `
+                INSERT INTO workspace_subscriptions (
+                  workspace_id,
+                  plan_id,
+                  status,
+                  billing_interval,
+                  cancel_at_period_end,
+                  current_period_start,
+                  current_period_end,
+                  updated_by,
+                  created_at,
+                  updated_at
+                )
+                VALUES (
+                  ?,
+                  ?,
+                  'active',
+                  ?,
+                  0,
+                  CURRENT_TIMESTAMP,
+                  datetime('now', ?),
+                  ?,
+                  CURRENT_TIMESTAMP,
+                  CURRENT_TIMESTAMP
+                )
+                ON CONFLICT(workspace_id) DO UPDATE SET
+                  plan_id = excluded.plan_id,
+                  status = 'active',
+                  billing_interval = excluded.billing_interval,
+                  cancel_at_period_end = 0,
+                  current_period_start = CURRENT_TIMESTAMP,
+                  current_period_end = datetime('now', ?),
+                  updated_by = excluded.updated_by,
+                  updated_at = CURRENT_TIMESTAMP
+              `,
+            )
+            .bind(
+              peerWorkspaceId,
+              targetPlanId,
+              nextBillingInterval,
+              periodModifier,
+              input.actorUserId,
+              periodModifier,
+            ),
     );
 
   const peerPlaceholders = peerWorkspaceIds
     .map(() => "?")
     .join(", ");
+
+  if (preserveExistingBillingWindow) {
+    statements.push(
+      db
+        .prepare(
+          `
+            UPDATE workspace_subscriptions
+            SET
+              current_period_end = ?
+            WHERE workspace_id IN (${peerPlaceholders})
+          `,
+        )
+        .bind(
+          currentSubscription.currentPeriodEnd,
+          ...peerWorkspaceIds,
+        ),
+    );
+  }
 
   if (evaluation.pagesRequiringFrequencyAdjustment > 0) {
     statements.push(

@@ -3,6 +3,7 @@ import { WorkspaceActionForm } from "@/components/workspace-feedback";
 import { WorkspacePanel } from "@/components/workspace-panel";
 import { auth } from "@/lib/auth";
 import { formatFrequencyIntervalLabel } from "@/lib/billing-plans";
+import { analyzeMonitoringSelectors } from "@/lib/monitoring-selectors";
 import { getWorkspaceEntitlements } from "@/lib/workspace-billing";
 import {
   getWorkspaceRolePermissions,
@@ -48,6 +49,7 @@ interface MonitoredPage {
   ignore_selectors_json: string;
   latest_http_status: number | null;
   latest_captured_at: string | null;
+  latest_html_object_key: string | null;
   change_count: number;
 }
 
@@ -474,6 +476,23 @@ export default async function CompetitorPage({
         ) AS latest_captured_at,
 
         (
+          SELECT snapshots.html_object_key
+
+          FROM snapshots
+
+          WHERE snapshots.monitored_page_id =
+                monitored_pages.id
+            AND snapshots.html_object_key IS NOT NULL
+
+          ORDER BY
+            datetime(
+              snapshots.captured_at
+            ) DESC
+
+          LIMIT 1
+        ) AS latest_html_object_key,
+
+        (
           SELECT COUNT(*)
 
           FROM changes
@@ -492,6 +511,89 @@ export default async function CompetitorPage({
   )
     .bind(competitor.id)
     .all<MonitoredPage>();
+
+  const missingSelectorsByPageId =
+    new Map<string, string[]>();
+
+  if (
+    entitlements.features
+      .sectionLevelMonitoring
+  ) {
+    await Promise.all(
+      monitoredPages.map(
+        async (page) => {
+          if (
+            !page.latest_html_object_key
+          ) {
+            return;
+          }
+
+          const configuredSelectors =
+            formatSelectorConfiguration(
+              page.include_selectors_json
+            )
+              .split(/\r?\n/)
+              .map((line) =>
+                line.trim()
+              )
+              .filter(Boolean);
+
+          if (
+            configuredSelectors.length ===
+            0
+          ) {
+            return;
+          }
+
+          try {
+            const snapshotObject =
+              await env.morrow_snapshots.get(
+                page.latest_html_object_key
+              );
+
+            if (!snapshotObject) {
+              return;
+            }
+
+            const html =
+              await snapshotObject.text();
+
+            const analysis =
+              analyzeMonitoringSelectors(
+                html,
+                configuredSelectors,
+                []
+              );
+
+            const missing =
+              analysis.includeMatches
+                .filter(
+                  (match) =>
+                    match.status ===
+                      "unmatched" ||
+                    match.status ===
+                      "invalid"
+                )
+                .map(
+                  (match) =>
+                    match.selector
+                );
+
+            if (
+              missing.length > 0
+            ) {
+              missingSelectorsByPageId.set(
+                page.id,
+                missing
+              );
+            }
+          } catch {
+            // Non-blocking UI inspection.
+          }
+        }
+      )
+    );
+  }
 
   const {
     results: recentChanges,
@@ -959,6 +1061,29 @@ export default async function CompetitorPage({
                       </div>
                     </div>
 
+                    {missingSelectorsByPageId.has(
+                      page.id
+                    ) ? (
+                      <div
+                        role="alert"
+                        className="border-t border-amber-200 bg-amber-50 px-5 py-3 text-xs leading-5 text-amber-800 sm:px-6"
+                      >
+                        <strong>
+                          Monitored section no longer found:
+                        </strong>{" "}
+                        {(
+                          missingSelectorsByPageId.get(
+                            page.id
+                          ) ?? []
+                        ).join(", ")}{" "}
+                        was not found on the latest capture. Open{" "}
+                        <strong>
+                          Manage
+                        </strong>{" "}
+                        and scan the page again in case the section was removed or renamed.
+                      </div>
+                    ) : null}
+
                     <div className="flex flex-col justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-5 py-3 sm:flex-row sm:items-center sm:px-6">
                       <div className="text-xs text-slate-500">
                         {page.latest_http_status !==
@@ -1041,7 +1166,7 @@ export default async function CompetitorPage({
                                 }
                               />
 
-                              <div>
+                              <div className="mt-4">
                                 <label
                                   htmlFor={`label-${page.id}`}
                                   className="mb-1.5 block text-xs font-medium text-slate-600"
@@ -1062,7 +1187,7 @@ export default async function CompetitorPage({
                                 />
                               </div>
 
-                              <div>
+                              <div className="mt-4">
                                 <label
                                   htmlFor={`url-${page.id}`}
                                   className="mb-1.5 block text-xs font-medium text-slate-600"
@@ -1086,7 +1211,7 @@ export default async function CompetitorPage({
 
                               <button
                                 type="submit"
-                                className="workspace-primary"
+                                className="workspace-primary mt-4"
                               >
                                 Save details
                               </button>
@@ -1118,8 +1243,8 @@ export default async function CompetitorPage({
                                   }
                                 />
 
-                                <div className="workspace-frequency">
-                                  <label className="block text-xs text-slate-500" htmlFor={`frequency-${page.id}`}>Check frequency</label><select
+                                <div className="workspace-frequency mt-4">
+                                  <label className="block text-center text-xs text-slate-500" htmlFor={`frequency-${page.id}`}>Check frequency</label><select
                                     id={`frequency-${page.id}`}
                                     name="frequencyMinutes"
                                     defaultValue={
@@ -1193,7 +1318,7 @@ export default async function CompetitorPage({
                                 {!entitlements
                                   .features
                                   .hourlyMonitoring ? (
-                                  <p className="text-xs text-slate-500">
+                                  <p className="mt-3 text-xs text-slate-500">
                                     Your{" "}
                                     <strong>
                                       {
@@ -1227,6 +1352,11 @@ export default async function CompetitorPage({
         initialIgnoreSelectors={formatSelectorConfiguration(
           page.ignore_selectors_json
         )}
+        initialMissingSelectors={
+          missingSelectorsByPageId.get(
+            page.id
+          ) ?? []
+        }
       />
     ) : (
       <div className="workspace-panel-section space-y-2">

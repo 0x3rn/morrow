@@ -68,6 +68,11 @@ const CATEGORY_LABELS: Record<
     label: "Other",
     description: "Uncategorized page updates that pass noise filtering",
   },
+  section_removed: {
+    label: "Monitored section removed",
+    description:
+      "Alerts when a monitored page section is removed or its selector changes",
+  },
 };
 
 const SIGNIFICANCE_LABELS: Record<

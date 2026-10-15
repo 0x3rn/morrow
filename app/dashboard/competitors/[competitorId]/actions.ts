@@ -1,6 +1,7 @@
 "use server";
 import {
   analyzeMonitoringSelectors,
+  discoverMonitoringSections,
   normalizeMonitoringSelectorInput,
   parseMonitoringSelectorInput,
 } from "@/lib/monitoring-selectors";
@@ -45,6 +46,7 @@ interface OwnedCompetitorRow {
 
 interface OwnedMonitoredPageRow {
   id: string;
+  url: string;
   workspace_id: string;
   role: string;
 }
@@ -146,6 +148,7 @@ async function getOwnedMonitoredPage(
     `
       SELECT
         monitored_pages.id,
+        monitored_pages.url,
         competitors.workspace_id,
         workspace_members.role
 
@@ -1040,6 +1043,71 @@ export async function previewMonitoredPageMonitoringScope(
     };
   }
 
+  const htmlSource =
+    await loadMonitoredPageHtmlForAnalysis(
+      monitoredPageId,
+      monitoredPage.url
+    );
+
+  if (!htmlSource.ok) {
+    return {
+      ok: false,
+      message:
+        htmlSource.message,
+      capturedAt:
+        htmlSource.capturedAt,
+      includeMatches: [],
+      ignoreMatches: [],
+    };
+  }
+
+  const analysis =
+    analyzeMonitoringSelectors(
+      htmlSource.html,
+      includeSelectors,
+      ignoreSelectors
+    );
+
+  return {
+    ok: true,
+    message: null,
+    capturedAt:
+      htmlSource.capturedAt,
+    includeMatches:
+      analysis.includeMatches,
+    ignoreMatches:
+      analysis.ignoreMatches,
+  };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        toUserFacingErrorMessage(
+          error,
+          "Morrow couldn't test these selectors."
+        ),
+      capturedAt: null,
+      includeMatches: [],
+      ignoreMatches: [],
+    };
+  }
+}
+
+async function loadMonitoredPageHtmlForAnalysis(
+  monitoredPageId: string,
+  pageUrl: string
+): Promise<
+  | {
+      ok: true;
+      html: string;
+      capturedAt: string | null;
+    }
+  | {
+      ok: false;
+      message: string;
+      capturedAt: string | null;
+    }
+> {
   const latestSnapshot =
     await env.DB.prepare(
       `
@@ -1060,82 +1128,237 @@ export async function previewMonitoredPageMonitoringScope(
         LIMIT 1
       `
     )
-      .bind(
-        monitoredPageId
-      )
+      .bind(monitoredPageId)
       .first<{
         html_object_key:
-          string | null;
-
-        captured_at:
-          string;
+          | string
+          | null;
+        captured_at: string;
       }>();
 
   if (
-    !latestSnapshot
-      ?.html_object_key
+    latestSnapshot?.html_object_key
   ) {
-    return {
-      ok: false,
-      message:
-        "No captured snapshot is available yet. Run the monitor once before testing selectors.",
-      capturedAt: null,
-      includeMatches: [],
-      ignoreMatches: [],
-    };
+    const snapshotObject =
+      await env.morrow_snapshots.get(
+        latestSnapshot.html_object_key
+      );
+
+    if (snapshotObject) {
+      return {
+        ok: true,
+        html: await snapshotObject.text(),
+        capturedAt:
+          latestSnapshot.captured_at,
+      };
+    }
   }
 
-  const snapshotObject =
-    await env.morrow_snapshots.get(
-      latestSnapshot
-        .html_object_key
+  try {
+    const controller =
+      new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      10000
     );
 
-  if (!snapshotObject) {
-    return {
-      ok: false,
-      message:
-        "The latest captured HTML could not be loaded.",
-      capturedAt:
-        latestSnapshot
-          .captured_at,
-      includeMatches: [],
-      ignoreMatches: [],
-    };
+    const response =
+      await fetch(pageUrl, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (compatible; MorrowBot/1.0)",
+          Accept:
+            "text/html,application/xhtml+xml",
+        },
+        signal:
+          controller.signal,
+      }).finally(() =>
+        clearTimeout(timeout)
+      );
+
+    if (response.ok) {
+      const liveHtml =
+        await response.text();
+
+      if (
+        liveHtml.trim().length >
+        0
+      ) {
+        return {
+          ok: true,
+          html: liveHtml,
+          capturedAt: null,
+        };
+      }
+    }
+  } catch {
+    // Fall through to snapshot error message below.
   }
-
-  const html =
-    await snapshotObject.text();
-
-  const analysis =
-    analyzeMonitoringSelectors(
-      html,
-      includeSelectors,
-      ignoreSelectors
-    );
 
   return {
-    ok: true,
-    message: null,
+    ok: false,
+    message:
+      "No captured snapshot is available yet and the page could not be fetched directly. Run the monitor once before scanning or testing selectors.",
     capturedAt:
-      latestSnapshot
-        .captured_at,
-    includeMatches:
-      analysis.includeMatches,
-    ignoreMatches:
-      analysis.ignoreMatches,
+      latestSnapshot?.captured_at ??
+      null,
   };
+}
+
+export async function scanMonitoredPageSections(
+  formData: FormData
+) {
+  try {
+    const session =
+      await auth.api.getSession(
+        {
+          headers:
+            await headers(),
+        }
+      );
+
+    if (!session) {
+      throw new Error(
+        "Unauthorized"
+      );
+    }
+
+    const monitoredPageId =
+      String(
+        formData.get(
+          "monitoredPageId"
+        ) || ""
+      ).trim();
+
+    const competitorId =
+      String(
+        formData.get(
+          "competitorId"
+        ) || ""
+      ).trim();
+
+    const includeSelectorsInput =
+      String(
+        formData.get(
+          "includeSelectors"
+        ) || ""
+      );
+
+    if (
+      !monitoredPageId ||
+      !competitorId
+    ) {
+      return {
+        ok: false as const,
+        message:
+          "Monitored page and competitor are required.",
+        capturedAt: null,
+        sections: [],
+      };
+    }
+
+    let existingIncludeSelectors: string[] =
+      [];
+
+    try {
+      existingIncludeSelectors =
+        normalizeMonitoringSelectorInput(
+          includeSelectorsInput
+        );
+    } catch {
+      existingIncludeSelectors =
+        [];
+    }
+
+    const monitoredPage =
+      await getOwnedMonitoredPage(
+        monitoredPageId,
+        competitorId,
+        session.user.id
+      );
+
+    if (!monitoredPage) {
+      throw new Error(
+        "Monitored page not found or access denied."
+      );
+    }
+
+    try {
+      await assertWorkspaceSectionLevelMonitoringAllowed(
+        env.DB,
+        {
+          workspaceId:
+            monitoredPage.workspace_id,
+          includeSelectors: [
+            "main",
+          ],
+          ignoreSelectors: [],
+        }
+      );
+    } catch (error) {
+      return {
+        ok: false as const,
+        message:
+          toUserFacingErrorMessage(
+            error,
+            "Section-level monitoring requires Starter or higher."
+          ),
+        capturedAt: null,
+        sections: [],
+      };
+    }
+
+    const htmlSource =
+      await loadMonitoredPageHtmlForAnalysis(
+        monitoredPageId,
+        monitoredPage.url
+      );
+
+    if (!htmlSource.ok) {
+      return {
+        ok: false as const,
+        message:
+          htmlSource.message,
+        capturedAt:
+          htmlSource.capturedAt,
+        sections: [],
+      };
+    }
+
+    const sections =
+      discoverMonitoringSections(
+        htmlSource.html,
+        existingIncludeSelectors
+      );
+
+    if (sections.length === 0) {
+      return {
+        ok: false as const,
+        message:
+          "No distinct sections were found on this page.",
+        capturedAt:
+          htmlSource.capturedAt,
+        sections: [],
+      };
+    }
+
+    return {
+      ok: true as const,
+      message: null,
+      capturedAt:
+        htmlSource.capturedAt,
+      sections,
+    };
   } catch (error) {
     return {
-      ok: false,
+      ok: false as const,
       message:
         toUserFacingErrorMessage(
           error,
-          "Morrow couldn't test these selectors."
+          "Morrow couldn't scan this page for sections."
         ),
       capturedAt: null,
-      includeMatches: [],
-      ignoreMatches: [],
+      sections: [],
     };
   }
 }

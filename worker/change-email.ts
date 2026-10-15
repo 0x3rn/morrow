@@ -5,6 +5,7 @@ import {
   type GeneratedDigest,
 } from "./digest-generator.ts";
 import {
+  hasMissingMonitoredSectionInDiffJson,
   matchesChangeRoutingPolicy,
   scopeDigestContentToRoutingPolicy,
 } from "./notification-routing.ts";
@@ -29,6 +30,8 @@ export interface ChangeNotificationContext {
   summary: string | null;
 
   why_it_matters: string | null;
+
+  diff_json?: string | null;
 
   detected_at: string;
 
@@ -267,6 +270,8 @@ export function shouldEmailRecipient(
         category?: string;
         competitor_id?: string;
         competitorId?: string;
+        diff_json?: string | null;
+        hasMissingMonitoredSection?: boolean;
       }
 ) {
   if (
@@ -301,6 +306,11 @@ export function shouldEmailRecipient(
       significance:
         changeOrSignificance.significance,
       competitorId,
+      hasMissingMonitoredSection:
+        changeOrSignificance.hasMissingMonitoredSection ??
+        hasMissingMonitoredSectionInDiffJson(
+          changeOrSignificance.diff_json
+        ),
     },
     {
       enabled: recipient.email_enabled,
@@ -815,6 +825,7 @@ async function getChangeContext(
           changes.significance,
           changes.summary,
           changes.why_it_matters,
+          changes.diff_json,
           changes.detected_at,
 
           monitored_pages.id

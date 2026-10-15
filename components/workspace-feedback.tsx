@@ -49,6 +49,31 @@ export function WorkspaceFeedback({ children }: { children: ReactNode }) {
 
 export const useWorkspaceFeedback = () => useContext(FeedbackContext);
 
+const ActionPendingContext = createContext(false);
+
+export function WorkspaceSubmitButton({
+  pendingLabel = "Switching…",
+  children,
+  disabled,
+  className,
+}: {
+  pendingLabel?: string;
+  children: ReactNode;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const pending = useContext(ActionPendingContext);
+  return (
+    <button
+      type="submit"
+      disabled={disabled || pending}
+      className={className}
+    >
+      {pending ? pendingLabel : children}
+    </button>
+  );
+}
+
 export function WorkspaceActionForm({ action, successMessage, children, className }: {
   action: (data: FormData) => Promise<unknown>;
   successMessage: string;
@@ -98,8 +123,10 @@ export function WorkspaceActionForm({ action, successMessage, children, classNam
       }
     });
   }}>
-    <fieldset className="workspace-action-fields" disabled={pending}>{children}</fieldset>
-    {pending && <p className="workspace-action-status" role="status">Please wait…</p>}
+    <ActionPendingContext.Provider value={pending}>
+      <fieldset className="workspace-action-fields" disabled={pending}>{children}</fieldset>
+    </ActionPendingContext.Provider>
     {error && <p className="account-error" role="alert">{error}</p>}
   </form>;
 }
+

@@ -1,5 +1,8 @@
 import { MobilePlanSelector } from "@/components/mobile-plan-selector";
-import { WorkspaceActionForm } from "@/components/workspace-feedback";
+import {
+  WorkspaceActionForm,
+  WorkspaceSubmitButton,
+} from "@/components/workspace-feedback";
 import { auth } from "@/lib/auth";
 import {
   formatFrequencyIntervalLabel,
@@ -312,15 +315,15 @@ export default async function BillingPage() {
                           : "annual"
                       }
                     />
-                    <button
-                      type="submit"
+                    <WorkspaceSubmitButton
+                      pendingLabel="Switching…"
                       className="workspace-panel-trigger workspace-panel-secondary"
                     >
                       {subscription.billingInterval ===
                       "annual"
                         ? "Switch to monthly billing"
                         : "Switch to annual billing (save ~20%)"}
-                    </button>
+                    </WorkspaceSubmitButton>
                   </WorkspaceActionForm>
                 </div>
               ) : null}
@@ -559,8 +562,12 @@ export default async function BillingPage() {
                               name="billingInterval"
                               value={subscription.billingInterval}
                             />
-                            <button
-                              type="submit"
+                            <WorkspaceSubmitButton
+                              pendingLabel={
+                                transition.direction === "upgrade"
+                                  ? "Upgrading…"
+                                  : "Switching…"
+                              }
                               disabled={!transition.allowed}
                               className={
                                 transition.direction === "upgrade"
@@ -571,7 +578,7 @@ export default async function BillingPage() {
                               {transition.direction === "upgrade"
                                 ? `Upgrade to ${plan.name}`
                                 : `Switch to ${plan.name}`}
-                            </button>
+                            </WorkspaceSubmitButton>
                           </WorkspaceActionForm>
                         ) : (
                           <div className="text-xs text-slate-500">
@@ -865,12 +872,12 @@ export default async function BillingPage() {
                           name="mode"
                           value="reactivate"
                         />
-                        <button
-                          type="submit"
+                        <WorkspaceSubmitButton
+                          pendingLabel="Resuming…"
                           className="workspace-primary"
                         >
                           Resume subscription renewal
-                        </button>
+                        </WorkspaceSubmitButton>
                       </WorkspaceActionForm>
                     ) : (
                       <WorkspaceActionForm
@@ -884,12 +891,12 @@ export default async function BillingPage() {
                           name="mode"
                           value="schedule_cancel"
                         />
-                        <button
-                          type="submit"
+                        <WorkspaceSubmitButton
+                          pendingLabel="Canceling…"
                           className="workspace-panel-trigger workspace-panel-secondary"
                         >
                           Cancel at period end
-                        </button>
+                        </WorkspaceSubmitButton>
                       </WorkspaceActionForm>
                     )
                   ) : null}

@@ -11,7 +11,10 @@ import {
   type DigestPeriod,
 } from "./digest-generator.ts";
 
-export const NOTIFICATION_CHANGE_CATEGORIES = DIGEST_CATEGORIES;
+export const NOTIFICATION_CHANGE_CATEGORIES = [
+  ...DIGEST_CATEGORIES,
+  "section_removed",
+] as const;
 
 export const NOTIFICATION_SIGNIFICANCE_LEVELS = [
   "minor",
@@ -27,7 +30,8 @@ export const EXTERNAL_NOTIFICATION_CHANNELS = [
   "webhook",
 ] as const;
 
-export type NotificationChangeCategory = DigestCategory;
+export type NotificationChangeCategory =
+  (typeof NOTIFICATION_CHANGE_CATEGORIES)[number];
 
 export type NotificationSignificanceLevel =
   (typeof NOTIFICATION_SIGNIFICANCE_LEVELS)[number];
@@ -58,6 +62,27 @@ export interface ChangeRoutingCandidate {
   category: string;
   significance: string;
   competitorId: string;
+  hasMissingMonitoredSection?: boolean;
+}
+
+export function hasMissingMonitoredSectionInDiffJson(
+  diffJson: string | null | undefined,
+): boolean {
+  if (!diffJson || typeof diffJson !== "string") {
+    return false;
+  }
+
+  try {
+    const parsed = JSON.parse(diffJson) as {
+      missingIncludeSelectors?: unknown;
+    };
+    return (
+      Array.isArray(parsed?.missingIncludeSelectors) &&
+      parsed.missingIncludeSelectors.length > 0
+    );
+  } catch {
+    return false;
+  }
 }
 
 export interface ChangeRoutingPolicyInput {
@@ -412,13 +437,17 @@ export function matchesChangeRoutingPolicy(
   const allowedCategories = parseAllowedCategoriesJson(
     policy.categoriesJson,
   );
-  if (
-    allowedCategories.length > 0 &&
-    !allowedCategories.includes(
+  if (allowedCategories.length > 0) {
+    const matchesCategory = allowedCategories.includes(
       change.category as NotificationChangeCategory,
-    )
-  ) {
-    return false;
+    );
+    const matchesSectionRemoved =
+      Boolean(change.hasMissingMonitoredSection) &&
+      allowedCategories.includes("section_removed");
+
+    if (!matchesCategory && !matchesSectionRemoved) {
+      return false;
+    }
   }
 
   const allowedCompetitorIds =
@@ -604,7 +633,10 @@ export function scopeDigestContentToRoutingPolicy(
       const hasMatchingCategory =
         allowedCategories.some(
           (cat) =>
-            (content.categoryCounts?.[cat] ?? 0) > 0,
+            cat !== "section_removed" &&
+            (content.categoryCounts?.[
+              cat as DigestCategory
+            ] ?? 0) > 0,
         );
       if (!hasMatchingCategory) {
         return null;

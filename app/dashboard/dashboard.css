@@ -124,7 +124,7 @@
 .workspace-panel-secondary { background: var(--morrow-surface); font-weight: 500; }
 .workspace-primary:hover, .workspace-panel-trigger:not(.workspace-panel-secondary):hover { background: #f27b62; }
 .workspace-panel-secondary:hover { background: var(--morrow-paper-deep); }
-.workspace-panel { position: fixed; inset: 0 0 0 auto; width: min(440px,100%); max-width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; padding: 0; border: 0; border-left: 1px solid var(--morrow-line); background: var(--morrow-paper); color: var(--morrow-ink); overflow-y: auto; overscroll-behavior: contain; }
+.workspace-panel { position: fixed; inset: 0 0 0 auto; width: min(500px,100%); max-width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; padding: 0; border: 0; border-left: 1px solid var(--morrow-line); background: var(--morrow-paper); color: var(--morrow-ink); overflow-y: auto; overscroll-behavior: contain; }
 .workspace-panel::backdrop { background: rgba(23,32,29,.22); }
 body:has(.workspace-panel[open]) { overflow: hidden; }
 .workspace-panel-heading { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--morrow-line); background: var(--morrow-paper); }
@@ -139,9 +139,11 @@ body:has(.workspace-panel[open]) { overflow: hidden; }
 .workspace-panel-body .workspace-panel-section { border-top: 1px solid var(--morrow-line); padding-top: 20px; margin-top: 20px; }
 .workspace-panel-body .workspace-destructive { padding: 20px 0 0; border-top: 1px solid var(--morrow-line); border-left: 0; }
 .workspace-panel-body .workspace-capacity { padding: 16px; background: var(--morrow-surface); border: 1px solid var(--morrow-line); border-radius: 8px; }
-.workspace-panel-body .workspace-frequency { display: flex; gap: 8px; }
+.workspace-panel-body .workspace-frequency { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.workspace-panel-body .workspace-frequency > label { flex-shrink: 0; text-align: center; line-height: 1.3; margin: 0; }
 .workspace-panel-body .workspace-frequency select { flex: 1; min-width: 0; }
 .workspace-panel-body .workspace-frequency button { flex-shrink: 0; }
+.workspace-scope-tag { min-width: 132px; justify-content: center; text-align: center; white-space: nowrap; flex-shrink: 0; }
 .workspace-scope-footer > p { margin: 0; }
 .workspace-scope-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .morrow-dashboard .workspace-scope-actions button { flex: 1 0 auto; min-height: 44px; max-width: 100%; overflow-wrap: normal; word-break: normal; white-space: normal; }
@@ -168,16 +170,16 @@ body:has(.workspace-panel[open]) { overflow: hidden; }
 .workspace-account-content > :is(.workspace-panel-trigger, .morrow-signout):hover, .workspace-account-content > .workspace-account-mobile-links > .workspace-panel-trigger:hover { background: var(--morrow-surface); color: var(--morrow-ink); }
 .workspace-switcher-dialog { position: fixed; inset: 0; width: min(460px, calc(100vw - 32px)); max-width: 100%; max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 1px solid var(--morrow-line); border-radius: 12px; background: var(--morrow-paper); color: var(--morrow-ink); overflow-y: auto; overscroll-behavior: contain; box-shadow: 0 20px 48px rgba(16, 24, 21, .24); }
 .workspace-switcher-dialog::backdrop { background: rgba(16, 24, 21, .42); }
-.workspace-switcher-dialog-body { display: grid; gap: 14px; padding: 20px; }
+.workspace-switcher-dialog .workspace-panel-heading { border-bottom: 0; padding-bottom: 4px; }
+.workspace-switcher-dialog-body { display: grid; gap: 14px; padding: 8px 20px 20px; }
 .workspace-switcher-options { display: grid; gap: 10px; }
-.workspace-switcher-option { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid var(--morrow-line); border-radius: 8px; background: var(--morrow-surface); color: var(--morrow-ink); cursor: pointer; }
+.workspace-switcher-option { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--morrow-line); border-radius: 8px; background: var(--morrow-surface); color: var(--morrow-ink); cursor: pointer; }
 .workspace-switcher-option:hover { background: var(--morrow-paper-deep); }
-.workspace-switcher-option.is-selected { border-color: var(--morrow-coral); box-shadow: 0 0 0 1px var(--morrow-coral); }
-.workspace-switcher-option input[type="radio"] { margin-top: 3px !important; }
+.workspace-switcher-option input[type="radio"] { margin: 0 !important; align-self: center; }
 .workspace-switcher-option-content { flex: 1; min-width: 0; display: grid; gap: 4px; }
 .workspace-switcher-option-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
 .workspace-switcher-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.workspace-switcher-actions { display: flex; align-items: center; gap: 10px; padding-top: 12px; border-top: 1px solid var(--morrow-line); }
+.workspace-switcher-actions { display: flex; align-items: center; gap: 10px; padding-top: 4px; }
 .workspace-switcher-actions .workspace-primary { flex: 1; white-space: nowrap; }
 .workspace-switcher-actions .workspace-panel-secondary { flex: 0 0 auto; width: auto; justify-content: center; white-space: nowrap; }
 .workspace-switcher-actions button:disabled { opacity: .55; cursor: default; }
@@ -236,9 +238,9 @@ body:has(.billing-plan-dialog[open]), body:has(.workspace-switcher-dialog[open])
 .morrow-dashboard input[type="checkbox"]:checked { border-color: var(--morrow-coral); background-color: var(--morrow-coral); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23faf8f3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 6.5 5 9l4.5-5.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: center; background-size: 12px 12px; }
 .morrow-dashboard input:is([type="checkbox"], [type="radio"]):disabled { opacity: .45; cursor: default; }
 .workspace-choice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
-.workspace-choice-option { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 10px 12px; border: 1px solid var(--morrow-line); border-radius: 8px; background: var(--morrow-surface); color: var(--morrow-ink); cursor: pointer; }
+.workspace-choice-option { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 12px; border: 1px solid var(--morrow-line); border-radius: 8px; background: var(--morrow-surface); color: var(--morrow-ink); cursor: pointer; }
 .workspace-choice-option:hover { background: var(--morrow-paper); }
-.workspace-choice-option input { margin-top: 2px !important; }
+.workspace-choice-option input { margin: 0 !important; align-self: center; }
 .morrow-dashboard input[type="date"] { display: block; appearance: none; -webkit-appearance: none; }
 .morrow-dashboard input[type="date"]::-webkit-date-and-time-value { min-width: 0; text-align: left; }
 .morrow-dashboard textarea { line-height: 1.6; resize: vertical; }
@@ -308,6 +310,7 @@ body:has(.billing-plan-dialog[open]), body:has(.workspace-switcher-dialog[open])
 .workspace-source-captures dl > div { display: grid; grid-template-columns: 100px minmax(0,1fr); gap: 12px; margin-top: 12px; }
 .workspace-source-captures dd { margin: 0; }
 .workspace-action-fields { display: contents; }
+.morrow-dashboard form[class*="space-y-"] > .workspace-action-fields > :not([hidden]) ~ :not([hidden]) { margin-top: 16px; }
 .workspace-action-status { color: var(--morrow-ink-soft); font-size: 13px; margin-top: 8px; }
 .workspace-action-fields:disabled button { cursor: wait; opacity: .55; }
 .workspace-toast { position: fixed; top: 24px; right: 24px; z-index: 100; display: flex; align-items: center; gap: 12px; width: max-content; max-width: min(380px,calc(100% - 32px)); padding: 8px 8px 8px 16px; border: 1px solid var(--morrow-line); border-radius: 8px; background: var(--morrow-surface); color: var(--morrow-ink); box-shadow: 0 4px 16px rgba(23,32,29,.1); font-size: 15px; line-height: 1.5; }

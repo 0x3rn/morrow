@@ -16,6 +16,7 @@ import {
   type FetchLike,
 } from "./external-delivery.ts";
 import {
+  hasMissingMonitoredSectionInDiffJson,
   matchesChangeRoutingPolicy,
   scopeDigestContentToRoutingPolicy,
 } from "./notification-routing.ts";
@@ -272,6 +273,7 @@ async function getChangeContext(
           changes.significance,
           changes.summary,
           changes.why_it_matters,
+          changes.diff_json,
           changes.detected_at,
           monitored_pages.id AS monitored_page_id,
           monitored_pages.url AS monitored_page_url,
@@ -684,6 +686,8 @@ export async function notifyChangeByExternalChannels(
   }
 
   result.changeFound = true;
+  const hasMissingMonitoredSection =
+    hasMissingMonitoredSectionInDiffJson(context.diff_json);
 
   const activeChannels = await getActiveWorkspaceChannels(
     env.DB,
@@ -695,6 +699,7 @@ export async function notifyChangeByExternalChannels(
         category: context.category,
         significance: context.significance,
         competitorId: context.competitor_id,
+        hasMissingMonitoredSection,
       },
       {
         enabled: channelRow.status === "active",

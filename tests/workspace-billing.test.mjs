@@ -839,7 +839,7 @@ test("THE-28.3 & THE-28.4: upgrades, downgrades, frequency normalization, billin
     .get();
   assert.equal(pricingPageRow.frequency_minutes, 360);
 
-  // Switch billing cycle to monthly
+  // Switch billing cycle to monthly and verify currentPeriodStart and currentPeriodEnd are preserved
   const intervalSub =
     await updateWorkspaceBillingInterval(db, {
       actorUserId: "usr_owner",
@@ -847,6 +847,14 @@ test("THE-28.3 & THE-28.4: upgrades, downgrades, frequency normalization, billin
       billingInterval: "monthly",
     });
   assert.equal(intervalSub.billingInterval, "monthly");
+  assert.equal(
+    intervalSub.currentPeriodStart,
+    downgradeResult.subscription.currentPeriodStart,
+  );
+  assert.equal(
+    intervalSub.currentPeriodEnd,
+    downgradeResult.subscription.currentPeriodEnd,
+  );
 
   // Schedule cancellation at period end and then reactivate
   const scheduledCancel =

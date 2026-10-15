@@ -1663,6 +1663,10 @@ export async function initiateOrUpdateWorkspaceSubscription(
         );
       }
 
+      const isIntervalUpgradeToAnnual =
+        currentSubscription.billingInterval === "monthly" &&
+        nextBillingInterval === "annual";
+
       const remoteUpdated =
         await updateLemonSqueezySubscription(
           config,
@@ -1671,7 +1675,8 @@ export async function initiateOrUpdateWorkspaceSubscription(
             variantId: targetVariantId,
             cancelled: false,
             invoiceImmediately:
-              evaluation.direction === "upgrade",
+              evaluation.direction === "upgrade" ||
+              isIntervalUpgradeToAnnual,
           },
           fetcher,
         );

@@ -1318,6 +1318,8 @@ const currentComparisonText =
 
 let previousComparisonText:
   string | null = null;
+let newlyMissingIncludeSelectors: string[] =
+  [];
 
 if (hasConfiguredScope) {
   const previousHtml =
@@ -1328,12 +1330,28 @@ if (hasConfiguredScope) {
     );
 
   if (previousHtml !== null) {
-    previousComparisonText =
+    const previousMonitoringScope =
       extractMonitoringScope(
         previousHtml,
         includeSelectors,
         ignoreSelectors
-      ).text;
+      );
+
+    previousComparisonText =
+      previousMonitoringScope.text;
+
+    const previouslyMatchedSet =
+      new Set(
+        previousMonitoringScope.matchedIncludeSelectors
+      );
+
+    newlyMissingIncludeSelectors =
+      currentMonitoringScope.unmatchedIncludeSelectors.filter(
+        (selector) =>
+          previouslyMatchedSet.has(
+            selector
+          )
+      );
   }
 } else {
   previousComparisonText =
@@ -1363,6 +1381,8 @@ console.log(
     unmatchedIncludeSelectors:
       currentMonitoringScope
         .unmatchedIncludeSelectors,
+
+    newlyMissingIncludeSelectors,
 
     invalidIncludeSelectors:
       currentMonitoringScope
@@ -1555,10 +1575,12 @@ if (
 
   /*
    * Raw hash changed, but THE-14 says all of that change
-   * was noise.
+   * was noise (and no monitored sections disappeared).
    */
   if (
-    !hasMeaningfulTextChange
+    !hasMeaningfulTextChange &&
+    newlyMissingIncludeSelectors.length ===
+      0
   ) {
     console.log(
       "Morrow raw change suppressed as noise",
@@ -1662,6 +1684,25 @@ if (
       }
     );
 
+  const missingSectionAlertNote =
+    newlyMissingIncludeSelectors.length >
+    0
+      ? `Monitored section missing (${newlyMissingIncludeSelectors.join(", ")}). A section you were monitoring was removed or renamed — open Manage > Monitoring scope and scan the page again to update your monitored sections.`
+      : null;
+
+  const finalSummary =
+    !hasMeaningfulTextChange &&
+    missingSectionAlertNote
+      ? `Monitored section (${newlyMissingIncludeSelectors.join(", ")}) was removed or renamed on this page.`
+      : changeSummary.summary;
+
+  const finalWhyItMatters =
+    missingSectionAlertNote
+      ? changeSummary.whyItMatters
+        ? `${changeSummary.whyItMatters} ${missingSectionAlertNote}`
+        : missingSectionAlertNote
+      : changeSummary.whyItMatters;
+
   console.log(
     "Morrow change summarized",
     {
@@ -1680,11 +1721,10 @@ if (
       summaryModel:
         changeSummary.model,
 
-      summary:
-        changeSummary.summary,
+      summary: finalSummary,
 
       whyItMatters:
-        changeSummary.whyItMatters,
+        finalWhyItMatters,
 
       hasPreviousEvidence:
         Boolean(
@@ -1711,6 +1751,9 @@ if (
       addedLines,
 
       removedLines,
+
+      missingIncludeSelectors:
+        newlyMissingIncludeSelectors,
 
       classification: {
         confidence:
@@ -1781,9 +1824,9 @@ if (
 
       classification.significance,
 
-      changeSummary.summary,
+      finalSummary,
 
-      changeSummary.whyItMatters,
+      finalWhyItMatters,
 
       changeSummary.previousText,
 

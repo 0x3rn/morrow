@@ -1,6 +1,7 @@
 "use client";
 
 import { WorkspaceActionForm } from "@/components/workspace-feedback";
+import type { DiscoveredMonitoringSection } from "@/lib/monitoring-selectors";
 import { toUserFacingErrorMessage } from "@/lib/user-facing-error";
 
 import {
@@ -10,6 +11,7 @@ import {
 
 import {
   previewMonitoredPageMonitoringScope,
+  scanMonitoredPageSections,
   updateMonitoredPageMonitoringScope,
 } from "./actions";
 
@@ -17,11 +19,11 @@ interface MonitoringScopeFormProps {
   monitoredPageId: string;
   competitorId: string;
 
-  initialIncludeSelectors:
-    string;
+  initialIncludeSelectors: string;
 
-  initialIgnoreSelectors:
-    string;
+  initialIgnoreSelectors: string;
+
+  initialMissingSelectors?: string[];
 }
 
 type PreviewResult =
@@ -82,6 +84,70 @@ const buttonClasses = [
   "motion-reduce:transition-none",
 ].join(" ");
 
+function parseInitialSelectorLines(
+  value: string
+) {
+  return [
+    ...new Set(
+      value
+        .split(/\r?\n/)
+        .map((line) =>
+          line.trim()
+        )
+        .filter(Boolean)
+    ),
+  ];
+}
+
+function buildInitialSectionItems(
+  selectors: string[],
+  missingSelectors: string[]
+): DiscoveredMonitoringSection[] {
+  const missingSet = new Set(
+    missingSelectors
+  );
+
+  return selectors.map(
+    (selector, index) => ({
+      selector,
+      label: selector.startsWith(
+        "#"
+      )
+        ? selector
+            .slice(1)
+            .replace(
+              /[_-]+/g,
+              " "
+            )
+            .replace(
+              /^\w/,
+              (c) =>
+                c.toUpperCase()
+            )
+        : `Monitored section ${
+            index + 1
+          }`,
+      tagName: "section",
+      status: missingSet.has(
+        selector
+      )
+        ? "unmatched"
+        : "matched",
+      matchCount:
+        missingSet.has(
+          selector
+        )
+          ? 0
+          : 1,
+      preview: missingSet.has(
+        selector
+      )
+        ? "This section was not found in the latest page capture. Scan the page again in case it was removed or renamed."
+        : "Saved section selector. Click 'Scan page for sections to monitor' or 'Test selectors' to refresh.",
+    })
+  );
+}
+
 function normalizeTimestamp(
   value: string
 ) {
@@ -140,7 +206,10 @@ function formatCapturedAt(
 }
 
 function getMatchLabel(
-  match: SelectorMatch
+  match: Pick<
+    SelectorMatch,
+    "status" | "matchCount"
+  >
 ) {
   if (
     match.status ===
@@ -153,7 +222,7 @@ function getMatchLabel(
     match.status ===
     "unmatched"
   ) {
-    return "No matches";
+    return "Removed / no match";
   }
 
   if (
@@ -166,7 +235,10 @@ function getMatchLabel(
 }
 
 function getMatchClasses(
-  match: SelectorMatch
+  match: Pick<
+    SelectorMatch,
+    "status" | "matchCount"
+  >
 ) {
   if (
     match.status ===
@@ -228,7 +300,7 @@ function SelectorResultList({
                 </code>
 
                 <span
-                  className={`inline-flex w-fit rounded-full border px-2 py-0.5 text-[11px] font-medium ${getMatchClasses(
+                  className={`inline-flex w-fit shrink-0 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${getMatchClasses(
                     match
                   )}`}
                 >
@@ -258,36 +330,200 @@ export function MonitoringScopeForm({
   competitorId,
   initialIncludeSelectors,
   initialIgnoreSelectors,
+  initialMissingSelectors = [],
 }: MonitoringScopeFormProps) {
-  const [
-    includeSelectors,
-    setIncludeSelectors,
-  ] =
-    useState(
+  const initialSelectedList =
+    parseInitialSelectorLines(
       initialIncludeSelectors
     );
 
   const [
+    scopeMode,
+    setScopeMode,
+  ] = useState<
+    | "whole_page"
+    | "selected_sections"
+  >(
+    initialSelectedList.length >
+      0
+      ? "selected_sections"
+      : "whole_page"
+  );
+
+  const [
+    selectedSelectors,
+    setSelectedSelectors,
+  ] = useState<string[]>(
+    initialSelectedList
+  );
+
+  const [
+    availableSections,
+    setAvailableSections,
+  ] = useState<
+    DiscoveredMonitoringSection[]
+  >(() =>
+    buildInitialSectionItems(
+      initialSelectedList,
+      initialMissingSelectors
+    )
+  );
+
+  const [
+    scanState,
+    setScanState,
+  ] = useState<{
+    ok: boolean;
+    message: string | null;
+    capturedAt: string | null;
+  } | null>(null);
+
+  const [
     ignoreSelectors,
     setIgnoreSelectors,
-  ] =
-    useState(
-      initialIgnoreSelectors
-    );
+  ] = useState(
+    initialIgnoreSelectors
+  );
 
   const [
     preview,
     setPreview,
-  ] =
-    useState<
-      PreviewResult | null
-    >(null);
+  ] = useState<
+    PreviewResult | null
+  >(null);
+
+  const [
+    isScanPending,
+    startScanTransition,
+  ] = useTransition();
 
   const [
     isPreviewPending,
     startPreviewTransition,
-  ] =
-    useTransition();
+  ] = useTransition();
+
+  const effectiveIncludeSelectorsValue =
+    scopeMode ===
+    "selected_sections"
+      ? selectedSelectors.join(
+          "\n"
+        )
+      : "";
+
+  const hasIncludeSelectors =
+    scopeMode ===
+      "selected_sections" &&
+    selectedSelectors.length >
+      0;
+
+  const missingSelectedSelectors =
+    availableSections
+      .filter(
+        (section) =>
+          selectedSelectors.includes(
+            section.selector
+          ) &&
+          (section.status ===
+            "unmatched" ||
+            section.status ===
+              "invalid")
+      )
+      .map(
+        (section) =>
+          section.selector
+      );
+
+  function toggleSectionSelector(
+    selector: string
+  ) {
+    setScopeMode(
+      "selected_sections"
+    );
+    setPreview(null);
+
+    setSelectedSelectors(
+      (previous) =>
+        previous.includes(
+          selector
+        )
+          ? previous.filter(
+              (item) =>
+                item !==
+                selector
+            )
+          : [
+              ...previous,
+              selector,
+            ]
+    );
+  }
+
+  function handleScanPageSections() {
+    setScopeMode(
+      "selected_sections"
+    );
+    setPreview(null);
+
+    const formData =
+      new FormData();
+
+    formData.set(
+      "monitoredPageId",
+      monitoredPageId
+    );
+
+    formData.set(
+      "competitorId",
+      competitorId
+    );
+
+    formData.set(
+      "includeSelectors",
+      selectedSelectors.join(
+        "\n"
+      )
+    );
+
+    startScanTransition(
+      async () => {
+        try {
+          const result =
+            await scanMonitoredPageSections(
+              formData
+            );
+
+          if (!result.ok) {
+            setScanState({
+              ok: false,
+              message:
+                result.message,
+              capturedAt:
+                result.capturedAt,
+            });
+            return;
+          }
+
+          setAvailableSections(
+            result.sections
+          );
+
+          setScanState({
+            ok: true,
+            message: null,
+            capturedAt:
+              result.capturedAt,
+          });
+        } catch {
+          setScanState({
+            ok: false,
+            message:
+              "Morrow couldn't scan this page for sections.",
+            capturedAt: null,
+          });
+        }
+      }
+    );
+  }
 
   function testSelectors() {
     const formData =
@@ -305,12 +541,12 @@ export function MonitoringScopeForm({
 
     formData.set(
       "includeSelectors",
-      includeSelectors
+      effectiveIncludeSelectorsValue
     );
 
     formData.set(
       "ignoreSelectors",
-      ignoreSelectors
+      ""
     );
 
     startPreviewTransition(
@@ -324,6 +560,50 @@ export function MonitoringScopeForm({
           setPreview(
             result
           );
+
+          if (
+            result.ok &&
+            result
+              .includeMatches
+              .length > 0
+          ) {
+            const matchBySelector =
+              new Map(
+                result.includeMatches.map(
+                  (match) => [
+                    match.selector,
+                    match,
+                  ]
+                )
+              );
+
+            setAvailableSections(
+              (previous) =>
+                previous.map(
+                  (section) => {
+                    const updated =
+                      matchBySelector.get(
+                        section.selector
+                      );
+                    if (
+                      !updated
+                    ) {
+                      return section;
+                    }
+                    return {
+                      ...section,
+                      status:
+                        updated.status,
+                      matchCount:
+                        updated.matchCount,
+                      preview:
+                        updated.preview ||
+                        section.preview,
+                    };
+                  }
+                )
+            );
+          }
         } catch {
           setPreview({
             ok: false,
@@ -341,13 +621,12 @@ export function MonitoringScopeForm({
     );
   }
 
-  const hasIncludeSelectors =
-    includeSelectors
-      .trim()
-      .length > 0;
-
   return (
-    <WorkspaceActionForm successMessage="Monitoring scope saved." action={updateMonitoredPageMonitoringScope}
+    <WorkspaceActionForm
+      successMessage="Monitoring scope saved."
+      action={
+        updateMonitoredPageMonitoringScope
+      }
       className="mt-6 border-t border-slate-200 pt-5"
     >
       <input
@@ -366,70 +645,313 @@ export function MonitoringScopeForm({
         }
       />
 
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-        <div>
+      <input
+        type="hidden"
+        name="includeSelectors"
+        value={
+          effectiveIncludeSelectorsValue
+        }
+      />
+
+      <input
+        type="hidden"
+        name="ignoreSelectors"
+        value=""
+      />
+
+      <div className="workspace-scope-header flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+        <div className="min-w-0 flex-1">
           <h4 className="text-sm font-semibold text-slate-900">
             Monitoring scope
           </h4>
 
-          <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
-            Choose which parts of this page
-            Morrow should compare and which
-            parts to ignore.
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            Choose whether Morrow
+            monitors the whole page
+            or scans the page so you
+            can tick specific
+            sections to monitor.
           </p>
         </div>
 
-        <span className="inline-flex w-fit rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
+        <span className="workspace-scope-tag inline-flex w-fit shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1 text-xs font-medium text-slate-600">
           {hasIncludeSelectors
             ? "Selected sections"
             : "Whole page"}
         </span>
       </div>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-2">
-        <div>
-          <label
-            htmlFor={`include-selectors-${monitoredPageId}`}
-            className="mb-1.5 block text-xs font-medium text-slate-600"
-          >
-            Sections to monitor
+      {missingSelectedSelectors.length >
+      0 ? (
+        <div
+          role="alert"
+          className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5"
+        >
+          <p className="text-xs font-semibold text-amber-800">
+            Monitored section no
+            longer found on page
+          </p>
+          <p className="mt-1 text-xs leading-5 text-amber-700">
+            {missingSelectedSelectors.length ===
+            1
+              ? `The monitored section (${missingSelectedSelectors[0]}) appears to have been removed or renamed.`
+              : `${missingSelectedSelectors.length} monitored sections (${missingSelectedSelectors.join(", ")}) appear to have been removed or renamed.`}{" "}
+            Click{" "}
+            <strong>
+              Scan page for sections
+              to monitor
+            </strong>{" "}
+            below to refresh the
+            page&apos;s sections and
+            update your selection.
+          </p>
+        </div>
+      ) : null}
+
+      <div className="mt-4 space-y-3">
+        <div
+          className="workspace-choice-grid"
+          role="radiogroup"
+          aria-label="Monitoring scope mode"
+        >
+          <label className="workspace-choice-option">
+            <input
+              type="radio"
+              name={`scope-mode-${monitoredPageId}`}
+              checked={
+                scopeMode ===
+                "whole_page"
+              }
+              onChange={() => {
+                setScopeMode(
+                  "whole_page"
+                );
+                setPreview(
+                  null
+                );
+              }}
+            />
+            <div>
+              <div className="text-sm font-medium text-slate-900">
+                Monitor the whole
+                page
+              </div>
+              <div className="mt-0.5 text-xs leading-5 text-slate-500">
+                Compare all readable
+                content across the
+                entire page.
+              </div>
+            </div>
           </label>
 
-          <textarea
-            id={`include-selectors-${monitoredPageId}`}
-            name="includeSelectors"
-            value={
-              includeSelectors
-            }
-            onChange={(
-              event
-            ) => {
-              setIncludeSelectors(
-                event.target
-                  .value
-              );
+          <label className="workspace-choice-option">
+            <input
+              type="radio"
+              name={`scope-mode-${monitoredPageId}`}
+              checked={
+                scopeMode ===
+                "selected_sections"
+              }
+              onChange={() => {
+                setScopeMode(
+                  "selected_sections"
+                );
+                setPreview(
+                  null
+                );
+              }}
+            />
+            <div>
+              <div className="text-sm font-medium text-slate-900">
+                Scan page to select
+                sections to monitor
+              </div>
+              <div className="mt-0.5 text-xs leading-5 text-slate-500">
+                Tick which page
+                sections to monitor;
+                unticked sections
+                are ignored.
+              </div>
+            </div>
+          </label>
+        </div>
 
-              setPreview(
-                null
-              );
-            }}
-            placeholder={[
-              ".pricing",
-              "#features",
-              "[data-section='plans']",
-            ].join("\n")}
-            rows={6}
-            className={`${inputClasses} resize-y font-mono text-xs leading-5`}
-          />
+        <div>
+          <button
+            type="button"
+            onClick={
+              handleScanPageSections
+            }
+            disabled={
+              isScanPending
+            }
+            className={
+              buttonClasses
+            }
+          >
+            {isScanPending
+              ? "Scanning page for sections…"
+              : "Scan page for sections to monitor"}
+          </button>
+        </div>
+      </div>
+
+      {scanState &&
+      !scanState.ok ? (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5">
+          <p className="text-xs font-medium text-amber-800">
+            Unable to scan page
+            sections
+          </p>
+          <p className="mt-1 text-xs leading-5 text-amber-700">
+            {toUserFacingErrorMessage(
+              scanState.message,
+              "Morrow couldn't scan this page for sections."
+            )}
+          </p>
+        </div>
+      ) : null}
+
+      <div className="mt-5">
+        <div>
+          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+            <label className="block text-xs font-medium text-slate-600">
+              Sections to monitor
+            </label>
+
+            {availableSections.length >
+            0 ? (
+              <span className="text-xs text-slate-500">
+                {
+                  selectedSelectors.length
+                }{" "}
+                of{" "}
+                {
+                  availableSections.length
+                }{" "}
+                ticked
+              </span>
+            ) : null}
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-3.5">
+            {availableSections.length ===
+            0 ? (
+              <div className="py-3 text-center">
+                <p className="text-xs font-medium text-slate-700">
+                  {scopeMode ===
+                  "whole_page"
+                    ? "Whole page monitoring is active"
+                    : "No sections scanned yet"}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Click{" "}
+                  <strong>
+                    Scan page for
+                    sections to
+                    monitor
+                  </strong>{" "}
+                  above to list the
+                  sections found on
+                  this page so you
+                  can tick which ones
+                  to monitor.
+                </p>
+              </div>
+            ) : (
+              <div className="max-h-80 space-y-2.5 overflow-y-auto pr-1">
+                {scanState?.ok &&
+                scanState.capturedAt ? (
+                  <p className="text-xs text-slate-500">
+                    Scanned from
+                    capture on{" "}
+                    {formatCapturedAt(
+                      scanState.capturedAt
+                    )}
+                    .
+                  </p>
+                ) : null}
+
+                {availableSections.map(
+                  (section) => {
+                    const isChecked =
+                      scopeMode ===
+                        "selected_sections" &&
+                      selectedSelectors.includes(
+                        section.selector
+                      );
+
+                    return (
+                      <label
+                        key={
+                          section.selector
+                        }
+                        className="workspace-choice-option w-full"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={
+                            isChecked
+                          }
+                          onChange={() =>
+                            toggleSectionSelector(
+                              section.selector
+                            )
+                          }
+                        />
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="text-sm font-medium text-slate-900">
+                              {
+                                section.label
+                              }
+                            </span>
+
+                            <span
+                              className={`inline-flex w-fit shrink-0 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${getMatchClasses(
+                                section
+                              )}`}
+                            >
+                              {getMatchLabel(
+                                section
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="mt-1">
+                            <code className="break-all text-xs text-slate-600">
+                              {
+                                section.selector
+                              }
+                            </code>
+                          </div>
+
+                          {section.preview ? (
+                            <p className="mt-1.5 text-xs leading-5 text-slate-500">
+                              {
+                                section.preview
+                              }
+                            </p>
+                          ) : null}
+                        </div>
+                      </label>
+                    );
+                  }
+                )}
+              </div>
+            )}
+          </div>
 
           <p className="mt-2 text-xs leading-5 text-slate-400">
-            One CSS selector per
-            line. Leave this empty
-            to monitor the entire
-            page.
+            Tick the sections you
+            want Morrow to monitor.
+            Unticked sections are
+            automatically ignored.
           </p>
         </div>
 
+        {/*
         <div>
           <label
             htmlFor={`ignore-selectors-${monitoredPageId}`}
@@ -472,6 +994,7 @@ export function MonitoringScopeForm({
             a monitored section.
           </p>
         </div>
+        */}
       </div>
 
       {preview ? (
@@ -522,7 +1045,7 @@ export function MonitoringScopeForm({
                     </p>
 
                     <p className="mt-1 text-xs leading-5 text-slate-500">
-                      No section selectors are set,
+                      No section selectors are ticked,
                       so Morrow will compare the whole
                       page.
                     </p>
@@ -537,6 +1060,7 @@ export function MonitoringScopeForm({
                   />
                 )}
 
+                {/*
                 <SelectorResultList
                   title="Regions to ignore"
                   matches={
@@ -544,6 +1068,7 @@ export function MonitoringScopeForm({
                       .ignoreMatches
                   }
                 />
+                */}
               </div>
             </div>
           )}
@@ -552,10 +1077,10 @@ export function MonitoringScopeForm({
 
       <div className="workspace-scope-footer mt-5 border-t border-slate-100 pt-4">
         <p className="text-xs leading-5 text-slate-400">
-          Test these selectors
+          Test your selected sections
           against the latest capture
-          before saving. Up to 20
-          selectors per list.
+          to verify they are still
+          available before saving.
         </p>
 
         <div className="workspace-scope-actions">
@@ -587,3 +1112,4 @@ export function MonitoringScopeForm({
     </WorkspaceActionForm>
   );
 }
+
