@@ -23,6 +23,7 @@ import {
 import type { D1DatabaseLike } from "../worker/external-notifications.ts";
 import { getWorkspaceMembershipById } from "./team-workspaces.ts";
 import {
+  countMaxNonTelegramChannelsAcrossPeers,
   ensureWorkspaceSubscription,
   getOwnerAccountTransitionUsage,
   getWorkspaceSubscription,
@@ -1119,34 +1120,46 @@ export async function initiateOrUpdateWorkspaceSubscription(
       const targetPlan =
         getBillingPlanDefinition(targetPlanId);
 
-      const transitionUsage =
-        await getOwnerAccountTransitionUsage(
+      const [
+        transitionUsage,
+        peerWorkspaceIds,
+        fasterPagesCount,
+        nonTelegramChannels,
+      ] = await Promise.all([
+        getOwnerAccountTransitionUsage(
           db,
           workspaceId,
           {
             retentionDays:
               targetPlan.limits.historyRetentionDays,
           },
-        );
-      const peerWorkspaceIds = await listOwnerPeerWorkspaceIds(
-        db,
-        workspaceId,
-      );
+        ),
+        listOwnerPeerWorkspaceIds(db, workspaceId),
+        countPagesFasterThanInterval(
+          db,
+          workspaceId,
+          targetPlan.limits.minFrequencyMinutes,
+        ),
+        countMaxNonTelegramChannelsAcrossPeers(
+          db,
+          workspaceId,
+        ),
+      ]);
       const peerPlaceholders = peerWorkspaceIds
         .map(() => "?")
         .join(", ");
 
-      const fasterPagesCount =
-        await countPagesFasterThanInterval(
-          db,
-          workspaceId,
-          targetPlan.limits.minFrequencyMinutes,
-        );
-
       const evaluation = evaluatePlanTransition({
         currentPlanId: currentEntitlements.effectivePlanId,
         targetPlanId,
-        usage: transitionUsage,
+        usage:
+          targetPlan.limits.externalChannelsPerWorkspace ===
+          0
+            ? {
+                ...transitionUsage,
+                externalChannels: nonTelegramChannels,
+              }
+            : transitionUsage,
         fasterThanTargetMinFrequencyPages:
           fasterPagesCount,
         pagesWithCssSelectors:
@@ -1308,6 +1321,15 @@ export async function initiateOrUpdateWorkspaceSubscription(
               `,
             )
             .bind(input.actorUserId, ...peerWorkspaceIds),
+          db
+            .prepare(
+              `
+                DELETE FROM external_notification_channels
+                WHERE workspace_id IN (${peerPlaceholders})
+                  AND channel = 'telegram'
+              `,
+            )
+            .bind(...peerWorkspaceIds),
         ];
 
         if (
@@ -2887,6 +2909,24 @@ export async function processLemonSqueezyWebhook(
                     AND TRIM(ignore_selectors_json) != '[]'
                   )
                 )
+            `,
+          )
+          .bind(...peerWorkspaceIds),
+      );
+    }
+
+    // Only revoke Telegram channels when the subscription period has ended or effective plan does not accommodate Telegram use
+    if (
+      effectiveEntitlements.limits
+        .externalChannelsPerWorkspace === 0
+    ) {
+      statements.push(
+        db
+          .prepare(
+            `
+              DELETE FROM external_notification_channels
+              WHERE workspace_id IN (${peerPlaceholders})
+                AND channel = 'telegram'
             `,
           )
           .bind(...peerWorkspaceIds),

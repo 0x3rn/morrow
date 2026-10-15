@@ -20,6 +20,7 @@ import {
   type NotificationSignificanceLevel,
 } from "../worker/notification-routing.ts";
 import { getActiveWorkspaceMembership } from "./team-workspaces.ts";
+import { revokeWorkspaceTelegramChannelsIfIneligible } from "./telegram-bot.ts";
 import {
   assertWorkspaceDigestScheduleAllowed,
   assertWorkspaceExternalChannelCapacity,
@@ -110,6 +111,7 @@ export interface UpsertWorkspaceExternalChannelInput {
   slackWebhookUrl?: string;
   telegramBotToken?: string;
   telegramChatId?: string;
+  telegramUsername?: string | null;
   webhookUrl?: string;
   webhookSecret?: string;
   sendChanges: boolean;
@@ -304,6 +306,11 @@ export async function getWorkspaceNotificationSettings(
       "No workspace found for this account.",
     );
   }
+
+  await revokeWorkspaceTelegramChannelsIfIneligible(
+    db,
+    workspace.id,
+  );
 
   const [
     competitors,
@@ -768,27 +775,36 @@ function buildValidatedExternalConfigJson(
       const providedChatId = (
         input.telegramChatId ?? ""
       ).trim();
-      const chatId =
-        providedChatId ||
-        (typeof existingParsed.chatId === "string"
+      const existingChatId =
+        typeof existingParsed.chatId === "string"
           ? existingParsed.chatId.trim()
-          : "");
-
-      if (!botToken) {
-        throw new Error(
-          "Telegram bot token is required.",
-        );
-      }
+          : "";
+      const chatId = providedChatId || existingChatId;
 
       if (!chatId) {
         throw new Error(
-          "Telegram chat ID is required.",
+          "Telegram chat ID or @username is required.",
         );
       }
 
+      const providedUsername =
+        typeof input.telegramUsername === "string"
+          ? input.telegramUsername.trim().replace(/^@+/, "")
+          : "";
+      const existingUsername =
+        typeof existingParsed.username === "string"
+          ? existingParsed.username.trim().replace(/^@+/, "")
+          : "";
+      const username =
+        providedUsername ||
+        (!providedChatId || providedChatId === existingChatId
+          ? existingUsername
+          : "");
+
       candidateConfig = {
-        botToken,
+        ...(botToken ? { botToken } : {}),
         chatId,
+        ...(username ? { username } : {}),
         ...(typeof existingParsed.apiBaseUrl === "string" &&
         existingParsed.apiBaseUrl.trim().length > 0
           ? {
@@ -840,7 +856,9 @@ function buildValidatedExternalConfigJson(
   const serialized = JSON.stringify(candidateConfig);
 
   // Validate against the Worker's canonical parser (HTTPS enforcement, token syntax, etc.).
-  parseExternalChannelConfig(channel, serialized);
+  parseExternalChannelConfig(channel, serialized, {
+    defaultTelegramBotToken: "managed_morrow_bot_token",
+  });
 
   return serialized;
 }

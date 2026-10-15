@@ -24,6 +24,9 @@ interface __BaseEnv_Env {
 	LEMONSQUEEZY_GROWTH_ANNUAL_VARIANT_ID?: string;
 	LEMONSQUEEZY_SCALE_MONTHLY_VARIANT_ID?: string;
 	LEMONSQUEEZY_SCALE_ANNUAL_VARIANT_ID?: string;
+	MORROW_TELEGRAM_BOT_TOKEN?: string;
+	MORROW_TELEGRAM_BOT_USERNAME?: string;
+	MORROW_TELEGRAM_WEBHOOK_SECRET?: string;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {

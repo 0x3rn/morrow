@@ -242,6 +242,7 @@ test("THE-26.1: normalization, JSON parsing, and serialization helpers enforce c
     "navigation",
     "content",
     "other",
+    "section_removed",
   ]);
   assert.deepEqual(NOTIFICATION_SIGNIFICANCE_LEVELS, [
     "minor",

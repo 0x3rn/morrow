@@ -796,6 +796,11 @@ export function maskExternalChannelConfigSummary(
       typeof parsed.chatId === "number"
         ? String(parsed.chatId).trim()
         : "";
+    const username =
+      typeof parsed.username === "string" &&
+      parsed.username.trim().length > 0
+        ? parsed.username.trim().replace(/^@+/, "")
+        : "";
     const threadId =
       typeof parsed.messageThreadId === "number" &&
       Number.isInteger(parsed.messageThreadId) &&
@@ -809,7 +814,7 @@ export function maskExternalChannelConfigSummary(
     return {
       ...empty,
       summary: chatId
-        ? `Telegram chat ${chatId}${threadId ? ` (topic #${threadId})` : ""}`
+        ? `Telegram chat ${chatId}${username ? ` (@${username})` : ""}${threadId ? ` (topic #${threadId})` : ""}`
         : "Telegram bot",
       chatId,
       messageThreadId: threadId,

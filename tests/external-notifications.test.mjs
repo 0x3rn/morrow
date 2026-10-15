@@ -3,6 +3,23 @@ import { readFileSync, readdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
+import {
+  getWorkspaceNotificationSettings,
+  removeWorkspaceExternalChannel,
+} from "../lib/notification-settings.ts";
+import {
+  createTelegramLinkValidationHandler,
+  createTelegramWebhookHandler,
+  generateTelegramLinkCode,
+  getActiveTelegramLinkCodeForWorkspace,
+  resolveTelegramChatDestination,
+  revokeWorkspaceTelegramChannelsIfIneligible,
+} from "../lib/telegram-bot.ts";
+import {
+  changeWorkspaceSubscriptionPlan,
+  ensureWorkspaceSubscription,
+  setWorkspaceSubscriptionCancellation,
+} from "../lib/workspace-billing.ts";
 import { generateDigest } from "../worker/digest-generator.ts";
 import { runDigestScheduler } from "../worker/digest-scheduler.ts";
 import { verifyWebhookSignature } from "../worker/external-delivery.ts";
@@ -949,3 +966,504 @@ test("notifyDigestByExternalChannels and runDigestScheduler deliver generated di
   );
   assert.equal(reused.reused, true);
 });
+
+test("Official Morrow Telegram Bot resolves @username / connect token via webhook and delivers using MORROW_TELEGRAM_BOT_TOKEN", async (t) => {
+  const { sqlite, db } = createD1Fixture(t);
+
+  const sentMessages = [];
+  const fetcher = async (input, init) => {
+    const url = String(input);
+    const body = JSON.parse(String(init?.body ?? "{}"));
+    sentMessages.push({ url, body });
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        result: { message_id: 909 },
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  };
+
+  const webhookPost = createTelegramWebhookHandler(
+    {
+      DB: db,
+      MORROW_TELEGRAM_BOT_TOKEN: "88888:OFFICIAL_MORROW_BOT",
+      MORROW_TELEGRAM_WEBHOOK_SECRET: "tg_secret_123",
+    },
+    fetcher,
+  );
+
+  // Rejects invalid webhook secret
+  const unauthorizedRes = await webhookPost(
+    new Request("https://morrow.example.com/api/webhooks/telegram", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-telegram-bot-api-secret-token": "wrong_secret",
+      },
+      body: JSON.stringify({ update_id: 1 }),
+    }),
+  );
+  assert.equal(unauthorizedRes.status, 401);
+
+  // Processes /start from user @AliceFounder and prompts for the 10-minute temporary unique ID
+  const validRes = await webhookPost(
+    new Request("https://morrow.example.com/api/webhooks/telegram", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-telegram-bot-api-secret-token": "tg_secret_123",
+      },
+      body: JSON.stringify({
+        update_id: 2,
+        message: {
+          message_id: 10,
+          text: "/start",
+          chat: {
+            id: 777888999,
+            type: "private",
+            username: "AliceFounder",
+            first_name: "Alice",
+          },
+        },
+      }),
+    }),
+  );
+  assert.equal(validRes.status, 200);
+  assert.equal(sentMessages.length, 1);
+  assert.match(
+    sentMessages[0].body.text,
+    /temporary unique ID \(valid for 10 minutes\)/i,
+  );
+
+  // Resolves by @username (case-insensitive)
+  const resolvedByUsername =
+    await resolveTelegramChatDestination(db, {
+      rawChatIdOrUsername: "@AliceFounder",
+      botToken: "88888:OFFICIAL_MORROW_BOT",
+      fetcher,
+    });
+  assert.deepEqual(resolvedByUsername, {
+    chatId: "777888999",
+    username: "alicefounder",
+  });
+
+  // Channel stored without per-channel botToken delivers using env.MORROW_TELEGRAM_BOT_TOKEN
+  sqlite
+    .prepare(
+      `
+        INSERT INTO external_notification_channels (
+          id, workspace_id, channel, name, status, config_json
+        )
+        VALUES (
+          'ch_managed_tg',
+          'ws_acme',
+          'telegram',
+          'Alice Telegram DM',
+          'active',
+          '{"chatId":"777888999","username":"alicefounder"}'
+        )
+      `,
+    )
+    .run();
+
+  const deliveryResult =
+    await notifyChangeByExternalChannels(
+      {
+        DB: db,
+        MORROW_APP_URL: "https://morrow.example.com",
+        MORROW_TELEGRAM_BOT_TOKEN: "88888:OFFICIAL_MORROW_BOT",
+      },
+      "chg_stripe_01",
+      fetcher,
+    );
+
+  assert.equal(deliveryResult.sent, 1);
+  assert.equal(sentMessages.length, 2);
+  assert.equal(
+    sentMessages[1].url,
+    "https://api.telegram.org/bot88888:OFFICIAL_MORROW_BOT/sendMessage",
+  );
+  assert.equal(sentMessages[1].body.chat_id, "777888999");
+});
+
+test("10-minute temporary unique ID linking flow, delivery channels list appearance, manual revocation, paid-tier downgrades, and period-end subscription revocation", async (t) => {
+  const { sqlite, db } = createD1Fixture(t);
+  sqlite
+    .prepare(
+      `DELETE FROM workspace_members WHERE workspace_id = 'ws_other' AND user_id = 'usr_owner'`,
+    )
+    .run();
+
+  const sentMessages = [];
+  const fetcher = async (input, init) => {
+    const url = String(input);
+    const body = JSON.parse(String(init?.body ?? "{}"));
+    sentMessages.push({ url, body });
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        result: { message_id: 501 },
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  };
+
+  const webhookPost = createTelegramWebhookHandler(
+    {
+      DB: db,
+      MORROW_TELEGRAM_BOT_TOKEN: "88888:OFFICIAL_MORROW_BOT",
+      MORROW_TELEGRAM_WEBHOOK_SECRET: "tg_secret_123",
+    },
+    fetcher,
+  );
+  const apiValidatePost = createTelegramLinkValidationHandler({
+    DB: db,
+    MORROW_TELEGRAM_BOT_TOKEN: "88888:OFFICIAL_MORROW_BOT",
+    MORROW_TELEGRAM_WEBHOOK_SECRET: "tg_secret_123",
+  });
+
+  // 1. Free plan user CANNOT generate a temporary link ID
+  await ensureWorkspaceSubscription(db, {
+    workspaceId: "ws_acme",
+    actorUserId: "usr_owner",
+    planId: "free",
+  });
+
+  await assert.rejects(
+    () =>
+      generateTelegramLinkCode(db, {
+        userId: "usr_owner",
+        name: "Founder Alerts",
+      }),
+    /External notification channels are not included on the Free plan/,
+  );
+
+  // 2. Upgrade to Scale plan -> user is now eligible to generate a 10-minute temporary unique ID
+  await changeWorkspaceSubscriptionPlan(db, {
+    actorUserId: "usr_owner",
+    workspaceId: "ws_acme",
+    planId: "scale",
+  });
+
+  const t0 = new Date("2026-10-15T12:00:00.000Z");
+  const expiredLinkCode = await generateTelegramLinkCode(db, {
+    userId: "usr_owner",
+    name: "Expired Channel",
+    now: new Date(t0.getTime() - 11 * 60 * 1000), // 11 minutes ago (> 10 min TTL)
+  });
+
+  // Validating an ID older than 10 minutes over the API returns 410 Expired
+  const expiredApiRes = await apiValidatePost(
+    new Request("https://morrow.example.com/api/telegram/link", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-telegram-bot-api-secret-token": "tg_secret_123",
+      },
+      body: JSON.stringify({
+        code: expiredLinkCode.code,
+        chatId: "555666777",
+        username: "founder_tg",
+      }),
+    }),
+  );
+  assert.equal(expiredApiRes.status, 410);
+  const expiredBody = await expiredApiRes.json();
+  assert.equal(expiredBody.ok, false);
+  assert.equal(expiredBody.reason, "expired_code");
+
+  // 3. Generate a fresh 10-minute temporary unique ID
+  const activeLinkCode = await generateTelegramLinkCode(db, {
+    userId: "usr_owner",
+    name: "Founder Telegram",
+    sendChanges: true,
+    sendDigests: true,
+    minSignificance: "moderate",
+    digestPeriods: ["weekly"],
+  });
+  assert.match(activeLinkCode.code, /^MRW-[A-Z0-9]{8}$/);
+
+  const activeForWorkspace =
+    await getActiveTelegramLinkCodeForWorkspace(
+      db,
+      "ws_acme",
+    );
+  assert.equal(activeForWorkspace?.code, activeLinkCode.code);
+
+  // 4. User starts the bot (/start) -> bot prompts for the 10-minute temporary unique ID
+  await webhookPost(
+    new Request("https://morrow.example.com/api/webhooks/telegram", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-telegram-bot-api-secret-token": "tg_secret_123",
+      },
+      body: JSON.stringify({
+        update_id: 100,
+        message: {
+          message_id: 1,
+          text: "/start",
+          chat: {
+            id: 555666777,
+            type: "private",
+            username: "FounderTG",
+          },
+        },
+      }),
+    }),
+  );
+  assert.equal(sentMessages.length, 1);
+  assert.match(
+    sentMessages[0].body.text,
+    /send your temporary unique ID \(valid for 10 minutes\)/i,
+  );
+
+  // 5. User replies with the temporary unique ID -> bot validates it and links their Telegram ID to delivery channels
+  const linkWebhookRes = await webhookPost(
+    new Request("https://morrow.example.com/api/webhooks/telegram", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-telegram-bot-api-secret-token": "tg_secret_123",
+      },
+      body: JSON.stringify({
+        update_id: 101,
+        message: {
+          message_id: 2,
+          text: activeLinkCode.code,
+          chat: {
+            id: 555666777,
+            type: "private",
+            username: "FounderTG",
+          },
+        },
+      }),
+    }),
+  );
+  assert.equal(linkWebhookRes.status, 200);
+  const linkWebhookPayload = await linkWebhookRes.json();
+  assert.equal(linkWebhookPayload.linked, true);
+  assert.equal(sentMessages.length, 2);
+  assert.match(
+    sentMessages[1].body.text,
+    /Telegram linked to Morrow/i,
+  );
+  assert.match(sentMessages[1].body.text, /555666777/);
+
+  // Re-using the same consumed code is rejected
+  const reusedApiRes = await apiValidatePost(
+    new Request("https://morrow.example.com/api/telegram/link", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-telegram-bot-api-secret-token": "tg_secret_123",
+      },
+      body: JSON.stringify({
+        code: activeLinkCode.code,
+        chatId: "555666777",
+      }),
+    }),
+  );
+  assert.equal(reusedApiRes.status, 410);
+
+  // 6. User's Telegram ID now appears in the Workspace delivery channels list
+  let settings = await getWorkspaceNotificationSettings(
+    db,
+    "usr_owner",
+  );
+  assert.equal(settings.externalChannels.length, 1);
+  assert.equal(
+    settings.externalChannels[0].channel,
+    "telegram",
+  );
+  assert.equal(
+    settings.externalChannels[0].telegramChatId,
+    "555666777",
+  );
+  assert.match(
+    settings.externalChannels[0].configSummary,
+    /Telegram chat 555666777 \(@foundertg\)/,
+  );
+
+  // 7. CRITICAL RULE 1: Downgrading from a higher plan to a lower plan that STILL accommodates Telegram use
+  // (Scale -> Growth -> Starter -> Personal) MUST NOT revoke the user's Telegram channel!
+  for (const targetPlanId of ["growth", "starter", "personal"]) {
+    await changeWorkspaceSubscriptionPlan(db, {
+      actorUserId: "usr_owner",
+      workspaceId: "ws_acme",
+      planId: targetPlanId,
+    });
+    settings = await getWorkspaceNotificationSettings(
+      db,
+      "usr_owner",
+    );
+    assert.equal(
+      settings.externalChannels.length,
+      1,
+      `Telegram channel must NOT be revoked when downgrading to ${targetPlanId}`,
+    );
+    assert.equal(
+      settings.externalChannels[0].telegramChatId,
+      "555666777",
+    );
+  }
+
+  // 8. CRITICAL RULE 2: Canceling the subscription while the user still has an active billing period
+  // MUST NOT revoke the user's Telegram channel until the end of the subscription period!
+  await setWorkspaceSubscriptionCancellation(db, {
+    actorUserId: "usr_owner",
+    workspaceId: "ws_acme",
+    cancelAtPeriodEnd: true,
+  });
+
+  // Set current_period_end to 15 days in the future (active billing period)
+  const futurePeriodEnd = new Date(
+    Date.now() + 15 * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  sqlite
+    .prepare(
+      `
+        UPDATE workspace_subscriptions
+        SET current_period_end = ?
+        WHERE workspace_id = 'ws_acme'
+      `,
+    )
+    .run(futurePeriodEnd);
+
+  settings = await getWorkspaceNotificationSettings(
+    db,
+    "usr_owner",
+  );
+  assert.equal(
+    settings.externalChannels.length,
+    1,
+    "Telegram channel must NOT be revoked while canceled subscription still has an active billing period",
+  );
+
+  // Worker notifications also continue to deliver during the active billing period of a canceled subscription
+  const activePeriodDelivery =
+    await notifyChangeByExternalChannels(
+      {
+        DB: db,
+        MORROW_APP_URL: "https://morrow.example.com",
+        MORROW_TELEGRAM_BOT_TOKEN: "88888:OFFICIAL_MORROW_BOT",
+      },
+      "chg_stripe_01",
+      fetcher,
+    );
+  assert.equal(activePeriodDelivery.sent, 1);
+
+  // 9. When the subscription period ends (current_period_end <= now), the Telegram channel IS automatically revoked!
+  const pastPeriodEnd = new Date(
+    Date.now() - 60 * 1000,
+  ).toISOString();
+  sqlite
+    .prepare(
+      `
+        UPDATE workspace_subscriptions
+        SET current_period_end = ?
+        WHERE workspace_id = 'ws_acme'
+      `,
+    )
+    .run(pastPeriodEnd);
+
+  settings = await getWorkspaceNotificationSettings(
+    db,
+    "usr_owner",
+  );
+  assert.equal(
+    settings.externalChannels.length,
+    0,
+    "Telegram channel must be automatically revoked once the canceled subscription period ends",
+  );
+
+  // 10. Re-subscribe to Personal, link Telegram again, then test manual revocation by the user
+  // and immediate revocation when switching to a plan that does not accommodate Telegram (Free).
+  await changeWorkspaceSubscriptionPlan(db, {
+    actorUserId: "usr_owner",
+    workspaceId: "ws_acme",
+    planId: "personal",
+  });
+
+  const secondCode = await generateTelegramLinkCode(db, {
+    userId: "usr_owner",
+    name: "Second Link",
+  });
+  await apiValidatePost(
+    new Request("https://morrow.example.com/api/telegram/link", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-telegram-bot-api-secret-token": "tg_secret_123",
+      },
+      body: JSON.stringify({
+        code: secondCode.code,
+        chatId: "555666777",
+        username: "FounderTG",
+      }),
+    }),
+  );
+
+  settings = await getWorkspaceNotificationSettings(
+    db,
+    "usr_owner",
+  );
+  assert.equal(settings.externalChannels.length, 1);
+
+  // Manual revocation by the user removes the Telegram channel
+  await removeWorkspaceExternalChannel(db, {
+    userId: "usr_owner",
+    channelId: settings.externalChannels[0].id,
+  });
+  settings = await getWorkspaceNotificationSettings(
+    db,
+    "usr_owner",
+  );
+  assert.equal(settings.externalChannels.length, 0);
+
+  // Link again, then switch plan to Free (a plan that does not accommodate Telegram use) -> automatically revoked
+  const thirdCode = await generateTelegramLinkCode(db, {
+    userId: "usr_owner",
+    name: "Third Link",
+  });
+  await apiValidatePost(
+    new Request("https://morrow.example.com/api/telegram/link", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-telegram-bot-api-secret-token": "tg_secret_123",
+      },
+      body: JSON.stringify({
+        code: thirdCode.code,
+        chatId: "555666777",
+        username: "FounderTG",
+      }),
+    }),
+  );
+  assert.equal(
+    (await getWorkspaceNotificationSettings(db, "usr_owner"))
+      .externalChannels.length,
+    1,
+  );
+
+  await changeWorkspaceSubscriptionPlan(db, {
+    actorUserId: "usr_owner",
+    workspaceId: "ws_acme",
+    planId: "free",
+  });
+  assert.equal(
+    (await getWorkspaceNotificationSettings(db, "usr_owner"))
+      .externalChannels.length,
+    0,
+    "Telegram channel must be automatically revoked when switching to Free plan",
+  );
+});
+
+

@@ -6,6 +6,11 @@ import {
   type WorkspaceCompetitorOption,
   type WorkspaceExternalChannelView,
 } from "@/lib/notification-settings";
+import {
+  buildTelegramBotDeepLink,
+  getActiveTelegramLinkCodeForWorkspace,
+  normalizeTelegramBotUsername,
+} from "@/lib/telegram-bot";
 import { getWorkspaceEntitlements } from "@/lib/workspace-billing";
 import {
   NOTIFICATION_CHANGE_CATEGORIES,
@@ -21,7 +26,9 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import {
+  cancelTelegramLinkIdAction,
   createExternalChannel,
+  generateTelegramLinkIdAction,
   removeExternalChannel,
   toggleExternalChannelStatus,
   updateEmailNotificationPreferences,
@@ -322,11 +329,16 @@ function RoutingFilterFields({
 function ChannelDestinationFields({
   idPrefix,
   channel,
+  telegramBotUsername,
 }: {
   idPrefix: string;
   channel?: WorkspaceExternalChannelView;
+  telegramBotUsername?: string | null;
 }) {
   const isEditing = Boolean(channel);
+  const botDeepLink = telegramBotUsername
+    ? buildTelegramBotDeepLink(telegramBotUsername)
+    : null;
 
   return (
     <div className="grid gap-4">
@@ -351,42 +363,50 @@ function ChannelDestinationFields({
       ) : null}
 
       {!channel || channel.channel === "telegram" ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label
-              htmlFor={`${idPrefix}-telegram-bot-token`}
-              className="mb-1.5 block text-xs font-medium text-slate-600"
-            >
-              Telegram bot token{" "}
-              {isEditing
-                ? "(leave blank to keep existing token)"
-                : "(required for Telegram)"}
-            </label>
-            <input
-              id={`${idPrefix}-telegram-bot-token`}
-              name="telegramBotToken"
-              type="password"
-              autoComplete="off"
-              placeholder="123456789:AAH..."
-            />
+        <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+          <div className="flex flex-col justify-between gap-2.5 sm:flex-row sm:items-center">
+            <div>
+              <div className="text-xs font-semibold text-slate-800">
+                Telegram connection (10-minute link ID)
+              </div>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {isEditing
+                  ? "This channel is linked to the Telegram ID shown below."
+                  : telegramBotUsername
+                    ? `Select "Telegram bot chat" and click Create channel to generate a temporary unique ID (expires in 10 minutes), then send that ID to @${telegramBotUsername} in Telegram.`
+                    : 'Select "Telegram bot chat" and click Create channel to generate a temporary unique ID (expires in 10 minutes), then send that ID to the Morrow bot in Telegram.'}
+              </p>
+            </div>
+
+            {botDeepLink ? (
+              <a
+                href={botDeepLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="workspace-panel-trigger workspace-panel-secondary shrink-0 text-xs"
+              >
+                Open @{telegramBotUsername} in Telegram
+              </a>
+            ) : null}
           </div>
 
-          <div>
-            <label
-              htmlFor={`${idPrefix}-telegram-chat-id`}
-              className="mb-1.5 block text-xs font-medium text-slate-600"
-            >
-              Telegram chat ID{" "}
-              {isEditing ? "" : "(required for Telegram)"}
-            </label>
-            <input
-              id={`${idPrefix}-telegram-chat-id`}
-              name="telegramChatId"
-              type="text"
-              defaultValue={channel?.telegramChatId ?? ""}
-              placeholder="-1001234567890"
-            />
-          </div>
+          {isEditing ? (
+            <div>
+              <label
+                htmlFor={`${idPrefix}-telegram-chat-id`}
+                className="mb-1.5 block text-xs font-medium text-slate-600"
+              >
+                Linked Telegram ID
+              </label>
+              <input
+                id={`${idPrefix}-telegram-chat-id`}
+                name="telegramChatId"
+                type="text"
+                defaultValue={channel?.telegramChatId ?? ""}
+                placeholder="123456789"
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -442,6 +462,10 @@ export default async function NotificationsPage() {
     redirect("/login");
   }
 
+  const telegramBotUsername = normalizeTelegramBotUsername(
+    env.MORROW_TELEGRAM_BOT_USERNAME,
+  );
+
   const settings = await getWorkspaceNotificationSettings(
     env.DB,
     session.user.id,
@@ -454,15 +478,21 @@ export default async function NotificationsPage() {
     externalChannels,
     deliveryMetrics,
   } = settings;
-  const entitlements = await getWorkspaceEntitlements(
-    env.DB,
-    workspace.id,
-  );
+  const [entitlements, activeTelegramLinkCode] =
+    await Promise.all([
+      getWorkspaceEntitlements(env.DB, workspace.id),
+      getActiveTelegramLinkCodeForWorkspace(
+        env.DB,
+        workspace.id,
+      ),
+    ]);
   const allowedDigestPeriodSet = new Set<string>(
     entitlements.features.allowedDigestPeriods,
   );
   const canManageExternalChannels =
     workspace.canManageExternalChannels;
+  const isTelegramPlanEligible =
+    entitlements.limits.externalChannelsPerWorkspace > 0;
 
   const activeExternalChannels = externalChannels.filter(
     (channel) => channel.status === "active",
@@ -553,7 +583,10 @@ export default async function NotificationsPage() {
                   </div>
                 </div>
 
-                <ChannelDestinationFields idPrefix="new-channel" />
+                <ChannelDestinationFields
+                  idPrefix="new-channel"
+                  telegramBotUsername={telegramBotUsername}
+                />
 
                 <div>
                   <div className="mb-1.5 text-xs font-medium text-slate-600">
@@ -912,15 +945,98 @@ export default async function NotificationsPage() {
               </p>
             </div>
 
-            <div className="text-sm font-medium text-slate-500">
-              {externalChannels.length} /{" "}
-              {
+            <div className="flex flex-wrap items-center gap-3">
+              {canManageExternalChannels &&
+              isTelegramPlanEligible &&
+              externalChannels.length <
                 entitlements.limits
-                  .externalChannelsPerWorkspace
-              }{" "}
-              channels ({entitlements.planName} plan)
+                  .externalChannelsPerWorkspace ? (
+                <WorkspaceActionForm
+                  action={generateTelegramLinkIdAction}
+                  successMessage="Temporary 10-minute Telegram link ID generated."
+                >
+                  <button
+                    type="submit"
+                    className="workspace-panel-trigger workspace-panel-secondary text-xs"
+                  >
+                    Generate Telegram link ID (10 min)
+                  </button>
+                </WorkspaceActionForm>
+              ) : null}
+
+              <div className="text-sm font-medium text-slate-500">
+                {externalChannels.length} /{" "}
+                {
+                  entitlements.limits
+                    .externalChannelsPerWorkspace
+                }{" "}
+                channels ({entitlements.planName} plan)
+              </div>
             </div>
           </div>
+
+          {canManageExternalChannels &&
+          activeTelegramLinkCode ? (
+            <div className="mb-6 rounded-2xl border border-indigo-200 bg-indigo-50/70 p-5 shadow-sm">
+              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-700">
+                    Temporary Telegram Link ID (valid for 10 minutes)
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <code className="rounded-xl border border-indigo-200 bg-white px-3.5 py-1.5 font-mono text-lg font-bold tracking-wider text-slate-950">
+                      {activeTelegramLinkCode.code}
+                    </code>
+                    <span className="text-xs font-medium text-slate-600">
+                      Expires {formatDateTime(activeTelegramLinkCode.expiresAt)}
+                    </span>
+                  </div>
+                  <p className="mt-2.5 text-xs leading-5 text-slate-600">
+                    1. Open{" "}
+                    {telegramBotUsername ? (
+                      <strong>@{telegramBotUsername}</strong>
+                    ) : (
+                      "the Morrow Telegram bot"
+                    )}{" "}
+                    in Telegram and send <code>/start</code>. 2. When prompted by the bot, send{" "}
+                    <strong>{activeTelegramLinkCode.code}</strong> to link your Telegram account. Once validated, your Telegram ID will appear in the delivery channels list below.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {telegramBotUsername ? (
+                    <a
+                      href={buildTelegramBotDeepLink(
+                        telegramBotUsername,
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="workspace-primary text-xs"
+                    >
+                      Open @{telegramBotUsername}
+                    </a>
+                  ) : null}
+
+                  <WorkspaceActionForm
+                    action={cancelTelegramLinkIdAction}
+                    successMessage="Temporary Telegram link ID canceled."
+                  >
+                    <input
+                      type="hidden"
+                      name="code"
+                      value={activeTelegramLinkCode.code}
+                    />
+                    <button
+                      type="submit"
+                      className="workspace-panel-trigger workspace-panel-secondary text-xs"
+                    >
+                      Cancel ID
+                    </button>
+                  </WorkspaceActionForm>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {externalChannels.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
@@ -929,7 +1045,7 @@ export default async function NotificationsPage() {
               </h3>
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
                 {canManageExternalChannels
-                  ? "Use “Add delivery channel” above to connect Slack, Telegram, or a custom HTTPS webhook to this workspace."
+                  ? "Use “Add delivery channel” or “Generate Telegram link ID” above to connect Slack, Telegram, or a custom HTTPS webhook to this workspace."
                   : "Workspace owners and admins can connect Slack, Telegram, or custom HTTPS webhooks to this workspace."}
               </p>
             </div>
@@ -1068,7 +1184,7 @@ export default async function NotificationsPage() {
                     {canManageExternalChannels ? (
                     <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-4 sm:px-6">
                       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                        <div className="workspace-record-actions">
+                        <div className="workspace-record-actions flex flex-wrap items-center gap-2">
                           <WorkspaceActionForm
                             action={
                               toggleExternalChannelStatus
@@ -1092,6 +1208,29 @@ export default async function NotificationsPage() {
                               {channel.status === "active"
                                 ? "Pause"
                                 : "Resume"}
+                            </button>
+                          </WorkspaceActionForm>
+
+                          <WorkspaceActionForm
+                            action={removeExternalChannel}
+                            successMessage={
+                              channel.channel === "telegram"
+                                ? "Telegram access revoked."
+                                : "Channel removed."
+                            }
+                          >
+                            <input
+                              type="hidden"
+                              name="channelId"
+                              value={channel.id}
+                            />
+                            <button
+                              type="submit"
+                              className="workspace-panel-trigger workspace-panel-secondary text-red-700 hover:bg-red-50"
+                            >
+                              {channel.channel === "telegram"
+                                ? "Revoke"
+                                : "Remove"}
                             </button>
                           </WorkspaceActionForm>
                         </div>
@@ -1139,6 +1278,9 @@ export default async function NotificationsPage() {
                               <ChannelDestinationFields
                                 idPrefix={`edit-channel-${channel.id}`}
                                 channel={channel}
+                                telegramBotUsername={
+                                  telegramBotUsername
+                                }
                               />
 
                               <div>

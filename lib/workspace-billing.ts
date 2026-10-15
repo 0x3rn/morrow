@@ -1058,7 +1058,11 @@ export async function getWorkspaceBillingSnapshot(
     currentPeriodEnd: subscription.currentPeriodEnd,
   });
 
-  const [usage, transitionUsage] = await Promise.all([
+  const [
+    usage,
+     transitionUsage,
+    nonTelegramChannels,
+  ] = await Promise.all([
     getWorkspaceMeteredUsage(db, activeWorkspace.id, {
       retentionDays:
         entitlements.limits.historyRetentionDays,
@@ -1070,6 +1074,10 @@ export async function getWorkspaceBillingSnapshot(
         retentionDays:
           entitlements.limits.historyRetentionDays,
       },
+    ),
+    countMaxNonTelegramChannelsAcrossPeers(
+      db,
+      activeWorkspace.id,
     ),
   ]);
 
@@ -1100,7 +1108,13 @@ export async function getWorkspaceBillingSnapshot(
       const transition = evaluatePlanTransition({
         currentPlanId: entitlements.effectivePlanId,
         targetPlanId: planId,
-        usage: transitionUsage,
+        usage:
+          plan.limits.externalChannelsPerWorkspace === 0
+            ? {
+                ...transitionUsage,
+                externalChannels: nonTelegramChannels,
+              }
+            : transitionUsage,
         fasterThanTargetMinFrequencyPages: fasterPages,
         pagesWithCssSelectors:
           transitionUsage.pagesWithCssSelectors,
@@ -1194,6 +1208,41 @@ export async function getWorkspaceBillingSnapshot(
   };
 }
 
+export async function countMaxNonTelegramChannelsAcrossPeers(
+  db: D1DatabaseLike,
+  workspaceId: string,
+): Promise<number> {
+  const peerWorkspaceIds = await listOwnerPeerWorkspaceIds(
+    db,
+    workspaceId,
+  );
+  const placeholders = peerWorkspaceIds
+    .map(() => "?")
+    .join(", ");
+
+  try {
+    const row = await db
+      .prepare(
+        `
+          SELECT COALESCE(MAX(ch_count), 0) AS count
+          FROM (
+            SELECT COUNT(*) AS ch_count
+            FROM external_notification_channels
+            WHERE workspace_id IN (${placeholders})
+              AND channel != 'telegram'
+            GROUP BY workspace_id
+          )
+        `,
+      )
+      .bind(...peerWorkspaceIds)
+      .first<{ count: number }>();
+
+    return Number(row?.count ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
 export async function changeWorkspaceSubscriptionPlan(
   db: D1DatabaseLike,
   input: {
@@ -1279,25 +1328,36 @@ export async function changeWorkspaceSubscriptionPlan(
   const targetPlan =
     getBillingPlanDefinition(targetPlanId);
 
-  const [usage, fasterPagesCount, peerWorkspaceIds] =
-    await Promise.all([
-      getOwnerAccountTransitionUsage(db, workspaceId, {
-        retentionDays:
-          targetPlan.limits.historyRetentionDays,
-      }),
-      countPagesFasterThanInterval(
-        db,
-        workspaceId,
-        targetPlan.limits.minFrequencyMinutes,
-      ),
-      listOwnerPeerWorkspaceIds(db, workspaceId),
-    ]);
+  const [
+    usage,
+    fasterPagesCount,
+    peerWorkspaceIds,
+    nonTelegramChannels,
+  ] = await Promise.all([
+    getOwnerAccountTransitionUsage(db, workspaceId, {
+      retentionDays:
+        targetPlan.limits.historyRetentionDays,
+    }),
+    countPagesFasterThanInterval(
+      db,
+      workspaceId,
+      targetPlan.limits.minFrequencyMinutes,
+    ),
+    listOwnerPeerWorkspaceIds(db, workspaceId),
+    countMaxNonTelegramChannelsAcrossPeers(db, workspaceId),
+  ]);
 
   const evaluation = evaluatePlanTransition({
     currentPlanId:
       currentEffectiveEntitlements.effectivePlanId,
     targetPlanId,
-    usage,
+    usage:
+      targetPlan.limits.externalChannelsPerWorkspace === 0
+        ? {
+            ...usage,
+            externalChannels: nonTelegramChannels,
+          }
+        : usage,
     fasterThanTargetMinFrequencyPages: fasterPagesCount,
     pagesWithCssSelectors:
       usage.pagesWithCssSelectors,
@@ -1522,6 +1582,23 @@ export async function changeWorkspaceSubscriptionPlan(
     );
   }
 
+  // Only revoke Telegram channels when transitioning to a plan that does not accommodate Telegram use (Free)
+  if (
+    targetPlan.limits.externalChannelsPerWorkspace === 0
+  ) {
+    statements.push(
+      db
+        .prepare(
+          `
+            DELETE FROM external_notification_channels
+            WHERE workspace_id IN (${peerPlaceholders})
+              AND channel = 'telegram'
+          `,
+        )
+        .bind(...peerWorkspaceIds),
+    );
+  }
+
   statements.push(
     db
       .prepare(
@@ -1714,6 +1791,15 @@ export async function setWorkspaceSubscriptionCancellation(
           `,
         )
         .bind(input.actorUserId, ...peerWorkspaceIds),
+      db
+        .prepare(
+          `
+            DELETE FROM external_notification_channels
+            WHERE workspace_id IN (${peerPlaceholders})
+              AND channel = 'telegram'
+          `,
+        )
+        .bind(...peerWorkspaceIds),
     ];
 
     if (fasterPagesCount > 0) {

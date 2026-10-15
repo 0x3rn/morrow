@@ -1,3 +1,4 @@
+import { resolveWorkspaceEntitlements } from "../lib/billing-plans.ts";
 import type { ChangeNotificationContext } from "./change-email.ts";
 import {
   DIGEST_PERIODS,
@@ -49,6 +50,11 @@ export interface D1DatabaseLike {
 export interface ExternalNotificationEnv {
   DB: D1DatabaseLike;
   MORROW_APP_URL?: string;
+  MORROW_TELEGRAM_BOT_TOKEN?: string;
+}
+
+export interface ParseExternalChannelConfigOptions {
+  defaultTelegramBotToken?: string;
 }
 
 export interface ExternalChannelRow {
@@ -171,6 +177,7 @@ function isDigestPeriod(
 export function parseExternalChannelConfig(
   channel: string,
   configJson: string,
+  options: ParseExternalChannelConfigOptions = {},
 ): ExternalChannelDestination {
   if (!isExternalDeliveryChannel(channel)) {
     throw new Error(
@@ -209,8 +216,18 @@ export function parseExternalChannelConfig(
     }
 
     case "telegram": {
+      const candidateBotToken =
+        typeof parsed.botToken === "string" &&
+        parsed.botToken.trim().length > 0
+          ? parsed.botToken.trim()
+          : typeof options.defaultTelegramBotToken ===
+                "string" &&
+              options.defaultTelegramBotToken.trim().length >
+                0
+            ? options.defaultTelegramBotToken.trim()
+            : "";
       const botToken = assertNonEmptyString(
-        parsed.botToken,
+        candidateBotToken,
         "Telegram botToken",
       );
       if (/[\s/?#\\]/.test(botToken)) {
@@ -368,10 +385,100 @@ async function getGeneratedDigestById(
   };
 }
 
+async function revokeIneligibleWorkspaceTelegramChannels(
+  db: D1DatabaseLike,
+  workspaceId: string,
+): Promise<void> {
+  try {
+    const subRow = await db
+      .prepare(
+        `
+          SELECT
+            plan_id,
+            status,
+            billing_interval,
+            cancel_at_period_end,
+            current_period_end
+          FROM workspace_subscriptions
+          WHERE workspace_id = ?
+             OR workspace_id IN (
+               SELECT w_peer.id
+               FROM workspaces w_self
+               INNER JOIN workspaces w_peer
+                 ON w_peer.created_by = w_self.created_by
+               WHERE w_self.id = ?
+                 AND w_self.created_by IS NOT NULL
+             )
+          ORDER BY
+            CASE
+              WHEN status != 'canceled' THEN 1
+              ELSE 0
+            END DESC,
+            CASE plan_id
+              WHEN 'scale' THEN 5
+              WHEN 'growth' THEN 4
+              WHEN 'starter' THEN 3
+              WHEN 'personal' THEN 2
+              ELSE 1
+            END DESC,
+            CASE
+              WHEN workspace_id = ? THEN 1
+              ELSE 0
+            END DESC,
+            datetime(updated_at) DESC
+          LIMIT 1
+        `,
+      )
+      .bind(workspaceId, workspaceId, workspaceId)
+      .first<{
+        plan_id: string;
+        status: string;
+        billing_interval: string;
+        cancel_at_period_end: number;
+        current_period_end: string | null;
+      }>();
+
+    if (!subRow) {
+      return;
+    }
+
+    const entitlements = resolveWorkspaceEntitlements({
+      planId: subRow.plan_id,
+      subscriptionStatus: subRow.status,
+      billingInterval: subRow.billing_interval,
+      cancelAtPeriodEnd:
+        Number(subRow.cancel_at_period_end) === 1,
+      currentPeriodEnd: subRow.current_period_end,
+    });
+
+    if (entitlements.limits.externalChannelsPerWorkspace > 0) {
+      return;
+    }
+
+    await db
+      .prepare(
+        `
+          DELETE FROM external_notification_channels
+          WHERE workspace_id = ?
+            AND channel = 'telegram'
+        `,
+      )
+      .bind(workspaceId)
+      .run();
+  } catch {
+    // Ignore if workspace_subscriptions table is unavailable in minimal test fixtures
+  }
+}
+
 async function getActiveWorkspaceChannels(
   db: D1DatabaseLike,
   workspaceId: string,
 ): Promise<ExternalChannelRow[]> {
+  await revokeIneligibleWorkspaceTelegramChannels(
+    db,
+    workspaceId,
+  );
+
   const { results } = await db
     .prepare(
       `
@@ -764,6 +871,10 @@ export async function notifyChangeByExternalChannels(
       const destination = parseExternalChannelConfig(
         channelRow.channel,
         channelRow.config_json,
+        {
+          defaultTelegramBotToken:
+            env.MORROW_TELEGRAM_BOT_TOKEN,
+        },
       );
       const event = buildChangeDeliveryEvent(
         context,
@@ -946,6 +1057,10 @@ export async function notifyDigestByExternalChannels(
       const destination = parseExternalChannelConfig(
         channelRow.channel,
         channelRow.config_json,
+        {
+          defaultTelegramBotToken:
+            env.MORROW_TELEGRAM_BOT_TOKEN,
+        },
       );
       const event = buildDigestDeliveryEvent(
         scopedDigest,
