@@ -396,7 +396,8 @@ export default async function BillingPage() {
                           </span>
                         </div>
 
-                        {cardInterval === "annual" &&
+                        {isModalCard &&
+                        cardInterval === "annual" &&
                         annualSavingsPercent > 0 ? (
                           <span className="workspace-badge health-healthy">
                             Save {annualSavingsPercent}%
@@ -409,7 +410,7 @@ export default async function BillingPage() {
                           : cardInterval === "annual"
                             ? `Billed annually ($${
                                 plan.annualMonthlyPriceUsd * 12
-                              }/yr) · Save ${annualSavingsPercent}%`
+                              }/yr)`
                             : "Billed monthly"}
                       </div>
                     </div>
@@ -843,10 +844,7 @@ export default async function BillingPage() {
           <div className="dashboard-operations">
             <section className="workspace-surface">
               <div className="workspace-section-heading">
-                <h2>Subscription lifecycle</h2>
-                <span className={statusBadge.className}>
-                  {statusBadge.label}
-                </span>
+                <h2>Subscription details</h2>
               </div>
 
               <dl className="workspace-usage-summary">
