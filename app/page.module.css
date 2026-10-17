@@ -38,7 +38,7 @@
 .navCta:hover, .primaryCta:hover { background: var(--coral-hover); transform: translateY(-1px); }
 .mobileMenu { display: none; }
 
-.hero { padding: 104px 0 106px; }
+.hero { padding: 90px 0 92px; }
 .heroGrid { align-items: center; display: grid; gap: clamp(40px, 6vw, 95px); grid-template-columns: minmax(0, 1.25fr) minmax(420px, 0.95fr); min-height: 590px; }
 .heroCopy { max-width: 710px; }
 .eyebrow, .sectionLabel { color: var(--ink-soft); font-family: var(--font-geist-mono), monospace; font-size: 11px; font-weight: 650; letter-spacing: 0.11em; line-height: 1.4; margin: 0 0 21px; text-transform: uppercase; }
@@ -71,7 +71,7 @@
 .feedRow p { color: #aeb5b1; font-size: 13px; line-height: 1.45; margin: 0; }
 .feedFooter { color: #aeb5b1; font-family: var(--font-geist-mono), monospace; font-size: 10px; letter-spacing: 0.06em; padding: 17px 24px; }
 
-.problemSection, .scopeSection, .useCases, .faqSection { padding: 133px 0; }
+.problemSection, .scopeSection, .useCases, .faqSection { padding: 113px 0; }
 .splitHeading { display: grid; gap: 72px; grid-template-columns: minmax(0, 1.05fr) minmax(290px, 0.7fr); margin-bottom: 59px; }
 .splitHeading h2, .scopeCopy h2 { font-size: clamp(46px, 4.25vw, 63px); max-width: 680px; }
 .splitCopy { align-self: end; color: var(--ink-soft); font-size: 18px; line-height: 1.58; max-width: 530px; }
