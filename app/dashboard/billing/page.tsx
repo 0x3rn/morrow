@@ -74,47 +74,6 @@ function formatDateOnly(value: string | null): string {
   }).format(date);
 }
 
-function getSubscriptionStatusBadge(
-  status: string,
-  cancelAtPeriodEnd: boolean,
-): {
-  label: string;
-  className: string;
-} {
-  if (status === "canceled") {
-    return {
-      label: "Canceled (Free fallback)",
-      className: "workspace-badge health-paused",
-    };
-  }
-
-  if (cancelAtPeriodEnd) {
-    return {
-      label: "Cancels at period end",
-      className: "workspace-badge significance-moderate",
-    };
-  }
-
-  if (status === "past_due") {
-    return {
-      label: "Past due",
-      className: "workspace-badge significance-major",
-    };
-  }
-
-  if (status === "trialing") {
-    return {
-      label: "Trialing",
-      className: "workspace-badge health-healthy",
-    };
-  }
-
-  return {
-    label: "Active subscription",
-    className: "workspace-badge health-healthy",
-  };
-}
-
 function formatBillingEventDescription(input: {
   eventType: WorkspaceBillingEventType;
   previousPlanId: string | null;
@@ -247,10 +206,6 @@ export default async function BillingPage() {
   const canManageBilling =
     activeWorkspace.permissions
       .canManageWorkspaceBilling;
-  const statusBadge = getSubscriptionStatusBadge(
-    subscription.status,
-    subscription.cancelAtPeriodEnd,
-  );
   const hasLifecycleActions =
     canManageBilling &&
     Boolean(
@@ -273,15 +228,6 @@ export default async function BillingPage() {
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-[15px]">
               Manage your subscription plan, billing cycle, and account entitlements.
             </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="workspace-badge">
-              {entitlements.planName} plan
-            </span>
-            <span className={statusBadge.className}>
-              {statusBadge.label}
-            </span>
           </div>
         </header>
 

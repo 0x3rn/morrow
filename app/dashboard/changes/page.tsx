@@ -697,9 +697,6 @@ export default async function ChangeHistoryPage({
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
-              History
-            </div>
             <h1 className="text-3xl font-semibold tracking-tight">
               Change history
             </h1>

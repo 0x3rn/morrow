@@ -518,11 +518,7 @@ export default async function NotificationsPage() {
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <header className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
-              Delivery &amp; alerts
-            </div>
-
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
+            <h1 className="text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
               Notifications &amp; routing
             </h1>
 

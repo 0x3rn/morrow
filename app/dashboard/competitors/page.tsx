@@ -554,19 +554,13 @@ export default async function CompetitorsPage() {
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <header className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
           <div>
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
-                Monitoring
-              </div>
+            <h1 className="text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
+              Competitors
+            </h1>
 
-              <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
-                Competitors
-              </h1>
-
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-[15px]">
-                Add competitors, choose which pages to monitor, and manage their schedules and history.
-              </p>
-            </div>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-[15px]">
+              Add competitors, choose which pages to monitor, and manage their schedules and history.
+            </p>
           </div>
 
           {canEditMonitoring ? (
