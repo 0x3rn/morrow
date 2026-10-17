@@ -174,7 +174,7 @@ export function MobilePlanSelector({
                 type="button"
                 role="tab"
                 aria-selected={selectedInterval === "monthly"}
-                className={`billing-interval-tab${
+                className={`billing-plan-tab${
                   selectedInterval === "monthly" ? " is-active" : ""
                 }`}
                 onClick={() => selectInterval("monthly")}
@@ -185,7 +185,7 @@ export function MobilePlanSelector({
                 type="button"
                 role="tab"
                 aria-selected={selectedInterval === "annual"}
-                className={`billing-interval-tab${
+                className={`billing-plan-tab${
                   selectedInterval === "annual" ? " is-active" : ""
                 }`}
                 onClick={() => selectInterval("annual")}

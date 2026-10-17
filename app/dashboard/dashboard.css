@@ -190,12 +190,10 @@ body:has(.workspace-panel[open]) { overflow: hidden; }
 .billing-plan-dialog::backdrop { background: rgba(16, 24, 21, .42); }
 .billing-plan-dialog-body { padding: 20px; }
 .billing-plan-tabs-header { display: grid; justify-items: center; gap: 10px; padding-bottom: 16px; }
-.billing-plan-tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 100%; }
+.billing-plan-tabs, .billing-interval-tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 100%; }
+@media (min-width: 1140px) { .billing-plan-tabs { display: none; } }
 .morrow-dashboard .billing-plan-tab { flex: 0 0 auto; min-height: 36px; padding: 6px 14px; border: 1px solid var(--morrow-line); border-radius: 999px; background: var(--morrow-surface); color: var(--morrow-ink-soft); font-size: 13px; font-weight: 500; cursor: pointer; }
 .morrow-dashboard .billing-plan-tab.is-active { border-color: var(--morrow-coral); background: var(--morrow-coral); color: var(--morrow-ink); font-weight: 600; }
-.billing-interval-tabs { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 3px; border: 1px solid var(--morrow-line); border-radius: 999px; background: var(--morrow-paper-deep); }
-.morrow-dashboard .billing-interval-tab { min-height: 32px; padding: 4px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--morrow-ink-soft); font-size: 13px; font-weight: 500; cursor: pointer; }
-.morrow-dashboard .billing-interval-tab.is-active { background: var(--morrow-surface); color: var(--morrow-ink); font-weight: 600; box-shadow: 0 1px 2px rgba(23, 32, 29, .08); }
 .billing-plan-card .workspace-usage-summary { margin-top: 0; }
 .billing-plan-price-value { font-size: 24px; line-height: 1.25; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.02em; color: var(--morrow-ink); }
 .billing-plan-carousel { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(250px, 1fr); column-gap: 16px; row-gap: 0; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; align-items: stretch; }
