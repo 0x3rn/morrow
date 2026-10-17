@@ -6,6 +6,7 @@ import {
 import { auth } from "@/lib/auth";
 import {
   formatFrequencyIntervalLabel,
+  getAnnualSavingsPercent,
   getBillingPlanDefinition,
 } from "@/lib/billing-plans";
 import {
@@ -21,7 +22,6 @@ import type { ReactNode } from "react";
 import {
   changeSubscriptionPlanAction,
   toggleSubscriptionCancellationAction,
-  updateBillingIntervalAction,
 } from "./actions";
 
 function normalizeDatabaseTimestamp(value: string): string {
@@ -298,35 +298,6 @@ export default async function BillingPage() {
                     : "Plan changes take effect immediately. Upgrading unlocks additional workspaces, higher monitoring limits, faster check intervals, and extended history retention."}
                 </p>
               </div>
-
-              {canManageBilling ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <WorkspaceActionForm
-                    action={updateBillingIntervalAction}
-                    successMessage="Billing cycle updated."
-                  >
-                    <input
-                      type="hidden"
-                      name="billingInterval"
-                      value={
-                        subscription.billingInterval ===
-                        "annual"
-                          ? "monthly"
-                          : "annual"
-                      }
-                    />
-                    <WorkspaceSubmitButton
-                      pendingLabel="Switching…"
-                      className="workspace-panel-trigger workspace-panel-secondary"
-                    >
-                      {subscription.billingInterval ===
-                      "annual"
-                        ? "Switch to monthly billing"
-                        : "Switch to annual billing (save ~20%)"}
-                    </WorkspaceSubmitButton>
-                  </WorkspaceActionForm>
-                </div>
-              ) : null}
             </div>
 
             {!canManageBilling ? (
@@ -342,6 +313,22 @@ export default async function BillingPage() {
               const otherPlanOptions = planOptions.filter(
                 (option) => option.plan.id !== currentPlanOption?.plan.id,
               );
+              const monthlyModalOptions =
+                subscription.billingInterval === "annual" &&
+                currentPlanOption &&
+                currentPlanOption.plan.id !== "free"
+                  ? planOptions
+                  : otherPlanOptions;
+              const annualModalOptions =
+                subscription.billingInterval !== "annual" &&
+                currentPlanOption &&
+                currentPlanOption.plan.id !== "free"
+                  ? planOptions.filter((option) => option.plan.id !== "free")
+                  : otherPlanOptions.filter(
+                      (option) =>
+                        option.plan.id !== "free" ||
+                        currentPlanOption?.plan.id !== "free",
+                    );
 
               function renderPlanCard(
                 {
@@ -349,16 +336,31 @@ export default async function BillingPage() {
                   isCurrentPlan,
                   transition,
                 }: (typeof planOptions)[number],
-                headerAction?: ReactNode,
+                options?: {
+                  billingInterval?: "monthly" | "annual";
+                  headerAction?: ReactNode;
+                  isModalCard?: boolean;
+                },
               ) {
+                const cardInterval =
+                  options?.billingInterval ??
+                  (subscription.billingInterval === "annual"
+                    ? "annual"
+                    : "monthly");
+                const isModalCard = options?.isModalCard ?? false;
+                const isEffectiveCurrentPlan =
+                  isCurrentPlan &&
+                  (!isModalCard ||
+                    cardInterval === subscription.billingInterval);
                 const displayedMonthlyPrice =
-                  subscription.billingInterval === "annual"
+                  cardInterval === "annual"
                     ? plan.annualMonthlyPriceUsd
                     : plan.monthlyPriceUsd;
+                const annualSavingsPercent = getAnnualSavingsPercent(plan);
 
                 return (
                   <article
-                    key={plan.id}
+                    key={`${plan.id}-${cardInterval}`}
                     className="billing-plan-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
                   >
                     <div className="billing-plan-card-header">
@@ -368,14 +370,14 @@ export default async function BillingPage() {
                             {plan.name}
                           </h3>
 
-                          {isCurrentPlan ? (
+                          {isEffectiveCurrentPlan ? (
                             <span className="workspace-badge health-healthy">
                               Current plan
                             </span>
                           ) : null}
                         </div>
 
-                        {headerAction}
+                        {options?.headerAction}
                       </div>
 
                       <p className="mt-2 text-xs leading-5 text-slate-500">
@@ -384,22 +386,31 @@ export default async function BillingPage() {
                     </div>
 
                     <div className="billing-plan-card-price mt-4 border-t border-slate-200 pt-4 pb-3">
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="billing-plan-price-value">
-                          ${displayedMonthlyPrice}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          / month
-                        </span>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="billing-plan-price-value">
+                            ${displayedMonthlyPrice}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            / month
+                          </span>
+                        </div>
+
+                        {cardInterval === "annual" &&
+                        annualSavingsPercent > 0 ? (
+                          <span className="workspace-badge health-healthy">
+                            Save {annualSavingsPercent}%
+                          </span>
+                        ) : null}
                       </div>
                       <div className="mt-1 text-xs text-slate-500">
                         {plan.id === "free"
                           ? "Free forever · No credit card required"
-                          : subscription.billingInterval === "annual"
+                          : cardInterval === "annual"
                             ? `Billed annually ($${
                                 plan.annualMonthlyPriceUsd * 12
-                              }/yr) · $${plan.monthlyPriceUsd}/mo monthly`
-                            : `Billed monthly · or $${plan.annualMonthlyPriceUsd}/mo billed annually`}
+                              }/yr) · Save ${annualSavingsPercent}%`
+                            : "Billed monthly"}
                       </div>
                     </div>
 
@@ -497,7 +508,7 @@ export default async function BillingPage() {
                       </div>
                     </dl>
 
-                    {!isCurrentPlan ? (
+                    {!isEffectiveCurrentPlan ? (
                       <div className="billing-plan-card-notice">
                         {transition.pagesRequiringFrequencyAdjustment > 0 ? (
                           <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800">
@@ -517,7 +528,7 @@ export default async function BillingPage() {
                       </div>
                     ) : null}
 
-                    {!isCurrentPlan ? (
+                    {!isEffectiveCurrentPlan ? (
                       <div className="billing-plan-card-notice">
                         {(transition.pagesRequiringSelectorClear ?? 0) > 0 ? (
                           <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800">
@@ -532,7 +543,7 @@ export default async function BillingPage() {
                       </div>
                     ) : null}
 
-                    {!isCurrentPlan ? (
+                    {!isEffectiveCurrentPlan ? (
                       <div className="billing-plan-card-notice">
                         {!transition.allowed ? (
                           <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700">
@@ -549,7 +560,7 @@ export default async function BillingPage() {
                       </div>
                     ) : null}
 
-                    {!isCurrentPlan ? (
+                    {!isEffectiveCurrentPlan ? (
                       <div className="billing-plan-card-cta mt-6 pt-4 border-t border-slate-200">
                         {canManageBilling ? (
                           <WorkspaceActionForm
@@ -560,7 +571,7 @@ export default async function BillingPage() {
                             <input
                               type="hidden"
                               name="billingInterval"
-                              value={subscription.billingInterval}
+                              value={cardInterval}
                             />
                             <WorkspaceSubmitButton
                               pendingLabel={
@@ -570,14 +581,20 @@ export default async function BillingPage() {
                               }
                               disabled={!transition.allowed}
                               className={
-                                transition.direction === "upgrade"
+                                transition.direction === "upgrade" ||
+                                (transition.direction === "same" &&
+                                  cardInterval === "annual")
                                   ? "workspace-primary w-full"
                                   : "workspace-panel-trigger workspace-panel-secondary w-full"
                               }
                             >
                               {transition.direction === "upgrade"
                                 ? `Upgrade to ${plan.name}`
-                                : `Switch to ${plan.name}`}
+                                : transition.direction === "same"
+                                  ? cardInterval === "annual"
+                                    ? `Switch ${plan.name} to annual`
+                                    : `Switch ${plan.name} to monthly`
+                                  : `Switch to ${plan.name}`}
                             </WorkspaceSubmitButton>
                           </WorkspaceActionForm>
                         ) : (
@@ -593,20 +610,39 @@ export default async function BillingPage() {
 
               return currentPlanOption ? (
                 <div className="billing-current-plan-view mt-6">
-                  {renderPlanCard(
-                    currentPlanOption,
-                    <MobilePlanSelector
-                      title="Change subscription plan"
-                      plans={otherPlanOptions.map((option) => ({
-                        id: option.plan.id,
-                        name: option.plan.name,
-                      }))}
-                      activePlanId={currentPlanOption.plan.id}
-                      billingInterval={subscription.billingInterval}
-                    >
-                      {otherPlanOptions.map((option) => renderPlanCard(option))}
-                    </MobilePlanSelector>,
-                  )}
+                  {renderPlanCard(currentPlanOption, {
+                    billingInterval:
+                      subscription.billingInterval === "annual"
+                        ? "annual"
+                        : "monthly",
+                    headerAction: (
+                      <MobilePlanSelector
+                        title="Change subscription plan"
+                        monthlyPlans={monthlyModalOptions.map((option) => ({
+                          id: option.plan.id,
+                          name: option.plan.name,
+                        }))}
+                        annualPlans={annualModalOptions.map((option) => ({
+                          id: option.plan.id,
+                          name: option.plan.name,
+                        }))}
+                        activePlanId={currentPlanOption.plan.id}
+                        billingInterval={subscription.billingInterval}
+                        monthlyChildren={monthlyModalOptions.map((option) =>
+                          renderPlanCard(option, {
+                            billingInterval: "monthly",
+                            isModalCard: true,
+                          }),
+                        )}
+                        annualChildren={annualModalOptions.map((option) =>
+                          renderPlanCard(option, {
+                            billingInterval: "annual",
+                            isModalCard: true,
+                          }),
+                        )}
+                      />
+                    ),
+                  })}
                 </div>
               ) : null;
             })()}

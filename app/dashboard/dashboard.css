@@ -189,9 +189,13 @@ body:has(.workspace-panel[open]) { overflow: hidden; }
 .billing-plan-dialog { position: fixed; inset: 0; width: min(1160px, calc(100vw - 48px)); max-width: 100%; max-height: calc(100dvh - 48px); margin: auto; padding: 0; border: 1px solid var(--morrow-line); border-radius: 12px; background: var(--morrow-paper); color: var(--morrow-ink); overflow-y: auto; overscroll-behavior: contain; box-shadow: 0 20px 48px rgba(16, 24, 21, .24); }
 .billing-plan-dialog::backdrop { background: rgba(16, 24, 21, .42); }
 .billing-plan-dialog-body { padding: 20px; }
-.billing-plan-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 14px; }
-.billing-plan-tab { flex: 0 0 auto; min-height: 36px; padding: 6px 12px; border: 1px solid var(--morrow-line); border-radius: 999px; background: var(--morrow-surface); color: var(--morrow-ink-soft); font-size: 13px; font-weight: 500; cursor: pointer; }
-.billing-plan-tab.is-active { border-color: var(--morrow-coral); background: var(--morrow-coral); color: var(--morrow-ink); font-weight: 600; }
+.billing-plan-tabs-header { display: grid; justify-items: center; gap: 10px; padding-bottom: 16px; }
+.billing-plan-tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 100%; }
+.morrow-dashboard .billing-plan-tab { flex: 0 0 auto; min-height: 36px; padding: 6px 14px; border: 1px solid var(--morrow-line); border-radius: 999px; background: var(--morrow-surface); color: var(--morrow-ink-soft); font-size: 13px; font-weight: 500; cursor: pointer; }
+.morrow-dashboard .billing-plan-tab.is-active { border-color: var(--morrow-coral); background: var(--morrow-coral); color: var(--morrow-ink); font-weight: 600; }
+.billing-interval-tabs { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 3px; border: 1px solid var(--morrow-line); border-radius: 999px; background: var(--morrow-paper-deep); }
+.morrow-dashboard .billing-interval-tab { min-height: 32px; padding: 4px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--morrow-ink-soft); font-size: 13px; font-weight: 500; cursor: pointer; }
+.morrow-dashboard .billing-interval-tab.is-active { background: var(--morrow-surface); color: var(--morrow-ink); font-weight: 600; box-shadow: 0 1px 2px rgba(23, 32, 29, .08); }
 .billing-plan-card .workspace-usage-summary { margin-top: 0; }
 .billing-plan-price-value { font-size: 24px; line-height: 1.25; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.02em; color: var(--morrow-ink); }
 .billing-plan-carousel { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(250px, 1fr); column-gap: 16px; row-gap: 0; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; align-items: stretch; }
@@ -386,7 +390,7 @@ body:has(.billing-plan-dialog[open]), body:has(.workspace-switcher-dialog[open])
   .workspace-source-captures dl > div { grid-template-columns: minmax(0,1fr); gap: 4px; }
   .billing-plan-dialog { inset: auto 12px 12px 12px; top: max(16px, env(safe-area-inset-top)); width: calc(100vw - 24px); max-height: calc(100dvh - 28px); }
   .billing-plan-dialog-body { padding: 14px 14px max(18px, env(safe-area-inset-bottom)); }
-  .billing-plan-tabs { padding-bottom: 12px; }
+  .billing-plan-tabs-header { gap: 8px; padding-bottom: 12px; }
   .billing-plan-carousel { column-gap: 12px; grid-auto-columns: calc(100% - 24px); }
   .billing-plan-carousel > article { min-width: 0; scroll-snap-align: center; }
   .workspace-choice-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+// import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,13 +23,37 @@ export const metadata: Metadata = {
   },
 };
 
+// Google Analytics (uncomment when ready to implement Google Ads / analytics)
+// const GA_MEASUREMENT_ID = "G-BL73YGP427";
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        {/* Google Analytics tag (gtag.js) - uncomment when ready to implement:
+        <Script
+          strategy="afterInteractive"
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+        />
+        <Script
+          id="google-analytics"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+
+              gtag('config', '${GA_MEASUREMENT_ID}');
+            `,
+          }}
+        />
+        */}
+      </body>
     </html>
   );
 }

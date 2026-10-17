@@ -700,3 +700,24 @@ export function evaluatePlanTransition(input: {
     pagesRequiringSelectorClear,
   };
 }
+
+export function getAnnualSavingsPercent(
+  plan: Pick<
+    BillingPlanDefinition,
+    "monthlyPriceUsd" | "annualMonthlyPriceUsd"
+  >,
+): number {
+  if (
+    plan.monthlyPriceUsd <= 0 ||
+    plan.annualMonthlyPriceUsd >= plan.monthlyPriceUsd
+  ) {
+    return 0;
+  }
+
+  return Math.round(
+    ((plan.monthlyPriceUsd - plan.annualMonthlyPriceUsd) /
+      plan.monthlyPriceUsd) *
+      100,
+  );
+}
+

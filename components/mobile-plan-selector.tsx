@@ -10,28 +10,44 @@ export interface MobilePlanTab {
 
 export function MobilePlanSelector({
   title,
-  plans,
+  monthlyPlans,
+  annualPlans,
   activePlanId,
   billingInterval,
-  children,
+  monthlyChildren,
+  annualChildren,
 }: {
   title: string;
-  plans: MobilePlanTab[];
+  monthlyPlans: MobilePlanTab[];
+  annualPlans: MobilePlanTab[];
   activePlanId: string;
   billingInterval: string;
-  children: ReactNode;
+  monthlyChildren: ReactNode;
+  annualChildren: ReactNode;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
+  const normalizedDefaultInterval =
+    billingInterval === "annual" ? "annual" : "monthly";
+  const [selectedInterval, setSelectedInterval] = useState<
+    "monthly" | "annual"
+  >(normalizedDefaultInterval);
   const [activeIndex, setActiveIndex] = useState(0);
 
+  const plans =
+    selectedInterval === "annual" ? annualPlans : monthlyPlans;
+
   useEffect(() => {
+    setSelectedInterval(
+      billingInterval === "annual" ? "annual" : "monthly",
+    );
     dialogRef.current?.close();
   }, [activePlanId, billingInterval]);
 
   function openModal() {
+    setSelectedInterval(normalizedDefaultInterval);
     setActiveIndex(0);
     dialogRef.current?.showModal();
     requestAnimationFrame(() => {
@@ -40,6 +56,18 @@ export function MobilePlanSelector({
       }
       closeButtonRef.current?.focus({ preventScroll: true });
     });
+  }
+
+  function selectInterval(nextInterval: "monthly" | "annual") {
+    if (nextInterval === selectedInterval) return;
+    const currentPlanId = plans[activeIndex]?.id;
+    const targetPlans =
+      nextInterval === "annual" ? annualPlans : monthlyPlans;
+    const preservedIndex = currentPlanId
+      ? targetPlans.findIndex((plan) => plan.id === currentPlanId)
+      : -1;
+    setSelectedInterval(nextInterval);
+    setActiveIndex(preservedIndex >= 0 ? preservedIndex : 0);
   }
 
   function scrollToCard(index: number) {
@@ -113,38 +141,72 @@ export function MobilePlanSelector({
         </div>
 
         <div className="billing-plan-dialog-body">
-          {plans.length > 1 ? (
+          <div className="billing-plan-tabs-header">
+            {plans.length > 1 ? (
+              <div
+                className="billing-plan-tabs"
+                role="tablist"
+                aria-label="Available subscription tiers"
+              >
+                {plans.map((plan, index) => (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeIndex === index}
+                    className={`billing-plan-tab${
+                      activeIndex === index ? " is-active" : ""
+                    }`}
+                    onClick={() => scrollToCard(index)}
+                  >
+                    {plan.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
             <div
-              className="billing-plan-tabs"
+              className="billing-interval-tabs"
               role="tablist"
-              aria-label="Other available plans"
+              aria-label="Billing cycle"
             >
-              {plans.map((plan, index) => (
-                <button
-                  key={plan.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={activeIndex === index}
-                  className={`billing-plan-tab${
-                    activeIndex === index ? " is-active" : ""
-                  }`}
-                  onClick={() => scrollToCard(index)}
-                >
-                  {plan.name}
-                </button>
-              ))}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedInterval === "monthly"}
+                className={`billing-interval-tab${
+                  selectedInterval === "monthly" ? " is-active" : ""
+                }`}
+                onClick={() => selectInterval("monthly")}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedInterval === "annual"}
+                className={`billing-interval-tab${
+                  selectedInterval === "annual" ? " is-active" : ""
+                }`}
+                onClick={() => selectInterval("annual")}
+              >
+                Annual
+              </button>
             </div>
-          ) : null}
+          </div>
 
           <div
             ref={carouselRef}
             className="billing-plan-carousel"
             onScroll={handleScroll}
           >
-            {children}
+            {selectedInterval === "annual"
+              ? annualChildren
+              : monthlyChildren}
           </div>
         </div>
       </dialog>
     </>
   );
 }
+
