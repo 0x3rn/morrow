@@ -14,7 +14,7 @@ const TOC: TocItem[] = [
   { id: "eligibility-workspaces", label: "2. Eligibility & Workspace Administration" },
   { id: "monitoring-specifications", label: "3. Monitoring Specifications & Crawl Constraints" },
   { id: "acceptable-use", label: "4. Acceptable Use & Prohibited Conduct" },
-  { id: "third-party-targets", label: "5. Third-Party Websites & Target Availability" },
+  { id: "third-party-targets", label: "5. Third-Party Websites & Domain Exclusion (Opt-Out / DMCA)" },
   { id: "intellectual-property", label: "6. Intellectual Property & Customer Intelligence" },
   { id: "subscriptions-billing", label: "7. Subscription Terms, Fees & Cancellations" },
   { id: "service-quotas", label: "8. Service Quotas & Historical Access" },
@@ -134,6 +134,16 @@ export default function TermsPage() {
             for any Target URL that produces server degradation, excessive error rates, or where the
             target site operator requests cessation of automated requests.
           </li>
+          <li>
+            <strong>Sole Customer Responsibility &amp; Legal Compliance:</strong> You acknowledge and
+            agree that Morrow operates purely as a neutral, automated technical tool executing
+            retrieval requests strictly at your direction and command. You are solely and
+            exclusively responsible for the selection of all Target URLs and for ensuring that your
+            monitoring of such URLs complies with all applicable local, state, national, and
+            international laws, as well as any third-party contractual agreements, non-disclosure
+            agreements (NDAs), confidentiality obligations, or fiduciary duties to which you are
+            subject.
+          </li>
         </ul>
       </section>
 
@@ -173,7 +183,7 @@ export default function TermsPage() {
       </section>
 
       <section id="third-party-targets" className={styles.section}>
-        <h2>5. Third-Party Websites &amp; Target Availability</h2>
+        <h2>5. Third-Party Websites &amp; Domain Exclusion (Opt-Out / DMCA)</h2>
         <p className={styles.bodyText}>
           Morrow monitors third-party websites that are owned, hosted, and controlled entirely
           independent of Corstack. Target websites may at any time:
@@ -196,6 +206,24 @@ export default function TermsPage() {
             Refund Policy
           </Link>
           .
+        </p>
+        <p className={styles.bodyText}>
+          <strong>Domain Exclusion (Opt-Out) &amp; DMCA Notices:</strong> Corstack respects the rights
+          and operational autonomy of website operators and intellectual property holders. If you are
+          an authorized administrator, webmaster, or copyright holder for a domain and wish to request
+          that your domain or specific URL paths be permanently excluded from automated monitoring by
+          Morrow, or if you wish to file a DMCA notice-and-takedown request, please transmit your request
+          to{" "}
+          <a
+            href="mailto:morrow@corstack.dev?subject=Domain%20Exclusion%20or%20DMCA%20Notice"
+            className="underline font-semibold text-slate-900"
+          >
+            morrow@corstack.dev
+          </a>{" "}
+          with the subject line &ldquo;Domain Exclusion Request&rdquo; or &ldquo;DMCA Takedown Notice&rdquo;.
+          Upon confirmation of domain ownership or receipt of a valid copyright notice, Corstack will
+          promptly blocklist the designated domain or paths, permanently terminating automated data
+          retrieval and difference tracking for that target across all Workspaces.
         </p>
       </section>
 
@@ -374,9 +402,10 @@ export default function TermsPage() {
           Customer agrees to defend, indemnify, and hold harmless Corstack, its officers,
           contractors, and agents from and against any third-party claims, liabilities, damages,
           losses, and reasonable legal expenses arising out of: (a) Customer&rsquo;s breach of these
-          Terms; (b) any unlawful or unauthorized Target URLs submitted by Customer; or (c)
-          Customer&rsquo;s violation of any applicable computer crime, intellectual property, or
-          privacy regulation.
+          Terms; (b) any Target URLs submitted by Customer, including any allegations that monitoring
+          such targets breaches third-party confidentiality agreements, non-disclosure obligations,
+          or proprietary rights; or (c) Customer&rsquo;s violation of any applicable computer crime,
+          intellectual property, or privacy regulation.
         </p>
       </section>
 

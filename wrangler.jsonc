@@ -12,6 +12,7 @@
 		]
 	},
 	"vars": {
+	"MORROW_EMAIL_FROM": "noreply@morrow.corstack.dev",
     "MORROW_TELEGRAM_BOT_USERNAME": "morrowalertbot"
   	},
 	"observability": {
