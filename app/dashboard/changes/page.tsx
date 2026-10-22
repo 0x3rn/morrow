@@ -704,19 +704,7 @@ export default async function ChangeHistoryPage({
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
               Search and filter the changes
               Morrow has recorded across your
-              monitored pages within your{" "}
-              <strong>
-                {retentionWindow.entitlements.planName}
-              </strong>{" "}
-              plan&apos;s{" "}
-              {retentionWindow.retentionDays}-day
-              retention window.{" "}
-              <Link
-                href="/dashboard/billing"
-                className="font-medium text-indigo-600 hover:text-indigo-500"
-              >
-                Manage plan
-              </Link>
+              monitored pages
             </p>
           </div>
         </header>
