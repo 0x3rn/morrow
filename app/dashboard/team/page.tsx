@@ -99,15 +99,15 @@ export default async function TeamWorkspacesPage() {
   ).length;
 
   return (
-    <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <header className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
           <div>
-            <h1 className="text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
+            <h1 className="text-3xl font-semibold tracking-[-0.035em] text-foreground sm:text-4xl">
               Team &amp; workspaces
             </h1>
 
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-[15px]">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
               Collaborate on shared competitor intelligence across workspaces with role-based permissions for Owners, Admins, Members, and Viewers.
             </p>
           </div>
@@ -118,7 +118,7 @@ export default async function TeamWorkspacesPage() {
               title="Create a team workspace"
             >
               <div>
-                <p className="text-sm leading-6 text-slate-500">
+                <p className="text-sm leading-6 text-muted-foreground">
                   Create a dedicated workspace to separate competitors, monitored pages, and notification channels by team, client, or business unit.
                 </p>
 
@@ -131,7 +131,7 @@ export default async function TeamWorkspacesPage() {
                   <div>
                     <label
                       htmlFor="new-workspace-name"
-                      className="mb-1.5 block text-xs font-medium text-slate-600"
+                      className="mb-1.5 block text-xs font-medium text-muted-foreground"
                     >
                       Workspace name
                     </label>
@@ -163,7 +163,7 @@ export default async function TeamWorkspacesPage() {
                 title={`Invite to ${activeWorkspace.name}`}
               >
                 <div>
-                  <p className="text-sm leading-6 text-slate-500">
+                  <p className="text-sm leading-6 text-muted-foreground">
                     If the email belongs to an existing Morrow user, they are added to{" "}
                     <strong>{activeWorkspace.name}</strong>{" "}
                     immediately. Otherwise, a pending invitation is created and automatically accepted when they sign up.
@@ -178,7 +178,7 @@ export default async function TeamWorkspacesPage() {
                     <div>
                       <label
                         htmlFor="invite-member-email"
-                        className="mb-1.5 block text-xs font-medium text-slate-600"
+                        className="mb-1.5 block text-xs font-medium text-muted-foreground"
                       >
                         Teammate email address
                       </label>
@@ -194,7 +194,7 @@ export default async function TeamWorkspacesPage() {
                     <div>
                       <label
                         htmlFor="invite-member-role"
-                        className="mb-1.5 block text-xs font-medium text-slate-600"
+                        className="mb-1.5 block text-xs font-medium text-muted-foreground"
                       >
                         Workspace role
                       </label>
@@ -265,7 +265,7 @@ export default async function TeamWorkspacesPage() {
                   >
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <strong className="text-base font-semibold text-slate-950">
+                        <strong className="text-base font-semibold text-foreground">
                           {invitation.workspaceName}
                         </strong>
                         <span
@@ -321,7 +321,7 @@ export default async function TeamWorkspacesPage() {
         ) : null}
 
         <section className="workspace-metrics mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="workspace-metric-label">
               Active workspace
             </div>
@@ -340,7 +340,7 @@ export default async function TeamWorkspacesPage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="workspace-metric-label">
               Team members
             </div>
@@ -356,7 +356,7 @@ export default async function TeamWorkspacesPage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="workspace-metric-label">
               Pending invitations
             </div>
@@ -368,7 +368,7 @@ export default async function TeamWorkspacesPage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="workspace-metric-label">
               Your workspaces
             </div>
@@ -399,7 +399,7 @@ export default async function TeamWorkspacesPage() {
                 >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <strong className="text-base font-semibold text-slate-950">
+                      <strong className="text-base font-semibold text-foreground">
                         {item.name}
                       </strong>
                       <span
@@ -488,7 +488,7 @@ export default async function TeamWorkspacesPage() {
               <strong>{activeWorkspace.name}</strong>.
             </p>
 
-            <p className="mt-3 text-sm text-slate-600">
+            <p className="mt-3 text-sm text-muted-foreground">
               {
                 WORKSPACE_ROLE_DETAILS[
                   activeWorkspace.role
@@ -501,12 +501,12 @@ export default async function TeamWorkspacesPage() {
                 key={`${activeWorkspace.id}:${activeWorkspace.name}`}
                 action={renameWorkspaceAction}
                 successMessage="Workspace name updated."
-                className="mt-5 grid gap-4 border-t border-slate-200 pt-4"
+                className="mt-5 grid gap-4 border-t border-border pt-4"
               >
                 <div>
                   <label
                     htmlFor="rename-workspace-input"
-                    className="mb-1.5 block text-xs font-medium text-slate-600"
+                    className="mb-1.5 block text-xs font-medium text-muted-foreground"
                   >
                     Workspace name
                   </label>
@@ -530,7 +530,7 @@ export default async function TeamWorkspacesPage() {
                 </div>
               </WorkspaceActionForm>
             ) : (
-              <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+              <p className="mt-4 rounded-xl border border-border bg-muted px-4 py-3 text-xs text-muted-foreground">
                 Only workspace Owners and Admins can rename this workspace or manage delivery channels and team members.
               </p>
             )}
@@ -540,17 +540,17 @@ export default async function TeamWorkspacesPage() {
         <section className="mt-10">
           <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-950">
+              <h2 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">
                 Workspace members
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
                 Everyone in{" "}
                 <strong>{activeWorkspace.name}</strong>{" "}
                 shares access to its tracked competitors, monitored page snapshots, and change insights according to their role.
               </p>
             </div>
 
-            <div className="text-sm font-medium text-slate-500">
+            <div className="text-sm font-medium text-muted-foreground">
               {members.length}{" "}
               {members.length === 1
                 ? "member"
@@ -587,12 +587,12 @@ export default async function TeamWorkspacesPage() {
               return (
                 <article
                   key={`${activeWorkspace.id}:${member.userId}:${member.role}`}
-                  className="workspace-competitor-record overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                  className="workspace-competitor-record overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
                 >
                   <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-center">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-semibold text-slate-950">
+                        <h3 className="text-base font-semibold text-foreground">
                           {member.name || member.email}
                         </h3>
 
@@ -710,7 +710,7 @@ export default async function TeamWorkspacesPage() {
                               />
                               <button
                                 type="submit"
-                                className="inline-flex min-h-10 items-center justify-center rounded-xl border border-red-200 bg-white px-3.5 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
+                                className="inline-flex min-h-10 items-center justify-center rounded-xl border border-destructive-border bg-card px-3.5 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive-bg"
                               >
                                 Remove
                               </button>
@@ -731,7 +731,7 @@ export default async function TeamWorkspacesPage() {
                           />
                           <button
                             type="submit"
-                            className="inline-flex min-h-10 items-center justify-center rounded-xl border border-red-200 bg-white px-3.5 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
+                            className="inline-flex min-h-10 items-center justify-center rounded-xl border border-destructive-border bg-card px-3.5 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive-bg"
                           >
                             Leave workspace
                           </button>
@@ -749,17 +749,17 @@ export default async function TeamWorkspacesPage() {
           <section className="mt-10">
             <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
-                <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-950">
+                <h2 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">
                   Pending workspace invitations
                 </h2>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
                   Invited teammates automatically join{" "}
                   <strong>{activeWorkspace.name}</strong>{" "}
                   when they create a Morrow account or accept their invite.
                 </p>
               </div>
 
-              <div className="text-sm font-medium text-slate-500">
+              <div className="text-sm font-medium text-muted-foreground">
                 {pendingInvitations.length} pending
               </div>
             </div>
@@ -776,12 +776,12 @@ export default async function TeamWorkspacesPage() {
                 return (
                   <article
                     key={invitation.id}
-                    className="workspace-competitor-record overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                    className="workspace-competitor-record overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
                   >
                     <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-center">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-base font-semibold text-slate-950">
+                          <h3 className="text-base font-semibold text-foreground">
                             {invitation.email}
                           </h3>
                           <span
@@ -829,7 +829,7 @@ export default async function TeamWorkspacesPage() {
                             />
                             <button
                               type="submit"
-                              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-red-200 bg-white px-3.5 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
+                              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-destructive-border bg-card px-3.5 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive-bg"
                             >
                               Revoke invite
                             </button>
@@ -872,7 +872,7 @@ export default async function TeamWorkspacesPage() {
                       >
                         {detail.label}
                       </span>
-                      <span className="text-sm text-slate-600">
+                      <span className="text-sm text-muted-foreground">
                         {detail.summary}
                       </span>
                     </div>

@@ -101,7 +101,7 @@ export default function RefundPolicyPage() {
           <li>
             <strong>Condition B (Timely Notification):</strong> The Customer must submit a formal
             technical ticket to{" "}
-            <a href="mailto:morrow@corstack.dev" className="underline font-medium text-slate-900">
+            <a href="mailto:morrow@corstack.dev" className="underline font-medium text-foreground">
               morrow@corstack.dev
             </a>{" "}
             within seven (7) calendar days of the initial subscription charge or incident,
@@ -138,7 +138,7 @@ export default function RefundPolicyPage() {
         <ol className={styles.bulletList}>
           <li>
             Navigate to the Workspace billing console at{" "}
-            <Link href="/dashboard/billing" className="underline font-medium text-slate-900">
+            <Link href="/dashboard/billing" className="underline font-medium text-foreground">
               morrow.corstack.dev/dashboard/billing
             </Link>
             .
@@ -214,7 +214,7 @@ export default function RefundPolicyPage() {
         <p className={styles.bodyText}>
           If you identify an unrecognized charge or suspect a billing error, you agree to contact
           Corstack at{" "}
-          <a href="mailto:morrow@corstack.dev" className="underline font-medium text-slate-900">
+          <a href="mailto:morrow@corstack.dev" className="underline font-medium text-foreground">
             morrow@corstack.dev
           </a>{" "}
           prior to opening a dispute or chargeback with your bank or credit card issuer.
@@ -239,14 +239,14 @@ export default function RefundPolicyPage() {
           <h4>Corstack — Morrow Billing &amp; Support</h4>
           <p>
             Email:{" "}
-            <a href="mailto:morrow@corstack.dev" className="underline font-medium text-slate-900">
+            <a href="mailto:morrow@corstack.dev" className="underline font-medium text-foreground">
               morrow@corstack.dev
             </a>
             <br />
             Platform: morrow.corstack.dev
             <br />
             Billing Console:{" "}
-            <Link href="/dashboard/billing" className="underline font-medium text-slate-900">
+            <Link href="/dashboard/billing" className="underline font-medium text-foreground">
               morrow.corstack.dev/dashboard/billing
             </Link>
           </p>

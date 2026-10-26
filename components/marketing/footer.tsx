@@ -16,7 +16,7 @@ export function Footer() {
       <div className={`${styles.container} ${styles.footerMain}`}>
         <div className={styles.footerIdentity}>
           <Link className={styles.footerBrand} href="/" aria-label="Morrow home">
-            <BrandLogo />
+            <BrandLogo variant="dark" />
             <span>Morrow</span>
           </Link>
           <p>Monitor competitor pages and keep a record of what changed.</p>

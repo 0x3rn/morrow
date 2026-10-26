@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 
 import styles from "@/app/page.module.css";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface MobileMenuProps {
   navigation: ReadonlyArray<{ href: string; label: string }>;
@@ -45,6 +46,11 @@ export function MobileMenu({ navigation }: MobileMenuProps) {
           ))}
         </nav>
         <div className={styles.mobileAccount}>
+          <div className={styles.mobileDivider} />
+          <div className={styles.mobileThemeRow}>
+            <span>Theme</span>
+            <ThemeToggle />
+          </div>
           <div className={styles.mobileDivider} />
           <Link href="/login" onClick={() => setIsOpen(false)}>Log in</Link>
           <Link className={styles.mobileCta} href="/register" onClick={() => setIsOpen(false)}>Start monitoring</Link>

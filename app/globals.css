@@ -1,22 +1,217 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+
+  /* Surfaces */
+  --background: #FFFFFF;
+  --card: #FFFFFF;
+  --card-foreground: var(--foreground);
+  --popover: #FFFFFF;              /* menus, dropdowns (e.g. Account menu) */
+  --popover-foreground: var(--foreground);
+  --dialog: #FFFFFF;               /* modals and sheets */
+  --surface-bar: #FFFFFF;          /* sticky header, bottom tab bar */
+  --muted: #F5F5F3;                /* subtle grouped areas, nested stat boxes, table headers */
+  --popover-hover: var(--muted);   /* item hover inside popovers/menus */
+  --scrim: rgba(0, 0, 0, 0.4);     /* modal/sheet backdrop */
+
+  /* Text */
+  --foreground: #17201D;           /* headings + body: existing ink value */
+  --muted-foreground: #55605B;     /* secondary text: existing ink-soft value */
+  --text-disabled: #9A9E99;        /* disabled only, never for real content */
+
+  /* Lines */
+  --border: #E4E4E0;               /* cards, dividers, header/footer rules */
+  --input: #8F8F89;                /* form control outline (3:1 against white) */
+  --ring: #B5442A;                 /* focus ring */
+  --grid-line: rgba(0, 0, 0, 0.04);/* faint dashboard background grid */
+
+  /* Brand orange */
+  --primary: #FF8B73;              /* existing brand coral/orange */
+  --primary-foreground: #17201D;   /* dark text ON the orange: do not switch to white */
+  --primary-hover: #F47D65;
+  --primary-active: #DA6F58;
+  --primary-border: #D9755F;       /* the outline on the big orange button */
+  --primary-text: #B5442A;         /* orange used AS text, links, small icons (5.5:1 on white) */
+  --primary-subtle: rgba(255, 139, 115, 0.16); /* tinted backgrounds, selected rows */
+
+  /* Status */
+  --success: #2F6B3A;
+  --success-bg: #E7F2E4;
+  --success-border: #BFDDB8;
+  --warning: #7A4F00;
+  --warning-bg: #FFF4DB;
+  --warning-border: #F0D9A0;
+  --destructive: #B3261E;
+  --destructive-bg: #FCEBE9;
+  --destructive-border: #F1C0BB;
+
+  /* Dark preview / hero / feature panels */
+  --panel: #101815;
+  --panel-foreground: #F7F4EC;
+  --panel-muted: #AEB5B1;
+  --panel-border: rgba(255, 255, 255, 0.10);
+  --panel-hover: rgba(255, 255, 255, 0.045);
+  --panel-accent: #C8EE79;
+  --panel-primary-text: #FF8B73;
+  --panel-primary-subtle: rgba(255, 139, 115, 0.14);
+
+  /* Shadows (light mode only; shadows are invisible in dark mode) */
+  --shadow-card: 0 1px 2px rgba(16, 24, 20, 0.05);
+  --shadow-pop: 0 8px 24px rgba(16, 24, 20, 0.10);
+}
+
+.dark {
+  color-scheme: dark;
+
+  /* Surfaces: lighter = higher elevation */
+  --background: #121212;           /* 0dp base */
+  --card: #1E1E1E;                 /* 1dp cards, panels */
+  --card-foreground: var(--foreground);
+  --surface-bar: #272727;          /* 4dp sticky header, bottom tab bar */
+  --popover: #2E2E2E;              /* 8dp menus, dropdowns, tooltips */
+  --popover-foreground: var(--foreground);
+  --dialog: #383838;               /* 24dp modals, sheets */
+  --muted: #272727;                /* nested areas inside cards, inputs, table headers */
+  --popover-hover: var(--dialog);  /* visibly lighter than #2E2E2E in dark mode */
+  --scrim: rgba(0, 0, 0, 0.6);     /* modal/sheet backdrop */
+
+  /* Text: dimmed white, never #FFFFFF */
+  --foreground: #E0E0E0;           /* headings + body (about 14:1 on base) */
+  --muted-foreground: #A0A0A0;     /* secondary text (about 7:1 on base) */
+  --text-disabled: #6C6C6C;        /* disabled ONLY: about 3.6:1, fails for real content */
+
+  /* Lines */
+  --border: #2C2C2C;
+  --input: #666666;                /* form control outline (3:1 on cards) */
+  --ring: #EE9A84;
+  --grid-line: rgba(255, 255, 255, 0.04);
+
+  /* Brand orange, softened for dark */
+  --primary: #E8856D;              /* about 7.6:1 on #121212, 6.9:1 on #1E1E1E */
+  --primary-foreground: #121212;   /* dark text on the orange stays dark */
+  --primary-hover: #EE957F;        /* lighter on hover (lighter = higher) */
+  --primary-active: #DE7760;
+  --primary-border: #E8856D;       /* no separate outline needed */
+  --primary-text: #EE9A84;         /* orange as text/links (about 9:1 on base) */
+  --primary-subtle: rgba(232, 133, 109, 0.14);
+
+  /* Status: desaturated and lighter so they don't glare */
+  --success: #86D19A;
+  --success-bg: rgba(134, 209, 154, 0.12);
+  --success-border: rgba(134, 209, 154, 0.30);
+  --warning: #E5B567;
+  --warning-bg: rgba(229, 181, 103, 0.12);
+  --warning-border: rgba(229, 181, 103, 0.30);
+  --destructive: #F07178;          /* leans pink-red so it stays distinct from the coral */
+  --destructive-bg: rgba(240, 113, 120, 0.12);
+  --destructive-border: rgba(240, 113, 120, 0.30);
+
+  /* Dark preview / hero / feature panels: neutral card elevation in dark mode */
+  --panel: #1E1E1E;
+  --panel-foreground: #E0E0E0;
+  --panel-muted: #A0A0A0;
+  --panel-border: #2C2C2C;
+  --panel-hover: #272727;
+  --panel-accent: #C8EE79;
+  --panel-primary-text: #EE9A84;
+  --panel-primary-subtle: rgba(232, 133, 109, 0.14);
+
+  /* No shadows in dark mode: elevation comes from the surface colors above */
+  --shadow-card: none;
+  --shadow-pop: none;
+}
+
+@media print {
+  :root,
+  .dark {
+    color-scheme: light;
+    --background: #FFFFFF;
+    --card: #FFFFFF;
+    --card-foreground: #17201D;
+    --popover: #FFFFFF;
+    --popover-foreground: #17201D;
+    --dialog: #FFFFFF;
+    --surface-bar: #FFFFFF;
+    --muted: #F5F5F3;
+    --popover-hover: #F5F5F3;
+    --scrim: rgba(0, 0, 0, 0.4);
+    --foreground: #17201D;
+    --muted-foreground: #55605B;
+    --text-disabled: #9A9E99;
+    --border: #E4E4E0;
+    --input: #8F8F89;
+    --ring: #B5442A;
+    --grid-line: rgba(0, 0, 0, 0.04);
+    --primary: #FF8B73;
+    --primary-foreground: #17201D;
+    --primary-hover: #F47D65;
+    --primary-active: #DA6F58;
+    --primary-border: #D9755F;
+    --primary-text: #B5442A;
+    --primary-subtle: rgba(255, 139, 115, 0.16);
+    --success: #2F6B3A;
+    --success-bg: #E7F2E4;
+    --success-border: #BFDDB8;
+    --warning: #7A4F00;
+    --warning-bg: #FFF4DB;
+    --warning-border: #F0D9A0;
+    --destructive: #B3261E;
+    --destructive-bg: #FCEBE9;
+    --destructive-border: #F1C0BB;
+    --panel: #101815;
+    --panel-foreground: #F7F4EC;
+    --panel-muted: #AEB5B1;
+    --panel-border: rgba(255, 255, 255, 0.10);
+    --panel-hover: rgba(255, 255, 255, 0.045);
+    --panel-accent: #C8EE79;
+    --panel-primary-text: #FF8B73;
+    --panel-primary-subtle: rgba(255, 139, 115, 0.14);
+    --shadow-card: none;
+    --shadow-pop: none;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-dialog: var(--dialog);
+  --color-surface-bar: var(--surface-bar);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-disabled: var(--text-disabled);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-border: var(--primary-border);
+  --color-primary-text: var(--primary-text);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-border: var(--success-border);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
+  --color-destructive: var(--destructive);
+  --color-destructive-bg: var(--destructive-bg);
+  --color-destructive-border: var(--destructive-border);
+  --color-panel: var(--panel);
+  --color-panel-foreground: var(--panel-foreground);
+  --color-panel-muted: var(--panel-muted);
+  --color-panel-border: var(--panel-border);
+  --color-panel-accent: var(--panel-accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 html,
@@ -34,8 +229,25 @@ body::-webkit-scrollbar,
   height: 0;
 }
 
+html {
+  background: var(--background);
+  color: var(--foreground);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: var(--primary-subtle);
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--foreground);
+  box-shadow: 0 0 0 1000px var(--muted) inset;
+  caret-color: var(--foreground);
 }

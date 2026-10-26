@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toUserFacingErrorMessage } from "@/lib/user-facing-error";
+import { ThemeToggle } from "./theme-toggle";
 import { WorkspacePanel } from "./workspace-panel";
 import { useWorkspaceFeedback } from "./workspace-feedback";
 
@@ -75,6 +76,12 @@ export function AccountSettings({ name: initialName, email: initialEmail }: { na
   }}>
     <div className="account-settings">
       <section>
+        <h3>Appearance</h3>
+        <div className="account-theme-row">
+          <ThemeToggle />
+        </div>
+      </section>
+      <section className="workspace-panel-section">
         <h3>Name</h3>
         <form onSubmit={event => { event.preventDefault(); void submit({ action: "update-name", name }); }}>
           <label htmlFor={`${id}-name`}>Name</label>

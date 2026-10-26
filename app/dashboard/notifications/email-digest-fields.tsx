@@ -74,7 +74,7 @@ export function EmailDigestFields({
   return (
     <>
       <div>
-        <div className="mb-1.5 text-xs font-medium text-slate-600">
+        <div className="mb-1.5 text-xs font-medium text-muted-foreground">
           Email delivery triggers
         </div>
         <div className="workspace-choice-grid">
@@ -86,10 +86,10 @@ export function EmailDigestFields({
               defaultChecked={initialEmailEnabled}
             />
             <span>
-              <strong className="block text-sm font-medium text-slate-900">
+              <strong className="block text-sm font-medium text-foreground">
                 Instant change alert emails
               </strong>
-              <span className="block text-xs text-slate-500">
+              <span className="block text-xs text-muted-foreground">
                 Email me immediately when a monitored page records a change that matches my filters
               </span>
             </span>
@@ -107,10 +107,10 @@ export function EmailDigestFields({
               disabled={!scheduledDigestsAvailable}
             />
             <span>
-              <strong className="block text-sm font-medium text-slate-900">
+              <strong className="block text-sm font-medium text-foreground">
                 Scheduled digest emails
               </strong>
-              <span className="block text-xs text-slate-500">
+              <span className="block text-xs text-muted-foreground">
                 {scheduledDigestsAvailable
                   ? "Email me a curated rollup when a scheduled digest includes matching changes"
                   : "Scheduled digests require Personal plan or higher"}
@@ -121,7 +121,7 @@ export function EmailDigestFields({
       </div>
 
       <div>
-        <div className="mb-1.5 text-xs font-medium text-slate-600">
+        <div className="mb-1.5 text-xs font-medium text-muted-foreground">
           Digest email schedules
         </div>
         <div className="workspace-choice-grid">
@@ -153,7 +153,7 @@ export function EmailDigestFields({
                   }
                   onInvalid={() => setShowScheduleError(true)}
                 />
-                <span className="text-sm font-medium text-slate-900">
+                <span className="text-sm font-medium text-foreground">
                   {option.label}
                   {!option.allowed ? option.lockedSuffix : ""}
                 </span>
@@ -176,20 +176,20 @@ export function EmailDigestFields({
           : null}
 
         {showScheduleError && isScheduleMissing ? (
-          <p className="mt-2 text-xs font-medium text-rose-600" role="alert">
+          <p className="mt-2 text-xs font-medium text-destructive" role="alert">
             {DIGEST_SCHEDULE_REQUIRED_MESSAGE}
           </p>
         ) : scheduledDigestsAvailable && !digestEnabled ? (
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-muted-foreground">
             Turn on scheduled digest emails to choose a schedule.
           </p>
         ) : null}
 
         {!scheduledDigestsAvailable ? (
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-muted-foreground">
             <Link
               href="/dashboard/billing"
-              className="font-medium text-indigo-600"
+              className="font-medium text-primary-text"
             >
               Upgrade in Billing
             </Link>{" "}

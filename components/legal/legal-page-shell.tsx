@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/marketing/brand-logo";
+import { MobileMenu } from "@/components/marketing/mobile-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 import styles from "./legal.module.css";
 
 export interface TocItem {
@@ -54,6 +56,7 @@ export function LegalPageShell({
             ))}
           </nav>
           <div className={styles.desktopActions}>
+            <ThemeToggle />
             <Link className={styles.loginLink} href="/login">
               Log in
             </Link>
@@ -61,6 +64,7 @@ export function LegalPageShell({
               Start monitoring
             </Link>
           </div>
+          <MobileMenu navigation={PRODUCT_NAV} />
         </div>
       </header>
 
@@ -148,7 +152,7 @@ export function LegalPageShell({
         <div className={`${styles.container} ${styles.footerMain}`}>
           <div className={styles.footerIdentity}>
             <Link className={styles.footerBrand} href="/" aria-label="Morrow home">
-              <BrandLogo />
+              <BrandLogo variant="dark" />
               <span>Morrow</span>
             </Link>
             <p>Monitor competitor pages and keep a record of what changed.</p>

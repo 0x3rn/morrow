@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import styles from "./auth-shell.module.css";
 import { BrandLogo } from "./marketing/brand-logo";
+import { ThemeToggle } from "./theme-toggle";
 
 type AuthShellProps = {
   children: ReactNode;
@@ -23,7 +24,7 @@ export function AuthShell({ children, mode }: AuthShellProps) {
     <main className={styles.shell}>
       <section className={styles.brandPanel} aria-label="Morrow product overview">
         <Link className={styles.brand} href="/" aria-label="Morrow home">
-          <BrandLogo className={styles.brandLogo} />
+          <BrandLogo className={styles.brandLogo} variant="dark" />
           <span>Morrow</span>
         </Link>
 
@@ -56,11 +57,14 @@ export function AuthShell({ children, mode }: AuthShellProps) {
             <BrandLogo className={styles.brandLogo} />
             <span>Morrow</span>
           </Link>
-          <Link className={styles.backLink} href="/">
-            <BackIcon />
-            <span className={styles.desktopBack}>Back to Morrow</span>
-            <span className={styles.mobileHome}>Home</span>
-          </Link>
+          <div className={styles.authHeaderActions}>
+            <ThemeToggle />
+            <Link className={styles.backLink} href="/">
+              <BackIcon />
+              <span className={styles.desktopBack}>Back to Morrow</span>
+              <span className={styles.mobileHome}>Home</span>
+            </Link>
+          </div>
         </header>
 
         <div className={styles.authContent}>

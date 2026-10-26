@@ -172,10 +172,10 @@ function getStatusClasses(
     status ===
     "active"
   ) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "border-success-border bg-success-bg text-success";
   }
 
-  return "border-slate-200 bg-slate-50 text-slate-600";
+  return "border-border bg-muted text-muted-foreground";
 }
 
 function PlusIcon() {
@@ -509,18 +509,18 @@ export default async function CompetitorsPage() {
     "w-full",
     "rounded-xl",
     "border",
-    "border-slate-200",
-    "bg-white",
+    "border-border",
+    "bg-card",
     "px-3.5",
     "py-2.5",
     "text-sm",
-    "text-slate-950",
+    "text-foreground",
     "outline-none",
     "transition-colors",
-    "placeholder:text-slate-400",
-    "focus-visible:border-indigo-400",
+    "placeholder:text-muted-foreground",
+    "focus-visible:border-ring",
     "focus-visible:ring-2",
-    "focus-visible:ring-indigo-500/15",
+    "focus-visible:ring-ring/15",
   ].join(
     " "
   );
@@ -532,33 +532,33 @@ export default async function CompetitorsPage() {
     "justify-center",
     "rounded-xl",
     "border",
-    "border-slate-200",
-    "bg-white",
+    "border-border",
+    "bg-card",
     "px-3.5",
     "py-2",
     "text-sm",
     "font-medium",
-    "text-slate-700",
+    "text-foreground",
     "transition-colors",
-    "hover:border-slate-300",
-    "hover:bg-slate-50",
+    "hover:border-border",
+    "hover:bg-muted",
     "focus-visible:outline-none",
     "focus-visible:ring-2",
-    "focus-visible:ring-indigo-500/25",
+    "focus-visible:ring-ring/25",
   ].join(
     " "
   );
 
   return (
-    <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <header className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
           <div>
-            <h1 className="text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
+            <h1 className="text-3xl font-semibold tracking-[-0.035em] text-foreground sm:text-4xl">
               Competitors
             </h1>
 
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-[15px]">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
               Add competitors, choose which pages to monitor, and manage their schedules and history.
             </p>
           </div>
@@ -569,18 +569,18 @@ export default async function CompetitorsPage() {
 
 
 
-              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
+              <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
                 Enter the company name and domain. You can choose which pages to monitor after it’s added.
               </p>
             </div>
 
             {competitorLimitReached ? (
-              <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
-                <div className="text-sm font-semibold text-amber-800">
+              <div className="mt-6 rounded-xl border border-warning-border bg-warning-bg px-4 py-4">
+                <div className="text-sm font-semibold text-warning">
                   Competitor limit reached
                 </div>
 
-                <p className="mt-1 text-sm leading-6 text-amber-700">
+                <p className="mt-1 text-sm leading-6 text-warning">
                   This workspace has reached its limit of{" "}
                   {
                     usage.competitorLimit
@@ -595,7 +595,7 @@ export default async function CompetitorsPage() {
                 <div>
                   <label
                     htmlFor="name"
-                    className="mb-1.5 block text-xs font-medium text-slate-600"
+                    className="mb-1.5 block text-xs font-medium text-muted-foreground"
                   >
                     Competitor name
                   </label>
@@ -616,7 +616,7 @@ export default async function CompetitorsPage() {
                 <div>
                   <label
                     htmlFor="domain"
-                    className="mb-1.5 block text-xs font-medium text-slate-600"
+                    className="mb-1.5 block text-xs font-medium text-muted-foreground"
                   >
                     Domain
                   </label>
@@ -637,7 +637,7 @@ export default async function CompetitorsPage() {
                 <div className="sm:col-span-2">
                   <button
                     type="submit"
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30 focus-visible:ring-offset-2"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-primary-border bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover active:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-2"
                   >
                     <PlusIcon />
 
@@ -646,22 +646,22 @@ export default async function CompetitorsPage() {
                 </div>
               </WorkspaceActionForm>
             )}
-          </div><aside className="workspace-capacity rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+          </div><aside className="workspace-capacity rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               Workspace limits
             </div>
 
-            <h2 className="mt-2 text-lg font-semibold text-slate-950">
+            <h2 className="mt-2 text-lg font-semibold text-foreground">
               Workspace usage
             </h2>
 
             <div className="mt-6">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm font-medium text-slate-700">
+                <span className="text-sm font-medium text-foreground">
                   Competitors
                 </span>
 
-                <span className="text-sm font-semibold text-slate-900">
+                <span className="text-sm font-semibold text-foreground">
                   {
                     usage.competitors
                   }
@@ -672,9 +672,9 @@ export default async function CompetitorsPage() {
                 </span>
               </div>
 
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full rounded-full bg-indigo-600"
+                  className="h-full rounded-full bg-primary"
                   style={{
                     width:
                       `${competitorPercentage}%`,
@@ -682,7 +682,7 @@ export default async function CompetitorsPage() {
                 />
               </div>
 
-              <div className="mt-2 text-xs text-slate-500">
+              <div className="mt-2 text-xs text-muted-foreground">
                 {
                   competitorRemaining
                 }{" "}
@@ -695,13 +695,13 @@ export default async function CompetitorsPage() {
               </div>
             </div>
 
-            <div className="mt-6 border-t border-slate-100 pt-5">
+            <div className="mt-6 border-t border-border pt-5">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm font-medium text-slate-700">
+                <span className="text-sm font-medium text-foreground">
                   Monitored pages
                 </span>
 
-                <span className="text-sm font-semibold text-slate-900">
+                <span className="text-sm font-semibold text-foreground">
                   {
                     usage.monitoredPages
                   }
@@ -712,9 +712,9 @@ export default async function CompetitorsPage() {
                 </span>
               </div>
 
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full rounded-full bg-indigo-600"
+                  className="h-full rounded-full bg-primary"
                   style={{
                     width:
                       `${monitoredPagePercentage}%`,
@@ -722,7 +722,7 @@ export default async function CompetitorsPage() {
                 />
               </div>
 
-              <div className="mt-2 text-xs text-slate-500">
+              <div className="mt-2 text-xs text-muted-foreground">
                 {
                   pageRemaining
                 }{" "}
@@ -735,12 +735,12 @@ export default async function CompetitorsPage() {
               </div>
             </div>
 
-            <div className="mt-6 border-t border-slate-100 pt-5">
-              <div className="text-xs text-slate-400">
+            <div className="mt-6 border-t border-border pt-5">
+              <div className="text-xs text-muted-foreground">
                 Per competitor
               </div>
 
-              <div className="mt-1 text-sm font-semibold text-slate-900">
+              <div className="mt-1 text-sm font-semibold text-foreground">
                 Up to{" "}
                 {
                   usage.perCompetitorPageLimit
@@ -748,7 +748,7 @@ export default async function CompetitorsPage() {
                 monitored pages
               </div>
 
-              <p className="mt-2 text-xs leading-5 text-slate-500">
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
                 Paused competitors and pages still count toward these limits.
               </p>
             </div>
@@ -763,7 +763,7 @@ export default async function CompetitorsPage() {
 
 
         <section className="workspace-metrics mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="workspace-metric-label">
               Competitors
             </div>
@@ -782,7 +782,7 @@ export default async function CompetitorsPage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="workspace-metric-label">
               Monitored pages
             </div>
@@ -798,7 +798,7 @@ export default async function CompetitorsPage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="workspace-metric-label">
               Changes
             </div>
@@ -814,7 +814,7 @@ export default async function CompetitorsPage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="workspace-metric-label">
               Major changes
             </div>
@@ -823,7 +823,7 @@ export default async function CompetitorsPage() {
               className={
                 totalMajorChanges >
                 0
-                  ? "workspace-metric-value text-red-700"
+                  ? "workspace-metric-value text-destructive"
                   : "workspace-metric-value"
               }
             >
@@ -844,16 +844,16 @@ export default async function CompetitorsPage() {
           <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
 
-              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-slate-950">
+              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-foreground">
                 Your competitors
               </h2>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
                 Open a competitor to manage its monitored pages and review recent changes.
               </p>
             </div>
 
-            <div className="text-sm font-medium text-slate-500">
+            <div className="text-sm font-medium text-muted-foreground">
               {
                 competitors.length
               }{" "}
@@ -866,12 +866,12 @@ export default async function CompetitorsPage() {
 
           {competitors.length ===
           0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
-              <h3 className="text-base font-semibold text-slate-900">
+            <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center">
+              <h3 className="text-base font-semibold text-foreground">
                 No competitors yet
               </h3>
 
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
                 Add a competitor to start choosing pages to monitor.
               </p>
             </div>
@@ -919,7 +919,7 @@ export default async function CompetitorsPage() {
                       key={
                         competitor.id
                       }
-                      className="workspace-competitor-record overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                      className="workspace-competitor-record overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
                     >
                       <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(420px,0.8fr)] lg:items-start">
                         <div className="min-w-0">
@@ -930,7 +930,7 @@ export default async function CompetitorsPage() {
                               <div className="flex flex-wrap items-center gap-2">
                                 <Link
                                   href={`/dashboard/competitors/${competitor.id}`}
-                                  className="text-lg font-semibold text-slate-950 hover:text-indigo-600"
+                                  className="text-lg font-semibold text-foreground hover:text-primary-text"
                                 >
                                   {
                                     competitor.name
@@ -952,7 +952,7 @@ export default async function CompetitorsPage() {
                                 href={`https://${competitor.domain}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="mt-2 inline-flex max-w-full items-center gap-1.5 text-sm text-slate-500 hover:text-indigo-600"
+                                className="mt-2 inline-flex max-w-full items-center gap-1.5 text-sm text-muted-foreground hover:text-primary-text"
                               >
                                 <span className="truncate">
                                   {
@@ -963,7 +963,7 @@ export default async function CompetitorsPage() {
                                 <ExternalLinkIcon />
                               </a>
 
-                              <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-500">
+                              <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">
                                 {competitor.description ||
                                   `Monitoring ${monitoredPageCount} ${
                                     monitoredPageCount ===
@@ -973,7 +973,7 @@ export default async function CompetitorsPage() {
                                   } for changes.`}
                               </p>
 
-                              <div className="mt-4 text-xs text-slate-400">
+                              <div className="mt-4 text-xs text-muted-foreground">
                                 Added{" "}
                                 {formatCompactDate(
                                   competitor.created_at
@@ -985,11 +985,11 @@ export default async function CompetitorsPage() {
 
                         <div className="grid grid-cols-2 gap-x-5 gap-y-5 sm:grid-cols-3">
                           <div>
-                            <div className="text-xs text-slate-400">
+                            <div className="text-xs text-muted-foreground">
                               Pages
                             </div>
 
-                            <div className="mt-1 text-sm font-semibold text-slate-900">
+                            <div className="mt-1 text-sm font-semibold text-foreground">
                               {
                                 monitoredPageCount
                               }
@@ -999,7 +999,7 @@ export default async function CompetitorsPage() {
                               }
                             </div>
 
-                            <div className="mt-1 text-xs text-slate-400">
+                            <div className="mt-1 text-xs text-muted-foreground">
                               {
                                 perCompetitorRemaining
                               }{" "}
@@ -1008,17 +1008,17 @@ export default async function CompetitorsPage() {
                           </div>
 
                           <div>
-                            <div className="text-xs text-slate-400">
+                            <div className="text-xs text-muted-foreground">
                               Active
                             </div>
 
-                            <div className="mt-1 text-sm font-semibold text-emerald-700">
+                            <div className="mt-1 text-sm font-semibold text-success">
                               {
                                 activePageCount
                               }
                             </div>
 
-                            <div className="mt-1 text-xs text-slate-400">
+                            <div className="mt-1 text-xs text-muted-foreground">
                               {
                                 pausedPageCount
                               }{" "}
@@ -1027,17 +1027,17 @@ export default async function CompetitorsPage() {
                           </div>
 
                           <div>
-                            <div className="text-xs text-slate-400">
+                            <div className="text-xs text-muted-foreground">
                               Changes
                             </div>
 
-                            <div className="mt-1 text-sm font-semibold text-slate-900">
+                            <div className="mt-1 text-sm font-semibold text-foreground">
                               {
                                 changeCount
                               }
                             </div>
 
-                            <div className="mt-1 text-xs text-red-500">
+                            <div className="mt-1 text-xs text-destructive">
                               {
                                 majorChangeCount
                               }{" "}
@@ -1046,11 +1046,11 @@ export default async function CompetitorsPage() {
                           </div>
 
                           <div>
-                            <div className="text-xs text-slate-400">
+                            <div className="text-xs text-muted-foreground">
                               Last checked
                             </div>
 
-                            <div className="mt-1 text-xs font-medium leading-5 text-slate-700">
+                            <div className="mt-1 text-xs font-medium leading-5 text-foreground">
                               {formatDateTime(
                                 competitor.latest_checked_at
                               )}
@@ -1058,11 +1058,11 @@ export default async function CompetitorsPage() {
                           </div>
 
                           <div>
-                            <div className="text-xs text-slate-400">
+                            <div className="text-xs text-muted-foreground">
                               Latest change
                             </div>
 
-                            <div className="mt-1 text-xs font-medium leading-5 text-slate-700">
+                            <div className="mt-1 text-xs font-medium leading-5 text-foreground">
                               {formatDateTime(
                                 competitor.latest_change_at
                               )}
@@ -1071,12 +1071,12 @@ export default async function CompetitorsPage() {
                         </div>
                       </div>
 
-                      <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-4 sm:px-6">
+                      <div className="border-t border-border bg-muted px-5 py-4 sm:px-6">
                         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                           <div className="flex flex-wrap items-center gap-2">
                             <Link
                               href={`/dashboard/competitors/${competitor.id}`}
-                              className="inline-flex min-h-10 items-center justify-center rounded-xl bg-slate-950 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-primary-border bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover active:bg-primary-active"
                             >
                               View competitor
                             </Link>
@@ -1116,7 +1116,7 @@ export default async function CompetitorsPage() {
                           </div>
 
                           {canEditMonitoring ? (
-                            <WorkspacePanel label="Manage" title={competitor.name}><div className="workspace-manage-competitor mt-4 grid gap-6 border-t border-slate-200 pt-5 lg:grid-cols-[minmax(0,1fr)_260px]">
+                            <WorkspacePanel label="Manage" title={competitor.name}><div className="workspace-manage-competitor mt-4 grid gap-6 border-t border-border pt-5 lg:grid-cols-[minmax(0,1fr)_260px]">
                                 <WorkspaceActionForm successMessage="Changes saved." action={updateCompetitor}
                                   className="grid gap-4 sm:grid-cols-2"
                                 >
@@ -1131,7 +1131,7 @@ export default async function CompetitorsPage() {
                                   <div>
                                     <label
                                       htmlFor={`name-${competitor.id}`}
-                                      className="mb-1.5 block text-xs font-medium text-slate-600"
+                                      className="mb-1.5 block text-xs font-medium text-muted-foreground"
                                     >
                                       Name
                                     </label>
@@ -1156,7 +1156,7 @@ export default async function CompetitorsPage() {
                                   <div>
                                     <label
                                       htmlFor={`domain-${competitor.id}`}
-                                      className="mb-1.5 block text-xs font-medium text-slate-600"
+                                      className="mb-1.5 block text-xs font-medium text-muted-foreground"
                                     >
                                       Domain
                                     </label>
@@ -1188,12 +1188,12 @@ export default async function CompetitorsPage() {
                                   </div>
                                 </WorkspaceActionForm>
 
-                                <div className="workspace-destructive border-t border-slate-200 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
-                                  <div className="text-sm font-semibold text-red-700">
+                                <div className="workspace-destructive border-t border-border pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+                                  <div className="text-sm font-semibold text-destructive">
                                     Remove competitor
                                   </div>
 
-                                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
                                     This permanently removes the competitor and its monitored pages, captures, changes, and delivery history.
                                   </p>
 
@@ -1211,13 +1211,13 @@ export default async function CompetitorsPage() {
 
                                       <button
                                         type="submit"
-                                        className="inline-flex min-h-10 items-center justify-center rounded-xl border border-red-200 bg-white px-3.5 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/20"
+                                        className="inline-flex min-h-10 items-center justify-center rounded-xl border border-destructive-border bg-card px-3.5 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/20"
                                       >
                                         Remove
                                       </button>
                                     </WorkspaceActionForm>
                                   ) : (
-                                    <p className="mt-3 text-xs text-slate-500">
+                                    <p className="mt-3 text-xs text-muted-foreground">
                                       Only workspace Owners and Admins can permanently remove a competitor.
                                     </p>
                                   )}

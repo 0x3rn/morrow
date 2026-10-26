@@ -94,13 +94,13 @@ function getSignificanceClasses(
 ) {
   switch (significance) {
     case "major":
-      return "border-red-200 bg-red-50 text-red-700";
+      return "border-destructive-border bg-destructive-bg text-destructive";
 
     case "moderate":
-      return "border-amber-200 bg-amber-50 text-amber-700";
+      return "border-warning-border bg-warning-bg text-warning";
 
     default:
-      return "border-slate-200 bg-slate-50 text-slate-600";
+      return "border-border bg-muted text-muted-foreground";
   }
 }
 
@@ -112,17 +112,17 @@ function getHttpStatusClasses(
     status >= 200 &&
     status < 300
   ) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "border-success-border bg-success-bg text-success";
   }
 
   if (
     status !== null &&
     status >= 400
   ) {
-    return "border-red-200 bg-red-50 text-red-700";
+    return "border-destructive-border bg-destructive-bg text-destructive";
   }
 
-  return "border-slate-200 bg-slate-50 text-slate-600";
+  return "border-border bg-muted text-muted-foreground";
 }
 
 export default async function SnapshotHistory({
@@ -328,12 +328,12 @@ export default async function SnapshotHistory({
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <nav className="mb-6">
           <Link
             href={`/dashboard/pages/${monitoredPageId}/history`}
-            className="inline-flex min-h-10 items-center gap-2 rounded-lg pr-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25"
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg pr-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
           >
             <ArrowLeftIcon />
 
@@ -343,15 +343,15 @@ export default async function SnapshotHistory({
           </Link>
         </nav>
 
-        <header className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <header className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
           <div className="px-5 py-6 sm:px-7 sm:py-8 lg:px-9">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-primary-text">
                   Snapshot history
                 </div>
 
-                <h1 className="mt-2 break-words text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
+                <h1 className="mt-2 break-words text-3xl font-semibold tracking-[-0.035em] text-foreground sm:text-4xl">
                   {monitoredPage.label ||
                     "Monitored page"}
                 </h1>
@@ -360,13 +360,13 @@ export default async function SnapshotHistory({
                   href={monitoredPage.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-3 block max-w-3xl break-all text-sm text-slate-500 transition-colors hover:text-indigo-600"
+                  className="mt-3 block max-w-3xl break-all text-sm text-muted-foreground transition-colors hover:text-primary-text"
                 >
                   {monitoredPage.url}
                 </a>
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
+                  <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
                     {
                       monitoredPage.competitor_name
                     }
@@ -376,8 +376,8 @@ export default async function SnapshotHistory({
                     className={
                       monitoredPage.status ===
                       "active"
-                        ? "rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"
-                        : "rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600"
+                        ? "rounded-full border border-success-border bg-success-bg px-2.5 py-1 text-xs font-medium text-success"
+                        : "rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"
                     }
                   >
                     {monitoredPage.status ===
@@ -391,14 +391,14 @@ export default async function SnapshotHistory({
               <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
                 <Link
                   href={`/dashboard/pages/${monitoredPageId}/history`}
-                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   Change history
                 </Link>
 
                 <Link
                   href={`/dashboard/competitors/${monitoredPage.competitor_id}`}
-                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   Competitor profile
                 </Link>
@@ -406,8 +406,8 @@ export default async function SnapshotHistory({
             </div>
           </div>
 
-          <div className="border-t border-slate-200 px-5 py-5 sm:px-7">
-            <div className="text-xs font-medium text-slate-500">
+          <div className="border-t border-border px-5 py-5 sm:px-7">
+            <div className="text-xs font-medium text-muted-foreground">
               Retained snapshots ({retentionWindow.entitlements.planName} · {retentionWindow.retentionDays}-day retention)
             </div>
 
@@ -419,11 +419,11 @@ export default async function SnapshotHistory({
 
         <section className="py-8 sm:py-10">
           <div className="mb-6">
-            <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-950">
+            <h2 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">
               Captures
             </h2>
 
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-muted-foreground">
               {totalSnapshots === 0 ? (
                 "No retained snapshots"
               ) : (
@@ -442,12 +442,12 @@ export default async function SnapshotHistory({
           </div>
 
           {snapshots.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white px-5 py-8 shadow-sm sm:px-6">
-              <h3 className="text-base font-semibold text-slate-900">
+            <div className="rounded-2xl border border-border bg-card px-5 py-8 shadow-sm sm:px-6">
+              <h3 className="text-base font-semibold text-foreground">
                 No snapshots yet
               </h3>
 
-              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
+              <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
                 No captures have been
                 retained for this page yet.
               </p>
@@ -469,11 +469,11 @@ export default async function SnapshotHistory({
                   return (
                     <article
                       key={snapshot.id}
-                      className="workspace-capture-record min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                      className="workspace-capture-record min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
                     >
                       <div className="p-5 sm:p-6">
                         <div className="flex min-w-0 flex-col justify-between gap-4 sm:flex-row sm:items-start">
-                          <div className="min-w-0"><time className="mt-3 block text-sm font-medium text-slate-700">
+                          <div className="min-w-0"><time className="mt-3 block text-sm font-medium text-foreground">
                               {formatDateTime(
                                 snapshot.captured_at
                               )}
@@ -482,8 +482,8 @@ export default async function SnapshotHistory({
                               <span
                                 className={
                                   hasChange
-                                    ? "rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700"
-                                    : "rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600"
+                                    ? "rounded-full border border-border bg-primary-subtle px-2.5 py-1 text-xs font-medium text-primary-text"
+                                    : "rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"
                                 }
                               >
                                 {hasChange
@@ -509,12 +509,12 @@ export default async function SnapshotHistory({
                               )}/screenshot`}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                              className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                             >
                               Open full capture
                             </a>
                           ) : (
-                            <span className="inline-flex min-h-10 shrink-0 items-center text-sm text-slate-400">
+                            <span className="inline-flex min-h-10 shrink-0 items-center text-sm text-muted-foreground">
                               Capture unavailable
                             </span>
                           )}
@@ -524,10 +524,10 @@ export default async function SnapshotHistory({
 
                         {hasChange &&
                         snapshot.change_id ? (
-                          <div className="mt-5 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 sm:p-5">
+                          <div className="mt-5 rounded-xl border border-border bg-primary-subtle p-4 sm:p-5">
                             <div className="flex flex-wrap items-center gap-2">
                               {snapshot.change_category ? (
-                                <span className="rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-xs font-medium capitalize text-indigo-700">
+                                <span className="rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium capitalize text-primary-text">
                                   {
                                     snapshot.change_category
                                   }
@@ -547,36 +547,36 @@ export default async function SnapshotHistory({
                               ) : null}
                             </div>
 
-                            <h3 className="mt-3 break-words text-sm font-semibold leading-6 text-slate-900">
+                            <h3 className="mt-3 break-words text-sm font-semibold leading-6 text-foreground">
                               {snapshot.change_summary ||
                                 "Meaningful change detected."}
                             </h3>
 
                             <Link
                               href={`/dashboard/changes/${snapshot.change_id}`}
-                              className="mt-3 inline-flex min-h-10 items-center text-sm font-medium text-indigo-600 transition-colors hover:text-indigo-500"
+                              className="mt-3 inline-flex min-h-10 items-center text-sm font-medium text-primary-text transition-colors hover:underline"
                             >
                               View change details
                             </Link>
                           </div>
-                        ) : null}<details className="workspace-snapshot-meta workspace-secondary-disclosure"><summary><span>Content hash</span><span>Snapshot ID</span></summary><div className="mt-5 grid min-w-0 gap-4 border-t border-slate-100 pt-5 md:grid-cols-2">
+                        ) : null}<details className="workspace-snapshot-meta workspace-secondary-disclosure"><summary><span>Content hash</span><span>Snapshot ID</span></summary><div className="mt-5 grid min-w-0 gap-4 border-t border-border pt-5 md:grid-cols-2">
                           <div className="min-w-0">
-                            <div className="text-xs font-medium text-slate-500">
+                            <div className="text-xs font-medium text-muted-foreground">
                               Content hash
                             </div>
 
-                            <div className="mt-2 max-w-full break-all font-mono text-xs leading-5 text-slate-700">
+                            <div className="mt-2 max-w-full break-all font-mono text-xs leading-5 text-foreground">
                               {snapshot.content_hash ||
                                 "Unavailable"}
                             </div>
                           </div>
 
                           <div className="min-w-0">
-                            <div className="text-xs font-medium text-slate-500">
+                            <div className="text-xs font-medium text-muted-foreground">
                               Snapshot ID
                             </div>
 
-                            <div className="mt-2 max-w-full break-all font-mono text-xs leading-5 text-slate-700">
+                            <div className="mt-2 max-w-full break-all font-mono text-xs leading-5 text-foreground">
                               {snapshot.id}
                             </div>
                           </div>
@@ -592,9 +592,9 @@ export default async function SnapshotHistory({
           {totalPages > 1 ? (
             <nav
               aria-label="Snapshot history pagination"
-              className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between"
+              className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between"
             >
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 Page {currentPage} of{" "}
                 {totalPages}
               </p>
@@ -605,7 +605,7 @@ export default async function SnapshotHistory({
                     href={getPageUrl(
                       currentPage - 1
                     )}
-                    className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                    className="inline-flex min-h-10 items-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
                   >
                     Previous
                   </Link>
@@ -617,7 +617,7 @@ export default async function SnapshotHistory({
                     href={getPageUrl(
                       currentPage + 1
                     )}
-                    className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                    className="inline-flex min-h-10 items-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
                   >
                     Next
                   </Link>

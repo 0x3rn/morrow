@@ -218,13 +218,13 @@ function getSignificanceClasses(
 ) {
   switch (significance) {
     case "major":
-      return "border-red-200 bg-red-50 text-red-700";
+      return "border-destructive-border bg-destructive-bg text-destructive";
 
     case "moderate":
-      return "border-amber-200 bg-amber-50 text-amber-700";
+      return "border-warning-border bg-warning-bg text-warning";
 
     default:
-      return "border-slate-200 bg-slate-50 text-slate-600";
+      return "border-border bg-muted text-muted-foreground";
   }
 }
 
@@ -236,14 +236,14 @@ function getHttpStatusClasses(
     status >= 200 &&
     status < 400
   ) {
-    return "text-emerald-700";
+    return "text-success";
   }
 
   if (status !== null) {
-    return "text-red-700";
+    return "text-destructive";
   }
 
-  return "text-slate-500";
+  return "text-muted-foreground";
 }
 
 function ArrowLeftIcon() {
@@ -706,19 +706,19 @@ export default async function CompetitorPage({
     "w-full",
     "rounded-xl",
     "border",
-    "border-slate-200",
-    "bg-white",
+    "border-border",
+    "bg-card",
     "px-3.5",
     "py-2.5",
     "text-sm",
-    "text-slate-950",
+    "text-foreground",
     "outline-none",
     "transition-colors",
     "duration-150",
-    "placeholder:text-slate-400",
-    "focus-visible:border-indigo-400",
+    "placeholder:text-muted-foreground",
+    "focus-visible:border-ring",
     "focus-visible:ring-2",
-    "focus-visible:ring-indigo-500/15",
+    "focus-visible:ring-ring/15",
     "motion-reduce:transition-none",
   ].join(" ");
 
@@ -729,30 +729,30 @@ export default async function CompetitorPage({
     "justify-center",
     "rounded-xl",
     "border",
-    "border-slate-200",
-    "bg-white",
+    "border-border",
+    "bg-card",
     "px-3.5",
     "py-2",
     "text-sm",
     "font-medium",
-    "text-slate-700",
+    "text-foreground",
     "transition-colors",
     "duration-150",
-    "hover:border-slate-300",
-    "hover:bg-slate-50",
+    "hover:border-border",
+    "hover:bg-muted",
     "focus-visible:outline-none",
     "focus-visible:ring-2",
-    "focus-visible:ring-indigo-500/25",
+    "focus-visible:ring-ring/25",
     "motion-reduce:transition-none",
   ].join(" ");
 
   return (
-    <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <nav className="mb-6 sm:mb-8">
           <Link
             href="/dashboard/competitors"
-            className="inline-flex min-h-10 items-center gap-2 rounded-lg pr-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25 motion-reduce:transition-none"
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg pr-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25 motion-reduce:transition-none"
           >
             <ArrowLeftIcon />
 
@@ -762,7 +762,7 @@ export default async function CompetitorPage({
           </Link>
         </nav>
 
-        <header className="workspace-profile-heading overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"><div><div className="min-w-0">
+        <header className="workspace-profile-heading overflow-hidden rounded-3xl border border-border bg-card shadow-sm"><div><div className="min-w-0">
               <div className="flex items-start gap-4 sm:gap-5">
                 <div className="relative shrink-0">
                   <CompetitorIcon name={competitor.name} src={competitor.favicon_url} variant="profile" />
@@ -770,7 +770,7 @@ export default async function CompetitorPage({
                   {competitor.status ===
                   "active" ? (
                     <span
-                      className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-[3px] border-white bg-emerald-500"
+                      className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-[3px] border-card bg-success"
                       aria-label="Monitoring active"
                     />
                   ) : null}
@@ -778,15 +778,15 @@ export default async function CompetitorPage({
 
                 <div className="min-w-0">
                   <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="font-semibold uppercase tracking-[0.14em] text-indigo-600">
+                    <span className="font-semibold uppercase tracking-[0.14em] text-primary-text">
                       Competitor
                     </span>
 
-                    <span className="text-slate-300">
+                    <span className="text-muted-foreground">
                       /
                     </span>
 
-                    <span className="text-slate-500">
+                    <span className="text-muted-foreground">
                       Added{" "}
                       {formatCompactDateTime(
                         competitor.created_at
@@ -794,7 +794,7 @@ export default async function CompetitorPage({
                     </span>
                   </div>
 
-                  <h1 className="break-words text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
+                  <h1 className="break-words text-3xl font-semibold tracking-[-0.035em] text-foreground sm:text-4xl">
                     {competitor.name}
                   </h1>
 
@@ -803,7 +803,7 @@ export default async function CompetitorPage({
                       href={`https://${competitor.domain}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex max-w-full items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25 motion-reduce:transition-none"
+                      className="inline-flex max-w-full items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25 motion-reduce:transition-none"
                     >
                       <span className="truncate">
                         {competitor.domain}
@@ -816,13 +816,13 @@ export default async function CompetitorPage({
                       className={
                         competitor.status ===
                         "active"
-                          ? "inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"
-                          : "inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600"
+                          ? "inline-flex items-center gap-1.5 rounded-full border border-success-border bg-success-bg px-2.5 py-1 text-xs font-medium text-success"
+                          : "inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"
                       }
                     >
                       {competitor.status ===
                       "active" ? (
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-success" />
                       ) : null}
 
                       {getStatusLabel(
@@ -831,7 +831,7 @@ export default async function CompetitorPage({
                     </span>
                   </div>
 
-                  <p className="mt-5 max-w-2xl text-sm leading-6 text-slate-600 sm:text-[15px]">
+                  <p className="mt-5 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
                     {competitor.description ||
                       `Monitoring ${
                         metrics.monitoredPages === 1
@@ -858,16 +858,16 @@ export default async function CompetitorPage({
         <section className="workspace-profile-pages">
           <div className="workspace-section-heading">
             <div>
-              <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-950">
+              <h2 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">
                 Monitored pages
               </h2>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
                 Pages Morrow checks on the schedule you set.
               </p>
             </div>
-          {permissions.canEditMonitoring ? (<WorkspacePanel label="Add monitored page"><p className="text-sm text-slate-500">Enter a page URL to monitor</p><WorkspaceActionForm successMessage="Monitored page added." action={createMonitoredPage}
-                className="space-y-4 border-t border-slate-100 px-5 py-5"
+          {permissions.canEditMonitoring ? (<WorkspacePanel label="Add monitored page"><p className="text-sm text-muted-foreground">Enter a page URL to monitor</p><WorkspaceActionForm successMessage="Monitored page added." action={createMonitoredPage}
+                className="space-y-4 border-t border-border px-5 py-5"
               >
                 <input
                   type="hidden"
@@ -878,7 +878,7 @@ export default async function CompetitorPage({
                 <div>
                   <label
                     htmlFor="url"
-                    className="mb-1.5 block text-xs font-medium text-slate-600"
+                    className="mb-1.5 block text-xs font-medium text-muted-foreground"
                   >
                     Page URL
                   </label>
@@ -896,7 +896,7 @@ export default async function CompetitorPage({
                 <div>
                   <label
                     htmlFor="label"
-                    className="mb-1.5 block text-xs font-medium text-slate-600"
+                    className="mb-1.5 block text-xs font-medium text-muted-foreground"
                   >
                     Label
                   </label>
@@ -912,19 +912,19 @@ export default async function CompetitorPage({
 
                 <button
                   type="submit"
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30 focus-visible:ring-offset-2 motion-reduce:transition-none"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-primary-border bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover active:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-2 motion-reduce:transition-none"
                 >
                   Add monitored page
                 </button>
               </WorkspaceActionForm></WorkspacePanel>) : null}</div>
 
           {monitoredPages.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center">
-              <div className="text-sm font-semibold text-slate-900">
+            <div className="rounded-2xl border border-dashed border-border bg-card px-5 py-10 text-center">
+              <div className="text-sm font-semibold text-foreground">
                 No monitored pages
               </div>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Add a page URL to start
                 monitoring this competitor.
               </p>
@@ -935,12 +935,12 @@ export default async function CompetitorPage({
                 (page) => (
                   <article
                     key={page.id}
-                    className="workspace-page-record overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                    className="workspace-page-record overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
                   >
                     <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(500px,1fr)] lg:items-center">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="truncate text-base font-semibold text-slate-950">
+                          <h3 className="truncate text-base font-semibold text-foreground">
                             {page.label ||
                               "Unlabelled page"}
                           </h3>
@@ -949,13 +949,13 @@ export default async function CompetitorPage({
                             className={
                               page.status ===
                               "active"
-                                ? "inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"
-                                : "inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600"
+                                ? "inline-flex items-center gap-1.5 rounded-full border border-success-border bg-success-bg px-2.5 py-1 text-xs font-medium text-success"
+                                : "inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"
                             }
                           >
                             {page.status ===
                             "active" ? (
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                              <span className="h-1.5 w-1.5 rounded-full bg-success" />
                             ) : null}
 
                             {page.status ===
@@ -969,7 +969,7 @@ export default async function CompetitorPage({
                           href={page.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="mt-2 inline-flex max-w-full items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25 motion-reduce:transition-none"
+                          className="mt-2 inline-flex max-w-full items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25 motion-reduce:transition-none"
                         >
                           <span className="truncate">
                             {page.url}
@@ -978,7 +978,7 @@ export default async function CompetitorPage({
                           <ExternalLinkIcon />
                         </a>
 
-                        <div className="mt-4 text-xs text-slate-400">
+                        <div className="mt-4 text-xs text-muted-foreground">
                           {getFrequencyLabel(
                             page.frequency_minutes
                           )}
@@ -993,11 +993,11 @@ export default async function CompetitorPage({
 
                       <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
                         <div>
-                          <div className="text-xs text-slate-400">
+                          <div className="text-xs text-muted-foreground">
                             Changes
                           </div>
 
-                          <div className="mt-1 text-sm font-semibold text-slate-900">
+                          <div className="mt-1 text-sm font-semibold text-foreground">
                             {Number(
                               page.change_count
                             )}
@@ -1005,7 +1005,7 @@ export default async function CompetitorPage({
                         </div>
 
                         <div>
-                          <div className="text-xs text-slate-400">
+                          <div className="text-xs text-muted-foreground">
                             HTTP
                           </div>
 
@@ -1020,11 +1020,11 @@ export default async function CompetitorPage({
                         </div>
 
                         <div>
-                          <div className="text-xs text-slate-400">
+                          <div className="text-xs text-muted-foreground">
                             Last checked
                           </div>
 
-                          <div className="mt-1 text-sm font-medium leading-5 text-slate-800">
+                          <div className="mt-1 text-sm font-medium leading-5 text-foreground">
                             {formatCompactDateTime(
                               page.last_checked_at
                             )}
@@ -1032,11 +1032,11 @@ export default async function CompetitorPage({
                         </div>
 
                         <div>
-                          <div className="text-xs text-slate-400">
+                          <div className="text-xs text-muted-foreground">
                             Next check
                           </div>
 
-                          <div className="mt-1 text-sm font-medium leading-5 text-slate-800">
+                          <div className="mt-1 text-sm font-medium leading-5 text-foreground">
                             {page.status ===
                             "active"
                               ? formatCompactDateTime(
@@ -1053,7 +1053,7 @@ export default async function CompetitorPage({
                     ) ? (
                       <div
                         role="alert"
-                        className="border-t border-amber-200 bg-amber-50 px-5 py-3 text-xs leading-5 text-amber-800 sm:px-6"
+                        className="border-t border-warning-border bg-warning-bg px-5 py-3 text-xs leading-5 text-warning sm:px-6"
                       >
                         <strong>
                           Monitored section no longer found:
@@ -1071,8 +1071,8 @@ export default async function CompetitorPage({
                       </div>
                     ) : null}
 
-                    <div className="flex flex-col justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-5 py-3 sm:flex-row sm:items-center sm:px-6">
-                      <div className="text-xs text-slate-500">
+                    <div className="flex flex-col justify-between gap-3 border-t border-border bg-muted px-5 py-3 sm:flex-row sm:items-center sm:px-6">
+                      <div className="text-xs text-muted-foreground">
                         {page.latest_http_status !==
                           null &&
                         page.latest_http_status >=
@@ -1130,11 +1130,11 @@ export default async function CompetitorPage({
                               className="space-y-4"
                             >
                               <div>
-                                <h4 className="text-sm font-semibold text-slate-900">
+                                <h4 className="text-sm font-semibold text-foreground">
                                   Page details
                                 </h4>
 
-                                <p className="mt-1 text-xs leading-5 text-slate-500">
+                                <p className="mt-1 text-xs leading-5 text-muted-foreground">
                                   Update this page&apos;s label or URL.
                                 </p>
                               </div>
@@ -1156,7 +1156,7 @@ export default async function CompetitorPage({
                               <div className="mt-4">
                                 <label
                                   htmlFor={`label-${page.id}`}
-                                  className="mb-1.5 block text-xs font-medium text-slate-600"
+                                  className="mb-1.5 block text-xs font-medium text-muted-foreground"
                                 >
                                   Label
                                 </label>
@@ -1177,7 +1177,7 @@ export default async function CompetitorPage({
                               <div className="mt-4">
                                 <label
                                   htmlFor={`url-${page.id}`}
-                                  className="mb-1.5 block text-xs font-medium text-slate-600"
+                                  className="mb-1.5 block text-xs font-medium text-muted-foreground"
                                 >
                                   Page URL
                                 </label>
@@ -1207,11 +1207,11 @@ export default async function CompetitorPage({
                                 className="space-y-4"
                               >
                                 <div>
-                                  <h4 className="text-sm font-semibold text-slate-900">
+                                  <h4 className="text-sm font-semibold text-foreground">
                                     Check frequency
                                   </h4>
 
-                                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
                                     Choose how often Morrow checks this page.
                                   </p>
                                 </div>
@@ -1231,7 +1231,7 @@ export default async function CompetitorPage({
                                 />
 
                                 <div className="workspace-frequency mt-4">
-                                  <label className="block text-center text-xs text-slate-500" htmlFor={`frequency-${page.id}`}>Check frequency</label><select
+                                  <label className="block text-center text-xs text-muted-foreground" htmlFor={`frequency-${page.id}`}>Check frequency</label><select
                                     id={`frequency-${page.id}`}
                                     name="frequencyMinutes"
                                     defaultValue={
@@ -1305,7 +1305,7 @@ export default async function CompetitorPage({
                                 {!entitlements
                                   .features
                                   .hourlyMonitoring ? (
-                                  <p className="mt-3 text-xs text-slate-500">
+                                  <p className="mt-3 text-xs text-muted-foreground">
                                     Your{" "}
                                     <strong>
                                       {
@@ -1321,7 +1321,7 @@ export default async function CompetitorPage({
                                     .{" "}
                                     <Link
                                       href="/dashboard/billing"
-                                      className="font-medium text-indigo-600"
+                                      className="font-medium text-primary-text"
                                     >
                                       Upgrade in Billing
                                     </Link>{" "}
@@ -1347,17 +1347,17 @@ export default async function CompetitorPage({
       />
     ) : (
       <div className="workspace-panel-section space-y-2">
-        <h4 className="text-sm font-semibold text-slate-900">
+        <h4 className="text-sm font-semibold text-foreground">
           Monitoring scope (CSS selectors)
         </h4>
-        <p className="text-xs leading-5 text-slate-500">
+        <p className="text-xs leading-5 text-muted-foreground">
           Section-level CSS selector filtering is included on{" "}
           <strong>Starter</strong>, <strong>Growth</strong>, and{" "}
           <strong>Scale</strong> plans. Your workspace is currently on{" "}
           <strong>{entitlements.planName}</strong> (full-page monitoring).{" "}
           <Link
             href="/dashboard/billing"
-            className="font-medium text-indigo-600"
+            className="font-medium text-primary-text"
           >
             Upgrade in Billing
           </Link>{" "}
@@ -1367,11 +1367,11 @@ export default async function CompetitorPage({
     )}
     {permissions.canDeleteMonitoringResources ? (
     <div className="workspace-destructive">
-                                <h4 className="text-sm font-semibold text-red-700">
+                                <h4 className="text-sm font-semibold text-destructive">
                                   Remove monitored page
                                 </h4>
 
-                                <p className="mt-1 text-xs leading-5 text-slate-500">
+                                <p className="mt-1 text-xs leading-5 text-muted-foreground">
                                   This permanently removes the page and its saved history.
                                 </p>
 
@@ -1394,7 +1394,7 @@ export default async function CompetitorPage({
 
                                   <button
                                     type="submit"
-                                    className="inline-flex min-h-10 items-center justify-center rounded-xl border border-red-200 bg-white px-3.5 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/20 motion-reduce:transition-none"
+                                    className="inline-flex min-h-10 items-center justify-center rounded-xl border border-destructive-border bg-card px-3.5 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/20 motion-reduce:transition-none"
                                   >
                                     Remove page
                                   </button>
@@ -1416,28 +1416,28 @@ export default async function CompetitorPage({
         <section className="workspace-profile-activity">
             <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-primary-text">
                   Activity
                 </div>
 
-                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-slate-950">
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-foreground">
                   Recent changes
                 </h2>
 
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
                   Changes recorded across this competitor&apos;s
                   monitored pages.
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <div className="text-xs text-slate-400">
+                <div className="text-xs text-muted-foreground">
                   Showing {recentChanges.length}
                 </div>
 
                 <Link
                   href={`/dashboard/competitors/${competitor.id}/history`}
-                  className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                  className="inline-flex min-h-10 items-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   View full history
                 </Link>
@@ -1445,12 +1445,12 @@ export default async function CompetitorPage({
             </div>
 
             {recentChanges.length === 0 ? (
-              <div className="rounded-2xl border border-slate-200 bg-white px-5 py-8 shadow-sm sm:px-6">
-                <h3 className="text-base font-semibold text-slate-900">
+              <div className="rounded-2xl border border-border bg-card px-5 py-8 shadow-sm sm:px-6">
+                <h3 className="text-base font-semibold text-foreground">
                   No changes yet
                 </h3>
 
-                <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
+                <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
                   Changes Morrow records will
                   appear here after a monitored
                   page changes.
@@ -1462,24 +1462,24 @@ export default async function CompetitorPage({
                   (change) => (
                     <article
                       key={change.id}
-                      className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                      className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
                     >
                       <div
                         className={
                           change.significance ===
                           "major"
-                            ? "absolute inset-y-0 left-0 w-1 bg-red-500"
+                            ? "absolute inset-y-0 left-0 w-1 bg-destructive"
                             : change.significance ===
                                 "moderate"
-                              ? "absolute inset-y-0 left-0 w-1 bg-amber-500"
-                              : "absolute inset-y-0 left-0 w-1 bg-indigo-500"
+                              ? "absolute inset-y-0 left-0 w-1 bg-warning"
+                              : "absolute inset-y-0 left-0 w-1 bg-primary"
                         }
                       />
 
                       <div className="p-5 pl-6 sm:p-6 sm:pl-7">
                         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium capitalize text-indigo-700">
+                            <span className="rounded-full border border-border bg-primary-subtle px-2.5 py-1 text-xs font-medium capitalize text-primary-text">
                               {change.category}
                             </span>
 
@@ -1494,23 +1494,23 @@ export default async function CompetitorPage({
                             </span>
                           </div>
 
-                          <time className="shrink-0 text-xs text-slate-400">
+                          <time className="shrink-0 text-xs text-muted-foreground">
                             {formatDateTime(
                               change.detected_at
                             )}
                           </time>
                         </div>
 
-                        <details className="workspace-change-disclosure"><summary><h3 className="mt-5 max-w-3xl text-lg font-semibold leading-7 tracking-[-0.01em] text-slate-950">
+                        <details className="workspace-change-disclosure"><summary><h3 className="mt-5 max-w-3xl text-lg font-semibold leading-7 tracking-[-0.01em] text-foreground">
                           {change.summary ||
                             "Change detected."}
                         </h3></summary><div className="workspace-change-description">{change.why_it_matters ? (
-                          <div className="mt-5 rounded-xl bg-slate-50 px-4 py-4 sm:px-5">
-                            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-600">
+                          <div className="mt-5 rounded-xl bg-muted px-4 py-4 sm:px-5">
+                            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-primary-text">
                               Why it matters
                             </div>
 
-                            <p className="mt-2 text-sm leading-6 text-slate-600">
+                            <p className="mt-2 text-sm leading-6 text-muted-foreground">
                               {
                                 change.why_it_matters
                               }
@@ -1518,8 +1518,8 @@ export default async function CompetitorPage({
                           </div>
                         ) : null}</div></details>
 
-                        <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-slate-100 pt-4 text-xs">
-                          <span className="font-medium text-slate-700">
+                        <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-4 text-xs">
+                          <span className="font-medium text-foreground">
                             {change.monitored_page_label ||
                               "Monitored page"}
                           </span>
@@ -1530,7 +1530,7 @@ export default async function CompetitorPage({
                             }
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex min-w-0 max-w-full items-center gap-1.5 text-slate-500 transition-colors hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25 motion-reduce:transition-none"
+                            className="inline-flex min-w-0 max-w-full items-center gap-1.5 text-muted-foreground transition-colors hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25 motion-reduce:transition-none"
                           >
                             <span className="max-w-[240px] truncate sm:max-w-md">
                               {
@@ -1545,7 +1545,7 @@ export default async function CompetitorPage({
                         {change.previous_text ||
                         change.current_text ? (
                           <details className="group mt-4">
-                            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25 motion-reduce:transition-none">
+                            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25 motion-reduce:transition-none">
                               <span>
                                 View before and after
                               </span>
@@ -1553,24 +1553,24 @@ export default async function CompetitorPage({
                               <ChevronIcon />
                             </summary>
 
-                            <div className="workspace-evidence mt-3 grid overflow-hidden rounded-xl border border-slate-200 md:grid-cols-2">
-                              <div className="bg-red-50/50 p-4 sm:p-5">
-                                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-red-600">
+                            <div className="workspace-evidence mt-3 grid overflow-hidden rounded-xl border border-border md:grid-cols-2">
+                              <div className="bg-destructive-bg p-4 sm:p-5">
+                                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-destructive">
                                   Previous
                                 </div>
 
-                                <pre className="mt-3 whitespace-pre-wrap break-words font-mono text-xs leading-6 text-slate-700">
+                                <pre className="mt-3 whitespace-pre-wrap break-words font-mono text-xs leading-6 text-foreground">
                                   {change.previous_text ||
                                     "No previous text available."}
                                 </pre>
                               </div>
 
-                              <div className="border-t border-slate-200 bg-emerald-50/50 p-4 sm:p-5 md:border-l md:border-t-0">
-                                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
+                              <div className="border-t border-border bg-success-bg p-4 sm:p-5 md:border-l md:border-t-0">
+                                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-success">
                                   Current
                                 </div>
 
-                                <pre className="mt-3 whitespace-pre-wrap break-words font-mono text-xs leading-6 text-slate-700">
+                                <pre className="mt-3 whitespace-pre-wrap break-words font-mono text-xs leading-6 text-foreground">
                                   {change.current_text ||
                                     "No current text available."}
                                 </pre>

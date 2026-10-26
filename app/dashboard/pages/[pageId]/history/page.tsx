@@ -100,13 +100,13 @@ function getSignificanceClasses(
 ) {
   switch (significance) {
     case "major":
-      return "border-red-200 bg-red-50 text-red-700";
+      return "border-destructive-border bg-destructive-bg text-destructive";
 
     case "moderate":
-      return "border-amber-200 bg-amber-50 text-amber-700";
+      return "border-warning-border bg-warning-bg text-warning";
 
     default:
-      return "border-slate-200 bg-slate-50 text-slate-600";
+      return "border-border bg-muted text-muted-foreground";
   }
 }
 
@@ -303,12 +303,12 @@ export default async function MonitoredPageHistory({
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <nav className="mb-6">
           <Link
             href={`/dashboard/competitors/${monitoredPage.competitor_id}`}
-            className="inline-flex min-h-10 items-center gap-2 rounded-lg pr-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25"
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg pr-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
           >
             <ArrowLeftIcon />
 
@@ -318,15 +318,15 @@ export default async function MonitoredPageHistory({
           </Link>
         </nav>
 
-        <header className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <header className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
           <div className="px-5 py-6 sm:px-7 sm:py-8 lg:px-9">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-primary-text">
                   Page history
                 </div>
 
-                <h1 className="mt-2 break-words text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
+                <h1 className="mt-2 break-words text-3xl font-semibold tracking-[-0.035em] text-foreground sm:text-4xl">
                   {monitoredPage.label ||
                     "Monitored page"}
                 </h1>
@@ -337,13 +337,13 @@ export default async function MonitoredPageHistory({
                   }
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-3 block max-w-3xl break-all text-sm text-slate-500 transition-colors hover:text-indigo-600"
+                  className="mt-3 block max-w-3xl break-all text-sm text-muted-foreground transition-colors hover:text-primary-text"
                 >
                   {monitoredPage.url}
                 </a>
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
+                  <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
                     {
                       monitoredPage.competitor_name
                     }
@@ -353,8 +353,8 @@ export default async function MonitoredPageHistory({
                     className={
                       monitoredPage.status ===
                       "active"
-                        ? "rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"
-                        : "rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600"
+                        ? "rounded-full border border-success-border bg-success-bg px-2.5 py-1 text-xs font-medium text-success"
+                        : "rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"
                     }
                   >
                     {monitoredPage.status ===
@@ -368,7 +368,7 @@ export default async function MonitoredPageHistory({
               <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
                 <Link
                   href={`/dashboard/pages/${monitoredPage.id}/snapshots`}
-                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   Snapshot history
                 </Link>
@@ -377,7 +377,7 @@ export default async function MonitoredPageHistory({
                   href={`/dashboard/changes?monitoredPage=${encodeURIComponent(
                     monitoredPage.id
                   )}`}
-                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   Open in Change history
                 </Link>
@@ -385,9 +385,9 @@ export default async function MonitoredPageHistory({
             </div>
           </div>
 
-          <div className="grid border-t border-slate-200 sm:grid-cols-3">
-            <div className="border-b border-slate-200 px-5 py-5 sm:border-b-0 sm:border-r sm:px-7">
-              <div className="text-xs font-medium text-slate-500">
+          <div className="grid border-t border-border sm:grid-cols-3">
+            <div className="border-b border-border px-5 py-5 sm:border-b-0 sm:border-r sm:px-7">
+              <div className="text-xs font-medium text-muted-foreground">
                 Recorded changes ({retentionWindow.entitlements.planName} · {retentionWindow.retentionDays}-day retention)
               </div>
 
@@ -396,12 +396,12 @@ export default async function MonitoredPageHistory({
               </div>
             </div>
 
-            <div className="border-b border-slate-200 px-5 py-5 sm:border-b-0 sm:border-r sm:px-7">
-              <div className="text-xs font-medium text-slate-500">
+            <div className="border-b border-border px-5 py-5 sm:border-b-0 sm:border-r sm:px-7">
+              <div className="text-xs font-medium text-muted-foreground">
                 Last checked
               </div>
 
-              <div className="mt-2 text-sm font-semibold leading-6 text-slate-900">
+              <div className="mt-2 text-sm font-semibold leading-6 text-foreground">
                 {formatDateTime(
                   monitoredPage.last_checked_at
                 )}
@@ -409,11 +409,11 @@ export default async function MonitoredPageHistory({
             </div>
 
             <div className="px-5 py-5 sm:px-7">
-              <div className="text-xs font-medium text-slate-500">
+              <div className="text-xs font-medium text-muted-foreground">
                 Next check
               </div>
 
-              <div className="mt-2 text-sm font-semibold leading-6 text-slate-900">
+              <div className="mt-2 text-sm font-semibold leading-6 text-foreground">
                 {monitoredPage.status ===
                 "active"
                   ? formatDateTime(
@@ -428,11 +428,11 @@ export default async function MonitoredPageHistory({
         <section className="py-8 sm:py-10">
           <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-950">
+              <h2 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">
                 Timeline
               </h2>
 
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-muted-foreground">
                 {totalChanges === 0 ? (
                   "No recorded changes"
                 ) : (
@@ -452,12 +452,12 @@ export default async function MonitoredPageHistory({
           </div>
 
           {changes.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white px-5 py-8 shadow-sm sm:px-6">
-              <h3 className="text-base font-semibold text-slate-900">
+            <div className="rounded-2xl border border-border bg-card px-5 py-8 shadow-sm sm:px-6">
+              <h3 className="text-base font-semibold text-foreground">
                 No changes yet
               </h3>
 
-              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
+              <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
                 No meaningful changes have
                 been detected for this page
                 yet.
@@ -469,12 +469,12 @@ export default async function MonitoredPageHistory({
                 (change) => (
                   <article
                     key={change.id}
-                    className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                    className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
                   >
                     <div className="p-5 sm:p-6">
                       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium capitalize text-indigo-700">
+                          <span className="rounded-full border border-border bg-primary-subtle px-2.5 py-1 text-xs font-medium capitalize text-primary-text">
                             {
                               change.category
                             }
@@ -491,23 +491,23 @@ export default async function MonitoredPageHistory({
                           </span>
                         </div>
 
-                        <time className="shrink-0 text-xs text-slate-400">
+                        <time className="shrink-0 text-xs text-muted-foreground">
                           {formatDateTime(
                             change.detected_at
                           )}
                         </time>
                       </div>
 
-                      <details className="workspace-change-disclosure"><summary><h3 className="mt-5 break-words text-lg font-semibold leading-7 tracking-[-0.01em] text-slate-950">
+                      <details className="workspace-change-disclosure"><summary><h3 className="mt-5 break-words text-lg font-semibold leading-7 tracking-[-0.01em] text-foreground">
                         {change.summary ||
                           "Change detected."}
                       </h3></summary><div className="workspace-change-description">{change.why_it_matters ? (
-                        <div className="mt-5 rounded-xl bg-slate-50 px-4 py-4 sm:px-5">
-                          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-600">
+                        <div className="mt-5 rounded-xl bg-muted px-4 py-4 sm:px-5">
+                          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-primary-text">
                             Why it matters
                           </div>
 
-                          <p className="mt-2 break-words text-sm leading-6 text-slate-600">
+                          <p className="mt-2 break-words text-sm leading-6 text-muted-foreground">
                             {
                               change.why_it_matters
                             }
@@ -518,28 +518,28 @@ export default async function MonitoredPageHistory({
                       {change.previous_text ||
                       change.current_text ? (
                         <details className="group mt-5">
-                          <summary className="flex min-h-11 cursor-pointer list-none items-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                          <summary className="flex min-h-11 cursor-pointer list-none items-center rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted">
                             View before and after
                           </summary>
 
-                          <div className="workspace-evidence mt-3 grid min-w-0 overflow-hidden rounded-xl border border-slate-200 md:grid-cols-2">
-                            <div className="min-w-0 bg-red-50/50 p-4 sm:p-5">
-                              <div className="text-xs font-semibold uppercase tracking-[0.12em] text-red-600">
+                          <div className="workspace-evidence mt-3 grid min-w-0 overflow-hidden rounded-xl border border-border md:grid-cols-2">
+                            <div className="min-w-0 bg-destructive-bg p-4 sm:p-5">
+                              <div className="text-xs font-semibold uppercase tracking-[0.12em] text-destructive">
                                 Previous
                               </div>
 
-                              <pre className="mt-3 max-h-64 max-w-full overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-6 text-slate-700">
+                              <pre className="mt-3 max-h-64 max-w-full overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-6 text-foreground">
                                 {change.previous_text ||
                                   "No previous text available."}
                               </pre>
                             </div>
 
-                            <div className="min-w-0 border-t border-slate-200 bg-emerald-50/50 p-4 sm:p-5 md:border-l md:border-t-0">
-                              <div className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
+                            <div className="min-w-0 border-t border-border bg-success-bg p-4 sm:p-5 md:border-l md:border-t-0">
+                              <div className="text-xs font-semibold uppercase tracking-[0.12em] text-success">
                                 Current
                               </div>
 
-                              <pre className="mt-3 max-h-64 max-w-full overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-6 text-slate-700">
+                              <pre className="mt-3 max-h-64 max-w-full overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-6 text-foreground">
                                 {change.current_text ||
                                   "No current text available."}
                               </pre>
@@ -548,10 +548,10 @@ export default async function MonitoredPageHistory({
                         </details>
                       ) : null}
 
-                      <div className="mt-5 border-t border-slate-100 pt-4">
+                      <div className="mt-5 border-t border-border pt-4">
                         <Link
                           href={`/dashboard/changes/${change.id}`}
-                          className="inline-flex min-h-10 items-center text-sm font-medium text-indigo-600 transition-colors hover:text-indigo-500"
+                          className="inline-flex min-h-10 items-center text-sm font-medium text-primary-text transition-colors hover:underline"
                         >
                           View change details
                         </Link>
@@ -566,9 +566,9 @@ export default async function MonitoredPageHistory({
           {totalPages > 1 ? (
             <nav
               aria-label="Page history pagination"
-              className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between"
+              className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between"
             >
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 Page {currentPage} of{" "}
                 {totalPages}
               </p>
@@ -579,7 +579,7 @@ export default async function MonitoredPageHistory({
                     href={getPageUrl(
                       currentPage - 1
                     )}
-                    className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                    className="inline-flex min-h-10 items-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
                   >
                     Previous
                   </Link>
@@ -591,7 +591,7 @@ export default async function MonitoredPageHistory({
                     href={getPageUrl(
                       currentPage + 1
                     )}
-                    className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                    className="inline-flex min-h-10 items-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
                   >
                     Next
                   </Link>

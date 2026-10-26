@@ -141,13 +141,13 @@ function getSignificanceClasses(
 ) {
   switch (significance) {
     case "major":
-      return "border-red-200 bg-red-50 text-red-700";
+      return "border-destructive-border bg-destructive-bg text-destructive";
 
     case "moderate":
-      return "border-amber-200 bg-amber-50 text-amber-700";
+      return "border-warning-border bg-warning-bg text-warning";
 
     default:
-      return "border-slate-200 bg-slate-50 text-slate-600";
+      return "border-border bg-muted text-muted-foreground";
   }
 }
 
@@ -693,7 +693,7 @@ export default async function ChangeHistoryPage({
     );
 
   return (
-    <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8">
           <div>
@@ -701,7 +701,7 @@ export default async function ChangeHistoryPage({
               Change history
             </h1>
 
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
               Search and filter the changes
               Morrow has recorded across your
               monitored pages
@@ -709,11 +709,11 @@ export default async function ChangeHistoryPage({
           </div>
         </header>
 
-        <section className="workspace-filters rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <section className="workspace-filters rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
           <form method="get"><div className="lg:col-span-2">
               <label
                 htmlFor="q"
-                className="mb-1.5 block text-xs font-medium text-slate-600"
+                className="mb-1.5 block text-xs font-medium text-muted-foreground"
               >
                 Search
               </label>
@@ -726,12 +726,12 @@ export default async function ChangeHistoryPage({
                   keyword
                 }
                 placeholder="Search changes, competitors, or page URLs"
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/15"
+                className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/15"
               />
             </div><WorkspaceFilters active={hasFilters}><div>
               <label
                 htmlFor="competitor"
-                className="mb-1.5 block text-xs font-medium text-slate-600"
+                className="mb-1.5 block text-xs font-medium text-muted-foreground"
               >
                 Competitor
               </label>
@@ -742,7 +742,7 @@ export default async function ChangeHistoryPage({
                 defaultValue={
                   competitorId
                 }
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400"
+                className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
               >
                 <option value="">
                   All competitors
@@ -769,7 +769,7 @@ export default async function ChangeHistoryPage({
 <div className="lg:col-span-2">
               <label
                 htmlFor="monitoredPage"
-                className="mb-1.5 block text-xs font-medium text-slate-600"
+                className="mb-1.5 block text-xs font-medium text-muted-foreground"
               >
                 Monitored page
               </label>
@@ -780,7 +780,7 @@ export default async function ChangeHistoryPage({
                 defaultValue={
                   monitoredPageId
                 }
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400"
+                className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
               >
                 <option value="">
                   All monitored pages
@@ -815,7 +815,7 @@ export default async function ChangeHistoryPage({
 <div>
               <label
                 htmlFor="category"
-                className="mb-1.5 block text-xs font-medium text-slate-600"
+                className="mb-1.5 block text-xs font-medium text-muted-foreground"
               >
                 Category
               </label>
@@ -826,7 +826,7 @@ export default async function ChangeHistoryPage({
                 defaultValue={
                   category
                 }
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400"
+                className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
               >
                 <option value="">
                   All categories
@@ -847,7 +847,7 @@ export default async function ChangeHistoryPage({
 <div>
               <label
                 htmlFor="significance"
-                className="mb-1.5 block text-xs font-medium text-slate-600"
+                className="mb-1.5 block text-xs font-medium text-muted-foreground"
               >
                 Significance
               </label>
@@ -858,7 +858,7 @@ export default async function ChangeHistoryPage({
                 defaultValue={
                   significance
                 }
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400"
+                className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
               >
                 <option value="">
                   All levels
@@ -880,7 +880,7 @@ export default async function ChangeHistoryPage({
               <div>
                 <label
                   htmlFor="from"
-                  className="mb-1.5 block text-xs font-medium text-slate-600"
+                  className="mb-1.5 block text-xs font-medium text-muted-foreground"
                 >
                   From
                 </label>
@@ -892,14 +892,14 @@ export default async function ChangeHistoryPage({
                   defaultValue={
                     dateFrom
                   }
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
+                  className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-ring"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="to"
-                  className="mb-1.5 block text-xs font-medium text-slate-600"
+                  className="mb-1.5 block text-xs font-medium text-muted-foreground"
                 >
                   To
                 </label>
@@ -911,14 +911,14 @@ export default async function ChangeHistoryPage({
                   defaultValue={
                     dateTo
                   }
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
+                  className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-ring"
                 />
               </div>
             </div>
 <div className="flex items-end gap-2 lg:col-span-4">
               <button
                 type="submit"
-                className="min-h-10 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+                className="min-h-10 rounded-xl border border-primary-border bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover active:bg-primary-active"
               >
                 Apply filters
               </button>
@@ -926,7 +926,7 @@ export default async function ChangeHistoryPage({
               {hasFilters ? (
                 <Link
                   href="/dashboard/changes"
-                  className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                  className="inline-flex min-h-10 items-center rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
                 >
                   Clear
                 </Link>
@@ -941,7 +941,7 @@ export default async function ChangeHistoryPage({
                 Recorded changes
               </h2>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {totalChanges === 0 ? (
                   "No changes"
                 ) : (
@@ -964,12 +964,12 @@ export default async function ChangeHistoryPage({
           </div>
 
           {changes.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white px-6 py-10 shadow-sm">
-              <h3 className="font-semibold text-slate-900">
+            <div className="rounded-2xl border border-border bg-card px-6 py-10 shadow-sm">
+              <h3 className="font-semibold text-foreground">
                 No changes found
               </h3>
 
-              <p className="mt-2 text-sm leading-6 text-slate-500">
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 No changes match the current
                 filters.
               </p>
@@ -980,12 +980,12 @@ export default async function ChangeHistoryPage({
                 (change) => (
                   <article
                     key={change.id}
-                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+                    className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6"
                   >
                     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium capitalize text-indigo-700">
+                          <span className="rounded-full border border-border bg-primary-subtle px-2.5 py-1 text-xs font-medium capitalize text-primary-text">
                             {
                               change.category
                             }
@@ -1005,46 +1005,46 @@ export default async function ChangeHistoryPage({
                         <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
                           <a
                             href={`/dashboard/competitors/${change.competitor_id}`}
-                            className="font-semibold text-slate-900 hover:text-indigo-600"
+                            className="font-semibold text-foreground hover:text-primary-text"
                           >
                             {
                               change.competitor_name
                             }
                           </a>
 
-                          <span className="text-slate-300">
+                          <span className="text-muted-foreground">
                             /
                           </span>
 
-                          <span className="text-slate-500">
+                          <span className="text-muted-foreground">
                             {change.monitored_page_label ||
                               change.monitored_page_url}
                           </span>
                         </div>
                       </div>
 
-                      <time className="shrink-0 text-xs text-slate-400">
+                      <time className="shrink-0 text-xs text-muted-foreground">
                         {formatDateTime(
                           change.detected_at
                         )}
                       </time>
                     </div>
 
-                    <details className="workspace-change-disclosure"><summary><h3 className="mt-5 max-w-4xl text-lg font-semibold leading-7 text-slate-950">
+                    <details className="workspace-change-disclosure"><summary><h3 className="mt-5 max-w-4xl text-lg font-semibold leading-7 text-foreground">
                       {change.summary ||
                         "Change detected."}
                     </h3></summary><div className="workspace-change-description">{change.why_it_matters ? (
-                      <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-600">
+                      <p className="mt-3 max-w-4xl text-sm leading-6 text-muted-foreground">
                         {
                           change.why_it_matters
                         }
                       </p>
                     ) : null}</div></details>
 
-                    <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
+                    <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-4">
                       <a
                         href={`/dashboard/changes/${change.id}`}
-                        className="inline-flex min-h-10 items-center rounded-xl bg-slate-950 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                        className="inline-flex min-h-10 items-center rounded-xl border border-primary-border bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover active:bg-primary-active"
                       >
                         View change
                       </a>
@@ -1055,7 +1055,7 @@ export default async function ChangeHistoryPage({
                         }
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                        className="inline-flex min-h-10 items-center rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
                       >
                         Open monitored page
                       </a>
@@ -1069,9 +1069,9 @@ export default async function ChangeHistoryPage({
           {totalPages > 1 ? (
             <nav
               aria-label="Change history pagination"
-              className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between"
+              className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between"
             >
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 Page {currentPage} of{" "}
                 {totalPages}
               </p>
@@ -1082,14 +1082,14 @@ export default async function ChangeHistoryPage({
                     href={getHistoryPageUrl(
                       currentPage - 1
                     )}
-                    className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                    className="inline-flex min-h-10 items-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
                   >
                     Previous
                   </a>
                 ) : (
                   <span
                     aria-disabled="true"
-                    className="inline-flex min-h-10 cursor-not-allowed items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-400"
+                    className="inline-flex min-h-10 cursor-not-allowed items-center rounded-xl border border-border bg-muted px-4 py-2 text-sm font-medium text-disabled"
                   >
                     Previous
                   </span>
@@ -1101,14 +1101,14 @@ export default async function ChangeHistoryPage({
                     href={getHistoryPageUrl(
                       currentPage + 1
                     )}
-                    className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                    className="inline-flex min-h-10 items-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
                   >
                     Next
                   </a>
                 ) : (
                   <span
                     aria-disabled="true"
-                    className="inline-flex min-h-10 cursor-not-allowed items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-400"
+                    className="inline-flex min-h-10 cursor-not-allowed items-center rounded-xl border border-border bg-muted px-4 py-2 text-sm font-medium text-disabled"
                   >
                     Next
                   </span>

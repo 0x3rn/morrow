@@ -202,7 +202,7 @@ export default function TermsPage() {
           renderable, or capable of difference calculation. Inability to monitor a specific target
           due to third-party defenses or downtime does not constitute a defect in the Platform,
           subject to the technical evaluation terms set forth in our{" "}
-          <Link href="/refund" className="underline font-semibold text-slate-900">
+          <Link href="/refund" className="underline font-semibold text-foreground">
             Refund Policy
           </Link>
           .
@@ -216,7 +216,7 @@ export default function TermsPage() {
           to{" "}
           <a
             href="mailto:morrow@corstack.dev?subject=Domain%20Exclusion%20or%20DMCA%20Notice"
-            className="underline font-semibold text-slate-900"
+            className="underline font-semibold text-foreground"
           >
             morrow@corstack.dev
           </a>{" "}
@@ -272,7 +272,7 @@ export default function TermsPage() {
           <li>
             <strong>Self-Serve Cancellation:</strong> The Workspace Owner may cancel recurring
             subscription renewal at any time directly through the billing dashboard at{" "}
-            <Link href="/dashboard/billing" className="underline font-medium text-slate-900">
+            <Link href="/dashboard/billing" className="underline font-medium text-foreground">
               /dashboard/billing
             </Link>
             . Cancellation stops future automatic renewal charges. The Workspace retains access to
@@ -286,7 +286,7 @@ export default function TermsPage() {
           <li>
             <strong>Incorporation of Refund Policy:</strong> All refund conditions, review
             procedures, and support requirements are strictly governed by our standalone{" "}
-            <Link href="/refund" className="underline font-semibold text-slate-900">
+            <Link href="/refund" className="underline font-semibold text-foreground">
               Refund Policy
             </Link>
             , which is incorporated into these Terms by reference.
@@ -354,7 +354,7 @@ export default function TermsPage() {
         <p className={styles.bodyText}>
           Detailed schedules regarding the automated pruning, deletion, and purging of expired
           Snapshot data are set forth in Section 5 of our{" "}
-          <Link href="/privacy" className="underline font-medium text-slate-900">
+          <Link href="/privacy" className="underline font-medium text-foreground">
             Privacy Policy
           </Link>
           .
@@ -439,7 +439,7 @@ export default function TermsPage() {
           of the competent commercial courts located at the Operator&rsquo;s seat of business.
           Before commencing formal legal proceedings, the parties agree to engage in good-faith
           discussions for at least thirty (30) calendar days following written notice sent to{" "}
-          <a href="mailto:morrow@corstack.dev" className="underline font-medium text-slate-900">
+          <a href="mailto:morrow@corstack.dev" className="underline font-medium text-foreground">
             morrow@corstack.dev
           </a>
           .
@@ -467,7 +467,7 @@ export default function TermsPage() {
           <h4>Corstack — Morrow Legal &amp; Support</h4>
           <p>
             Email:{" "}
-            <a href="mailto:morrow@corstack.dev" className="underline font-medium text-slate-900">
+            <a href="mailto:morrow@corstack.dev" className="underline font-medium text-foreground">
               morrow@corstack.dev
             </a>
             <br />

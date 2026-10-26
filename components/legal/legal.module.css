@@ -1,20 +1,20 @@
 .legalWrapper {
-  --paper: #f4f0e8;
-  --paper-deep: #e8e1d4;
-  --ink: #17201d;
-  --ink-soft: #55605b;
-  --night: #101815;
-  --night-soft: #17231f;
-  --lime: #c8ee79;
-  --coral: #ff8b73;
-  --coral-hover: #f47d65;
-  --coral-surface: #f6e0d5;
-  --line-light: rgba(23, 32, 29, 0.14);
-  --line-dark: rgba(255, 255, 255, 0.1);
+  --paper: var(--background);
+  --paper-deep: var(--muted);
+  --ink: var(--foreground);
+  --ink-soft: var(--muted-foreground);
+  --night: var(--panel);
+  --night-soft: var(--panel-hover);
+  --lime: var(--panel-accent);
+  --coral: var(--primary);
+  --coral-hover: var(--primary-hover);
+  --coral-surface: var(--primary-subtle);
+  --line-light: var(--border);
+  --line-dark: var(--panel-border);
   --container: 1320px;
   --gutter: 48px;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--background);
+  color: var(--foreground);
   min-height: 100vh;
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -29,6 +29,11 @@
   text-decoration: none;
 }
 
+.legalWrapper :focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 .container {
   margin: 0 auto;
   max-width: var(--container);
@@ -38,8 +43,8 @@
 
 /* Header matching landing page */
 .header {
-  background: var(--paper);
-  border-bottom: 1px solid var(--line-light);
+  background: var(--surface-bar);
+  border-bottom: 1px solid var(--border);
   position: relative;
   z-index: 5;
 }
@@ -61,7 +66,7 @@
   font-weight: 650;
   gap: 9px;
   letter-spacing: -0.045em;
-  color: var(--ink);
+  color: var(--foreground);
 }
 
 .brandLogo {
@@ -79,7 +84,7 @@
 
 .desktopNav a,
 .loginLink {
-  color: var(--ink-soft);
+  color: var(--muted-foreground);
   font-size: 14px;
   font-weight: 590;
   transition: color 180ms ease;
@@ -87,21 +92,22 @@
 
 .desktopNav a:hover,
 .loginLink:hover {
-  color: var(--ink);
+  color: var(--foreground);
   text-decoration: underline;
-  text-decoration-color: var(--coral);
+  text-decoration-color: var(--primary-text);
 }
 
 .desktopActions {
   align-items: center;
   display: flex;
-  gap: 23px;
+  gap: 20px;
 }
 
 .navCta {
   align-items: center;
-  background: var(--coral);
-  color: var(--ink) !important;
+  background: var(--primary);
+  border: 1px solid var(--primary-border);
+  color: var(--primary-foreground) !important;
   display: inline-flex;
   font-size: 14px;
   font-weight: 640;
@@ -113,19 +119,23 @@
 }
 
 .navCta:hover {
-  background: var(--coral-hover);
+  background: var(--primary-hover);
   transform: translateY(-1px);
+}
+
+.navCta:active {
+  background: var(--primary-active);
 }
 
 /* Document Banner */
 .banner {
-  border-bottom: 1px solid var(--line-light);
+  border-bottom: 1px solid var(--border);
   padding: 56px 0 32px;
-  background: var(--paper);
+  background: var(--background);
 }
 
 .eyebrow {
-  color: var(--ink-soft);
+  color: var(--muted-foreground);
   font-family: var(--font-geist-mono), monospace;
   font-size: 11px;
   font-weight: 650;
@@ -141,11 +151,11 @@
   letter-spacing: -0.04em;
   line-height: 1.05;
   margin: 0 0 14px;
-  color: var(--ink);
+  color: var(--foreground);
 }
 
 .description {
-  color: var(--ink-soft);
+  color: var(--muted-foreground);
   font-size: 17px;
   line-height: 1.55;
   max-width: 760px;
@@ -158,14 +168,14 @@
   gap: 28px;
   font-family: var(--font-geist-mono), monospace;
   font-size: 11px;
-  color: var(--ink-soft);
+  color: var(--muted-foreground);
   letter-spacing: 0.04em;
   padding-bottom: 24px;
-  border-bottom: 1px solid var(--line-light);
+  border-bottom: 1px solid var(--border);
 }
 
 .metaItem strong {
-  color: var(--ink);
+  color: var(--foreground);
 }
 
 .tabsNav {
@@ -178,14 +188,15 @@
 
 .tab {
   align-items: center;
-  border: 1px solid var(--line-light);
-  background: var(--paper-deep);
-  color: var(--ink-soft);
+  border: 1px solid var(--border);
+  background: var(--muted);
+  color: var(--muted-foreground);
   display: inline-flex;
   font-family: var(--font-geist-mono), monospace;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
+  min-height: 44px;
   padding: 9px 16px;
   text-decoration: none;
   text-transform: uppercase;
@@ -194,14 +205,14 @@
 }
 
 .tab:hover {
-  border-color: var(--ink);
-  color: var(--ink);
+  border-color: var(--foreground);
+  color: var(--foreground);
 }
 
 .activeTab {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: #f7f4ec !important;
+  background: var(--primary);
+  border-color: var(--primary-border);
+  color: var(--primary-foreground) !important;
 }
 
 /* Two-column layout */
@@ -216,8 +227,8 @@
 .sidebar {
   position: sticky;
   top: 28px;
-  background: var(--paper-deep);
-  border: 1px solid var(--line-light);
+  background: var(--muted);
+  border: 1px solid var(--border);
   padding: 22px;
 }
 
@@ -228,7 +239,7 @@
   letter-spacing: 0.09em;
   text-transform: uppercase;
   margin: 0 0 14px;
-  color: var(--ink);
+  color: var(--foreground);
 }
 
 .tocList {
@@ -242,7 +253,7 @@
 
 .tocItem a {
   font-size: 12.5px;
-  color: var(--ink-soft);
+  color: var(--muted-foreground);
   text-decoration: none;
   line-height: 1.4;
   display: block;
@@ -250,9 +261,9 @@
 }
 
 .tocItem a:hover {
-  color: var(--ink);
+  color: var(--foreground);
   text-decoration: underline;
-  text-decoration-color: var(--coral);
+  text-decoration-color: var(--primary-text);
 }
 
 .mainContent {
@@ -262,7 +273,7 @@
 .section {
   padding-bottom: 44px;
   margin-bottom: 44px;
-  border-bottom: 1px solid var(--line-light);
+  border-bottom: 1px solid var(--border);
   scroll-margin-top: 36px;
 }
 
@@ -278,7 +289,7 @@
   font-weight: 400;
   letter-spacing: -0.03em;
   margin: 0 0 16px;
-  color: var(--ink);
+  color: var(--foreground);
 }
 
 .section h3 {
@@ -286,18 +297,18 @@
   font-weight: 650;
   letter-spacing: -0.015em;
   margin: 24px 0 10px;
-  color: var(--ink);
+  color: var(--foreground);
 }
 
 .bodyText {
   font-size: 14.5px;
   line-height: 1.7;
-  color: #2e3834;
+  color: var(--foreground);
   margin: 0 0 15px;
 }
 
 .bodyText strong {
-  color: var(--ink);
+  color: var(--foreground);
   font-weight: 600;
 }
 
@@ -312,19 +323,19 @@
 .bulletList li {
   font-size: 14px;
   line-height: 1.62;
-  color: #34403b;
+  color: var(--foreground);
 }
 
 .bulletList li strong {
-  color: var(--ink);
+  color: var(--foreground);
   font-weight: 600;
 }
 
 .tableWrap {
   margin: 20px 0 24px;
   overflow-x: auto;
-  border: 1px solid var(--line-light);
-  background: #ffffff;
+  border: 1px solid var(--border);
+  background: var(--card);
 }
 
 .table {
@@ -335,27 +346,27 @@
 }
 
 .table th {
-  background: var(--paper-deep);
+  background: var(--muted);
   font-family: var(--font-geist-mono), monospace;
   font-size: 10.5px;
   font-weight: 650;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 11px 14px;
-  border-bottom: 1px solid var(--line-light);
-  color: var(--ink);
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
 }
 
 .table td {
   padding: 11px 14px;
-  border-bottom: 1px solid var(--line-light);
-  color: #38423e;
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
   vertical-align: top;
   line-height: 1.5;
 }
 
 .table td strong {
-  color: var(--ink);
+  color: var(--foreground);
 }
 
 .table tr:last-child td {
@@ -363,8 +374,8 @@
 }
 
 .noticePanel {
-  border: 1px solid var(--line-light);
-  background: var(--paper-deep);
+  border: 1px solid var(--border);
+  background: var(--muted);
   padding: 18px 22px;
   margin: 20px 0;
 }
@@ -372,26 +383,26 @@
 .noticePanel h4 {
   font-size: 14px;
   margin: 0 0 6px;
-  color: var(--ink);
+  color: var(--foreground);
 }
 
 .noticePanel p {
   font-size: 13px;
   line-height: 1.55;
-  color: var(--ink-soft);
+  color: var(--muted-foreground);
   margin: 0;
 }
 
 .contactBox {
-  background: var(--night);
-  color: #f7f4ec;
+  background: var(--panel);
+  color: var(--panel-foreground);
   padding: 28px 32px;
   margin-top: 36px;
-  border: 1px solid var(--line-dark);
+  border: 1px solid var(--panel-border);
 }
 
 .contactBox h3 {
-  color: #f7f4ec;
+  color: var(--panel-foreground);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 20px;
   font-weight: 400;
@@ -400,19 +411,19 @@
 }
 
 .contactBox p {
-  color: #aeb7b2;
+  color: var(--panel-muted);
   font-size: 13.5px;
   line-height: 1.6;
   margin: 0 0 16px;
 }
 
 .contactBox a {
-  color: var(--coral);
+  color: var(--panel-primary-text);
   text-decoration: underline;
 }
 
 .contactBox a:hover {
-  color: var(--coral-hover);
+  color: var(--primary-hover);
 }
 
 .contactDetails {
@@ -420,14 +431,14 @@
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
   padding-top: 16px;
-  border-top: 1px solid var(--line-dark);
+  border-top: 1px solid var(--panel-border);
   font-family: var(--font-geist-mono), monospace;
   font-size: 11px;
 }
 
 .contactDetails div span {
   display: block;
-  color: #8f9994;
+  color: var(--panel-muted);
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -435,18 +446,19 @@
 }
 
 .contactDetails div a {
-  color: #f7f4ec;
+  color: var(--panel-foreground);
   text-decoration: none;
 }
 
 .contactDetails div a:hover {
-  color: var(--coral);
+  color: var(--panel-primary-text);
 }
 
 /* Footer matching landing page */
 .footer {
-  background: var(--night);
-  color: #f7f4ec;
+  background: var(--panel);
+  border-top: 1px solid var(--panel-border);
+  color: var(--panel-foreground);
   padding: 64px 0 0;
 }
 
@@ -458,7 +470,7 @@
 
 .footerBrand {
   align-items: center;
-  color: #f7f4ec;
+  color: var(--panel-foreground);
   display: inline-flex;
   font-size: 20px;
   font-weight: 650;
@@ -467,7 +479,7 @@
 }
 
 .footerIdentity > p {
-  color: #aeb7b2;
+  color: var(--panel-muted);
   font-size: 14px;
   line-height: 1.55;
   margin: 19px 0 0;
@@ -486,7 +498,7 @@
 }
 
 .footerNav p {
-  color: #8f9994;
+  color: var(--panel-muted);
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   font-weight: 650;
@@ -496,19 +508,19 @@
 }
 
 .footerNav a {
-  color: #d6dcd8;
+  color: var(--panel-foreground);
   font-size: 13.5px;
 }
 
 .footerNav a:hover {
-  color: #d6dcd8;
+  color: var(--panel-foreground);
   text-decoration: underline;
-  text-decoration-color: var(--coral);
+  text-decoration-color: var(--panel-primary-text);
 }
 
 .footerBottom {
-  border-top: 1px solid var(--line-dark);
-  color: #8f9994;
+  border-top: 1px solid var(--panel-border);
+  color: var(--panel-muted);
   display: flex;
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
@@ -531,7 +543,8 @@
   .sidebar {
     position: static;
   }
-  .desktopNav {
+  .desktopNav,
+  .desktopActions {
     display: none;
   }
   .footerMain {
@@ -540,5 +553,14 @@
   }
   .footerNav {
     gap: 40px;
+  }
+}
+
+@media (max-width: 767px) {
+  .legalWrapper {
+    --gutter: 20px;
+  }
+  .headerInner {
+    height: 64px;
   }
 }

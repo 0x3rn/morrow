@@ -105,7 +105,7 @@ export default function PrivacyPage() {
             <strong>Performance of Contract (Art. 6(1)(b)):</strong> Executing scheduled automated
             crawls, rendering Snapshots, calculating DOM differences, generating Change Records, and
             transmitting alert notifications in fulfillment of our{" "}
-            <Link href="/terms" className="underline font-medium text-slate-900">
+            <Link href="/terms" className="underline font-medium text-foreground">
               Terms of Service
             </Link>
             .
@@ -288,7 +288,7 @@ export default function PrivacyPage() {
         </ul>
         <p className={styles.bodyText}>
           To exercise any statutory right, transmit a formal request to{" "}
-          <a href="mailto:morrow@corstack.dev" className="underline font-medium text-slate-900">
+          <a href="mailto:morrow@corstack.dev" className="underline font-medium text-foreground">
             morrow@corstack.dev
           </a>
           . We acknowledge and respond to verified requests within thirty (30) calendar days without
@@ -374,7 +374,7 @@ export default function PrivacyPage() {
           <h4>Corstack — Data Protection &amp; Privacy</h4>
           <p>
             Email:{" "}
-            <a href="mailto:morrow@corstack.dev" className="underline font-medium text-slate-900">
+            <a href="mailto:morrow@corstack.dev" className="underline font-medium text-foreground">
               morrow@corstack.dev
             </a>
             <br />

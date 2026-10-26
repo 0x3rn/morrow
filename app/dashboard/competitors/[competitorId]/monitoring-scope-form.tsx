@@ -42,19 +42,19 @@ const inputClasses = [
   "w-full",
   "rounded-xl",
   "border",
-  "border-slate-200",
-  "bg-white",
+  "border-border",
+  "bg-card",
   "px-3.5",
   "py-2.5",
   "text-sm",
-  "text-slate-950",
+  "text-foreground",
   "outline-none",
   "transition-colors",
   "duration-150",
-  "placeholder:text-slate-400",
-  "focus-visible:border-indigo-400",
+  "placeholder:text-muted-foreground",
+  "focus-visible:border-ring",
   "focus-visible:ring-2",
-  "focus-visible:ring-indigo-500/15",
+  "focus-visible:ring-ring/15",
   "motion-reduce:transition-none",
 ].join(" ");
 
@@ -65,20 +65,19 @@ const buttonClasses = [
   "justify-center",
   "rounded-xl",
   "border",
-  "border-slate-200",
-  "bg-white",
+  "border-border",
+  "bg-card",
   "px-3.5",
   "py-2",
   "text-sm",
   "font-medium",
-  "text-slate-700",
+  "text-foreground",
   "transition-colors",
   "duration-150",
-  "hover:border-slate-300",
-  "hover:bg-slate-50",
+  "hover:bg-muted",
   "focus-visible:outline-none",
   "focus-visible:ring-2",
-  "focus-visible:ring-indigo-500/25",
+  "focus-visible:ring-ring/25",
   "disabled:cursor-not-allowed",
   "disabled:opacity-60",
   "motion-reduce:transition-none",
@@ -244,23 +243,23 @@ function getMatchClasses(
     match.status ===
     "invalid"
   ) {
-    return "border-red-200 bg-red-50 text-red-700";
+    return "border-destructive-border bg-destructive-bg text-destructive";
   }
 
   if (
     match.status ===
     "unmatched"
   ) {
-    return "border-amber-200 bg-amber-50 text-amber-700";
+    return "border-warning-border bg-warning-bg text-warning";
   }
 
   if (
     match.matchCount > 1
   ) {
-    return "border-amber-200 bg-amber-50 text-amber-700";
+    return "border-warning-border bg-warning-bg text-warning";
   }
 
-  return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  return "border-success-border bg-success-bg text-success";
 }
 
 function SelectorResultList({
@@ -279,7 +278,7 @@ function SelectorResultList({
 
   return (
     <div>
-      <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {title}
       </h5>
 
@@ -290,10 +289,10 @@ function SelectorResultList({
               key={
                 match.selector
               }
-              className="rounded-xl border border-slate-200 bg-white p-3"
+              className="rounded-xl border border-border bg-card p-3"
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <code className="break-all text-xs font-medium text-slate-800">
+                <code className="break-all text-xs font-medium text-foreground">
                   {
                     match.selector
                   }
@@ -311,7 +310,7 @@ function SelectorResultList({
               </div>
 
               {match.preview ? (
-                <p className="mt-2 text-xs leading-5 text-slate-500">
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
                   {
                     match.preview
                   }
@@ -627,7 +626,7 @@ export function MonitoringScopeForm({
       action={
         updateMonitoredPageMonitoringScope
       }
-      className="mt-6 border-t border-slate-200 pt-5"
+      className="mt-6 border-t border-border pt-5"
     >
       <input
         type="hidden"
@@ -661,11 +660,11 @@ export function MonitoringScopeForm({
 
       <div className="workspace-scope-header flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
         <div className="min-w-0 flex-1">
-          <h4 className="text-sm font-semibold text-slate-900">
+          <h4 className="text-sm font-semibold text-foreground">
             Monitoring scope
           </h4>
 
-          <p className="mt-1 text-xs leading-5 text-slate-500">
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
             Choose whether Morrow
             monitors the whole page
             or scans the page so you
@@ -674,7 +673,7 @@ export function MonitoringScopeForm({
           </p>
         </div>
 
-        <span className="workspace-scope-tag inline-flex w-fit shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1 text-xs font-medium text-slate-600">
+        <span className="workspace-scope-tag inline-flex w-fit shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-border bg-muted px-3.5 py-1 text-xs font-medium text-muted-foreground">
           {hasIncludeSelectors
             ? "Selected sections"
             : "Whole page"}
@@ -685,13 +684,13 @@ export function MonitoringScopeForm({
       0 ? (
         <div
           role="alert"
-          className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5"
+          className="mt-4 rounded-xl border border-warning-border bg-warning-bg p-3.5"
         >
-          <p className="text-xs font-semibold text-amber-800">
+          <p className="text-xs font-semibold text-warning">
             Monitored section no
             longer found on page
           </p>
-          <p className="mt-1 text-xs leading-5 text-amber-700">
+          <p className="mt-1 text-xs leading-5 text-warning">
             {missingSelectedSelectors.length ===
             1
               ? `The monitored section (${missingSelectedSelectors[0]}) appears to have been removed or renamed.`
@@ -732,11 +731,11 @@ export function MonitoringScopeForm({
               }}
             />
             <div>
-              <div className="text-sm font-medium text-slate-900">
+              <div className="text-sm font-medium text-foreground">
                 Monitor the whole
                 page
               </div>
-              <div className="mt-0.5 text-xs leading-5 text-slate-500">
+              <div className="mt-0.5 text-xs leading-5 text-muted-foreground">
                 Compare all readable
                 content across the
                 entire page.
@@ -762,11 +761,11 @@ export function MonitoringScopeForm({
               }}
             />
             <div>
-              <div className="text-sm font-medium text-slate-900">
+              <div className="text-sm font-medium text-foreground">
                 Scan page to select
                 sections to monitor
               </div>
-              <div className="mt-0.5 text-xs leading-5 text-slate-500">
+              <div className="mt-0.5 text-xs leading-5 text-muted-foreground">
                 Tick which page
                 sections to monitor;
                 unticked sections
@@ -798,12 +797,12 @@ export function MonitoringScopeForm({
 
       {scanState &&
       !scanState.ok ? (
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5">
-          <p className="text-xs font-medium text-amber-800">
+        <div className="mt-4 rounded-xl border border-warning-border bg-warning-bg p-3.5">
+          <p className="text-xs font-medium text-warning">
             Unable to scan page
             sections
           </p>
-          <p className="mt-1 text-xs leading-5 text-amber-700">
+          <p className="mt-1 text-xs leading-5 text-warning">
             {toUserFacingErrorMessage(
               scanState.message,
               "Morrow couldn't scan this page for sections."
@@ -815,13 +814,13 @@ export function MonitoringScopeForm({
       <div className="mt-5">
         <div>
           <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-            <label className="block text-xs font-medium text-slate-600">
+            <label className="block text-xs font-medium text-muted-foreground">
               Sections to monitor
             </label>
 
             {availableSections.length >
             0 ? (
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-muted-foreground">
                 {
                   selectedSelectors.length
                 }{" "}
@@ -834,17 +833,17 @@ export function MonitoringScopeForm({
             ) : null}
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-3.5">
+          <div className="rounded-xl border border-border bg-card p-3.5">
             {availableSections.length ===
             0 ? (
               <div className="py-3 text-center">
-                <p className="text-xs font-medium text-slate-700">
+                <p className="text-xs font-medium text-foreground">
                   {scopeMode ===
                   "whole_page"
                     ? "Whole page monitoring is active"
                     : "No sections scanned yet"}
                 </p>
-                <p className="mt-1 text-xs leading-5 text-slate-500">
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
                   Click{" "}
                   <strong>
                     Scan page for
@@ -862,7 +861,7 @@ export function MonitoringScopeForm({
               <div className="max-h-80 space-y-2.5 overflow-y-auto pr-1">
                 {scanState?.ok &&
                 scanState.capturedAt ? (
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     Scanned from
                     capture on{" "}
                     {formatCapturedAt(
@@ -902,7 +901,7 @@ export function MonitoringScopeForm({
 
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <span className="text-sm font-medium text-slate-900">
+                            <span className="text-sm font-medium text-foreground">
                               {
                                 section.label
                               }
@@ -920,7 +919,7 @@ export function MonitoringScopeForm({
                           </div>
 
                           <div className="mt-1">
-                            <code className="break-all text-xs text-slate-600">
+                            <code className="break-all text-xs text-muted-foreground">
                               {
                                 section.selector
                               }
@@ -928,7 +927,7 @@ export function MonitoringScopeForm({
                           </div>
 
                           {section.preview ? (
-                            <p className="mt-1.5 text-xs leading-5 text-slate-500">
+                            <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
                               {
                                 section.preview
                               }
@@ -943,7 +942,7 @@ export function MonitoringScopeForm({
             )}
           </div>
 
-          <p className="mt-2 text-xs leading-5 text-slate-400">
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
             Tick the sections you
             want Morrow to monitor.
             Unticked sections are
@@ -955,7 +954,7 @@ export function MonitoringScopeForm({
         <div>
           <label
             htmlFor={`ignore-selectors-${monitoredPageId}`}
-            className="mb-1.5 block text-xs font-medium text-slate-600"
+            className="mb-1.5 block text-xs font-medium text-muted-foreground"
           >
             Regions to ignore
           </label>
@@ -987,7 +986,7 @@ export function MonitoringScopeForm({
             className={`${inputClasses} resize-y font-mono text-xs leading-5`}
           />
 
-          <p className="mt-2 text-xs leading-5 text-slate-400">
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
             Changes inside these
             regions will be ignored,
             even when they are inside
@@ -998,15 +997,15 @@ export function MonitoringScopeForm({
       </div>
 
       {preview ? (
-        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div className="mt-5 rounded-xl border border-border bg-muted p-4">
           {!preview.ok ? (
             <div>
-              <p className="text-sm font-medium text-slate-900">
+              <p className="text-sm font-medium text-foreground">
                 Unable to test
                 selectors
               </p>
 
-              <p className="mt-1 text-xs leading-5 text-slate-500">
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 {toUserFacingErrorMessage(
                   preview.message,
                   "Morrow couldn't test these selectors.",
@@ -1016,12 +1015,12 @@ export function MonitoringScopeForm({
           ) : (
             <div>
               <div>
-                <p className="text-sm font-medium text-slate-900">
+                <p className="text-sm font-medium text-foreground">
                   Selector test
                   results
                 </p>
 
-                <p className="mt-1 text-xs leading-5 text-slate-500">
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
                   Using the latest
                   captured version
                   {preview.capturedAt
@@ -1038,13 +1037,13 @@ export function MonitoringScopeForm({
                   .includeMatches
                   .length ===
                 0 ? (
-                  <div className="rounded-xl border border-slate-200 bg-white p-3">
-                    <p className="text-xs font-medium text-slate-700">
+                  <div className="rounded-xl border border-border bg-card p-3">
+                    <p className="text-xs font-medium text-foreground">
                       Whole page
                       monitoring
                     </p>
 
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
                       No section selectors are ticked,
                       so Morrow will compare the whole
                       page.
@@ -1075,8 +1074,8 @@ export function MonitoringScopeForm({
         </div>
       ) : null}
 
-      <div className="workspace-scope-footer mt-5 border-t border-slate-100 pt-4">
-        <p className="text-xs leading-5 text-slate-400">
+      <div className="workspace-scope-footer mt-5 border-t border-border pt-4">
+        <p className="text-xs leading-5 text-muted-foreground">
           Test your selected sections
           against the latest capture
           to verify they are still

@@ -225,7 +225,7 @@ function RoutingFilterFields({
       <div>
         <label
           htmlFor={`${idPrefix}-min-significance`}
-          className="mb-1.5 block text-xs font-medium text-slate-600"
+          className="mb-1.5 block text-xs font-medium text-muted-foreground"
         >
           Minimum significance threshold
         </label>
@@ -248,10 +248,10 @@ function RoutingFilterFields({
       </div>
 
       <div>
-        <div className="mb-1.5 text-xs font-medium text-slate-600">
+        <div className="mb-1.5 text-xs font-medium text-muted-foreground">
           Change categories
         </div>
-        <p className="mb-2.5 text-xs text-slate-500">
+        <p className="mb-2.5 text-xs text-muted-foreground">
           Select specific categories to route, or leave all unchecked to receive every category.
         </p>
 
@@ -270,10 +270,10 @@ function RoutingFilterFields({
                 )}
               />
               <span>
-                <strong className="block text-sm font-medium text-slate-900">
+                <strong className="block text-sm font-medium text-foreground">
                   {CATEGORY_LABELS[category].label}
                 </strong>
-                <span className="block text-xs text-slate-500">
+                <span className="block text-xs text-muted-foreground">
                   {CATEGORY_LABELS[category].description}
                 </span>
               </span>
@@ -283,15 +283,15 @@ function RoutingFilterFields({
       </div>
 
       <div>
-        <div className="mb-1.5 text-xs font-medium text-slate-600">
+        <div className="mb-1.5 text-xs font-medium text-muted-foreground">
           Competitors
         </div>
-        <p className="mb-2.5 text-xs text-slate-500">
+        <p className="mb-2.5 text-xs text-muted-foreground">
           Select specific competitors to route, or leave all unchecked to receive alerts across all competitors in this workspace.
         </p>
 
         {competitors.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-500">
+          <p className="rounded-xl border border-border bg-muted px-3.5 py-2.5 text-xs text-muted-foreground">
             No competitors added yet. Alerts will automatically apply to new competitors until you restrict this filter.
           </p>
         ) : (
@@ -310,10 +310,10 @@ function RoutingFilterFields({
                   )}
                 />
                 <span>
-                  <strong className="block text-sm font-medium text-slate-900">
+                  <strong className="block text-sm font-medium text-foreground">
                     {competitor.name}
                   </strong>
-                  <span className="block text-xs text-slate-500">
+                  <span className="block text-xs text-muted-foreground">
                     {competitor.domain}
                   </span>
                 </span>
@@ -346,7 +346,7 @@ function ChannelDestinationFields({
         <div>
           <label
             htmlFor={`${idPrefix}-slack-webhook-url`}
-            className="mb-1.5 block text-xs font-medium text-slate-600"
+            className="mb-1.5 block text-xs font-medium text-muted-foreground"
           >
             Slack incoming webhook URL{" "}
             {isEditing
@@ -363,13 +363,13 @@ function ChannelDestinationFields({
       ) : null}
 
       {!channel || channel.channel === "telegram" ? (
-        <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+        <div className="grid gap-3 rounded-xl border border-border bg-muted p-3.5">
           <div className="flex flex-col justify-between gap-2.5 sm:flex-row sm:items-center">
             <div>
-              <div className="text-xs font-semibold text-slate-800">
+              <div className="text-xs font-semibold text-foreground">
                 Telegram connection (10-minute link ID)
               </div>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 {isEditing
                   ? "This channel is linked to the Telegram ID shown below."
                   : telegramBotUsername
@@ -394,7 +394,7 @@ function ChannelDestinationFields({
             <div>
               <label
                 htmlFor={`${idPrefix}-telegram-chat-id`}
-                className="mb-1.5 block text-xs font-medium text-slate-600"
+                className="mb-1.5 block text-xs font-medium text-muted-foreground"
               >
                 Linked Telegram ID
               </label>
@@ -415,7 +415,7 @@ function ChannelDestinationFields({
           <div>
             <label
               htmlFor={`${idPrefix}-webhook-url`}
-              className="mb-1.5 block text-xs font-medium text-slate-600"
+              className="mb-1.5 block text-xs font-medium text-muted-foreground"
             >
               Webhook HTTPS endpoint URL{" "}
               {isEditing ? "" : "(required for Webhook)"}
@@ -432,7 +432,7 @@ function ChannelDestinationFields({
           <div>
             <label
               htmlFor={`${idPrefix}-webhook-secret`}
-              className="mb-1.5 block text-xs font-medium text-slate-600"
+              className="mb-1.5 block text-xs font-medium text-muted-foreground"
             >
               Webhook HMAC signing secret{" "}
               {isEditing
@@ -514,15 +514,15 @@ export default async function NotificationsPage() {
     }));
 
   return (
-    <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <header className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
           <div>
-            <h1 className="text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
+            <h1 className="text-3xl font-semibold tracking-[-0.035em] text-foreground sm:text-4xl">
               Notifications &amp; routing
             </h1>
 
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-[15px]">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
               Choose which change categories, competitors, significance levels, and digest schedules trigger alerts across email, Slack, Telegram, and custom webhooks.
             </p>
           </div>
@@ -533,7 +533,7 @@ export default async function NotificationsPage() {
             title="Add delivery channel"
           >
             <div>
-              <p className="text-sm leading-6 text-slate-500">
+              <p className="text-sm leading-6 text-muted-foreground">
                 Connect a Slack incoming webhook, Telegram bot chat, or HMAC-signed HTTPS webhook and configure its routing rules.
               </p>
 
@@ -546,7 +546,7 @@ export default async function NotificationsPage() {
                   <div>
                     <label
                       htmlFor="new-channel-name"
-                      className="mb-1.5 block text-xs font-medium text-slate-600"
+                      className="mb-1.5 block text-xs font-medium text-muted-foreground"
                     >
                       Channel name
                     </label>
@@ -563,7 +563,7 @@ export default async function NotificationsPage() {
                   <div>
                     <label
                       htmlFor="new-channel-type"
-                      className="mb-1.5 block text-xs font-medium text-slate-600"
+                      className="mb-1.5 block text-xs font-medium text-muted-foreground"
                     >
                       Integration type
                     </label>
@@ -591,7 +591,7 @@ export default async function NotificationsPage() {
                 />
 
                 <div>
-                  <div className="mb-1.5 text-xs font-medium text-slate-600">
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">
                     Delivery triggers
                   </div>
                   <div className="workspace-choice-grid">
@@ -603,10 +603,10 @@ export default async function NotificationsPage() {
                         defaultChecked
                       />
                       <span>
-                        <strong className="block text-sm font-medium text-slate-900">
+                        <strong className="block text-sm font-medium text-foreground">
                           Instant change alerts
                         </strong>
-                        <span className="block text-xs text-slate-500">
+                        <span className="block text-xs text-muted-foreground">
                           Deliver immediately when a monitored page records a matching change
                         </span>
                       </span>
@@ -627,10 +627,10 @@ export default async function NotificationsPage() {
                         }
                       />
                       <span>
-                        <strong className="block text-sm font-medium text-slate-900">
+                        <strong className="block text-sm font-medium text-foreground">
                           Scheduled digests
                         </strong>
-                        <span className="block text-xs text-slate-500">
+                        <span className="block text-xs text-muted-foreground">
                           {entitlements.features
                             .scheduledDigests
                             ? "Deliver scheduled rollups scoped to this channel’s filters"
@@ -642,7 +642,7 @@ export default async function NotificationsPage() {
                 </div>
 
                 <div>
-                  <div className="mb-1.5 text-xs font-medium text-slate-600">
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">
                     Digest schedules
                   </div>
                   <div className="workspace-choice-grid">
@@ -662,7 +662,7 @@ export default async function NotificationsPage() {
                               defaultChecked={isAllowed}
                               disabled={!isAllowed}
                             />
-                            <span className="text-sm font-medium text-slate-900">
+                            <span className="text-sm font-medium text-foreground">
                               {DIGEST_PERIOD_LABELS[period]}
                               {!isAllowed
                                 ? " (Starter+ plans)"
@@ -698,7 +698,7 @@ export default async function NotificationsPage() {
         </header>
 
         <section className="workspace-metrics mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="workspace-metric-label">
               Email alerts
             </div>
@@ -719,7 +719,7 @@ export default async function NotificationsPage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="workspace-metric-label">
               External channels
             </div>
@@ -735,7 +735,7 @@ export default async function NotificationsPage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="workspace-metric-label">
               Notifications sent
             </div>
@@ -750,14 +750,14 @@ export default async function NotificationsPage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="workspace-metric-label">
               Channel failures
             </div>
             <div
               className={
                 deliveryMetrics.externalFailedCount > 0
-                  ? "workspace-metric-value text-red-700"
+                  ? "workspace-metric-value text-destructive"
                   : "workspace-metric-value"
               }
             >
@@ -782,7 +782,7 @@ export default async function NotificationsPage() {
             </div>
 
             {!session.user.emailVerified ? (
-              <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <p className="mt-3 rounded-xl border border-warning-border bg-warning-bg px-4 py-3 text-sm text-warning">
                 Your account email is not verified yet. You can save your routing preferences now, and Morrow will begin sending emails as soon as you verify your address from the Account menu.
               </p>
             ) : null}
@@ -822,8 +822,8 @@ export default async function NotificationsPage() {
                 competitors={competitors}
               />
 
-              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 pt-4">
-                <span className="text-xs text-slate-500">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border pt-4">
+                <span className="text-xs text-muted-foreground">
                   {emailPreferences.updatedAt
                     ? `Last updated ${formatDateTime(
                         emailPreferences.updatedAt,
@@ -845,16 +845,16 @@ export default async function NotificationsPage() {
         <section className="mt-10">
           <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-950">
+              <h2 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">
                 Workspace delivery channels
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
                 Route instant change alerts and scheduled digests to Slack channels, Telegram chats, or signed HTTPS webhooks with per-channel filters.
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-              <div className="text-sm font-medium text-slate-500">
+              <div className="text-sm font-medium text-muted-foreground">
                 {externalChannels.length} /{" "}
                 {
                   entitlements.limits
@@ -885,21 +885,21 @@ export default async function NotificationsPage() {
 
           {canManageExternalChannels &&
           activeTelegramLinkCode ? (
-            <div className="mb-6 rounded-2xl border border-indigo-200 bg-indigo-50/70 p-5 shadow-sm">
+            <div className="mb-6 rounded-2xl border border-border bg-primary-subtle p-5 shadow-sm">
               <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-700">
+                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-primary-text">
                     Temporary Telegram Link ID (valid for 10 minutes)
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-3">
-                    <code className="rounded-xl border border-indigo-200 bg-white px-3.5 py-1.5 font-mono text-lg font-bold tracking-wider text-slate-950">
+                    <code className="rounded-xl border border-border bg-card px-3.5 py-1.5 font-mono text-lg font-bold tracking-wider text-foreground">
                       {activeTelegramLinkCode.code}
                     </code>
-                    <span className="text-xs font-medium text-slate-600">
+                    <span className="text-xs font-medium text-muted-foreground">
                       Expires {formatDateTime(activeTelegramLinkCode.expiresAt)}
                     </span>
                   </div>
-                  <p className="mt-2.5 text-xs leading-5 text-slate-600">
+                  <p className="mt-2.5 text-xs leading-5 text-muted-foreground">
                     1. Open{" "}
                     {telegramBotUsername ? (
                       <strong>@{telegramBotUsername}</strong>
@@ -947,11 +947,11 @@ export default async function NotificationsPage() {
           ) : null}
 
           {externalChannels.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
-              <h3 className="text-base font-semibold text-slate-900">
+            <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center">
+              <h3 className="text-base font-semibold text-foreground">
                 No external delivery channels configured
               </h3>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
                 {canManageExternalChannels
                   ? "Use “Add delivery channel” or “Generate Telegram link ID” above to connect Slack, Telegram, or a custom HTTPS webhook to this workspace."
                   : "Workspace owners and admins can connect Slack, Telegram, or custom HTTPS webhooks to this workspace."}
@@ -967,12 +967,12 @@ export default async function NotificationsPage() {
                 return (
                   <article
                     key={channel.id}
-                    className="workspace-competitor-record overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                    className="workspace-competitor-record overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
                   >
                     <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-lg font-semibold text-slate-950">
+                          <h3 className="text-lg font-semibold text-foreground">
                             {channel.name}
                           </h3>
 
@@ -1001,12 +1001,12 @@ export default async function NotificationsPage() {
                           {channel.configSummary}
                         </div>
 
-                        <dl className="mt-4 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
+                        <dl className="mt-4 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
                           <div>
-                            <dt className="text-slate-400">
+                            <dt className="text-muted-foreground">
                               Triggers
                             </dt>
-                            <dd className="mt-0.5 font-medium text-slate-900">
+                            <dd className="mt-0.5 font-medium text-foreground">
                               {formatTriggerSummary(
                                 channel,
                               )}
@@ -1014,10 +1014,10 @@ export default async function NotificationsPage() {
                           </div>
 
                           <div>
-                            <dt className="text-slate-400">
+                            <dt className="text-muted-foreground">
                               Significance threshold
                             </dt>
-                            <dd className="mt-0.5 font-medium text-slate-900">
+                            <dd className="mt-0.5 font-medium text-foreground">
                               {
                                 SIGNIFICANCE_LABELS[
                                   channel.minSignificance
@@ -1027,10 +1027,10 @@ export default async function NotificationsPage() {
                           </div>
 
                           <div>
-                            <dt className="text-slate-400">
+                            <dt className="text-muted-foreground">
                               Categories
                             </dt>
-                            <dd className="mt-0.5 font-medium text-slate-900">
+                            <dd className="mt-0.5 font-medium text-foreground">
                               {formatCategorySummary(
                                 channel.categories,
                               )}
@@ -1038,10 +1038,10 @@ export default async function NotificationsPage() {
                           </div>
 
                           <div>
-                            <dt className="text-slate-400">
+                            <dt className="text-muted-foreground">
                               Competitors
                             </dt>
-                            <dd className="mt-0.5 font-medium text-slate-900">
+                            <dd className="mt-0.5 font-medium text-foreground">
                               {formatCompetitorSummary(
                                 channel.competitorIds,
                                 competitors,
@@ -1053,23 +1053,23 @@ export default async function NotificationsPage() {
 
                       <div className="grid grid-cols-3 gap-4">
                         <div>
-                          <div className="text-xs text-slate-400">
+                          <div className="text-xs text-muted-foreground">
                             Delivered
                           </div>
-                          <div className="mt-1 text-sm font-semibold text-slate-900">
+                          <div className="mt-1 text-sm font-semibold text-foreground">
                             {channel.sentCount}
                           </div>
                         </div>
 
                         <div>
-                          <div className="text-xs text-slate-400">
+                          <div className="text-xs text-muted-foreground">
                             Failed
                           </div>
                           <div
                             className={`mt-1 text-sm font-semibold ${
                               channel.failedCount > 0
-                                ? "text-red-700"
-                                : "text-slate-900"
+                                ? "text-destructive"
+                                : "text-foreground"
                             }`}
                           >
                             {channel.failedCount}
@@ -1077,10 +1077,10 @@ export default async function NotificationsPage() {
                         </div>
 
                         <div>
-                          <div className="text-xs text-slate-400">
+                          <div className="text-xs text-muted-foreground">
                             Last delivered
                           </div>
-                          <div className="mt-1 text-xs font-medium text-slate-700">
+                          <div className="mt-1 text-xs font-medium text-foreground">
                             {formatDateTime(
                               channel.lastDeliveredAt,
                             )}
@@ -1090,7 +1090,7 @@ export default async function NotificationsPage() {
                     </div>
 
                     {canManageExternalChannels ? (
-                    <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-4 sm:px-6">
+                    <div className="border-t border-border bg-muted px-5 py-4 sm:px-6">
                       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                         <div className="workspace-record-actions flex flex-wrap items-center gap-2">
                           <WorkspaceActionForm
@@ -1134,7 +1134,7 @@ export default async function NotificationsPage() {
                             />
                             <button
                               type="submit"
-                              className="workspace-panel-trigger workspace-panel-secondary text-red-700 hover:bg-red-50"
+                              className="workspace-panel-trigger workspace-panel-secondary text-destructive hover:bg-destructive-bg"
                             >
                               {channel.channel === "telegram"
                                 ? "Revoke"
@@ -1167,7 +1167,7 @@ export default async function NotificationsPage() {
                               <div>
                                 <label
                                   htmlFor={`edit-channel-name-${channel.id}`}
-                                  className="mb-1.5 block text-xs font-medium text-slate-600"
+                                  className="mb-1.5 block text-xs font-medium text-muted-foreground"
                                 >
                                   Channel name
                                 </label>
@@ -1192,7 +1192,7 @@ export default async function NotificationsPage() {
                               />
 
                               <div>
-                                <div className="mb-1.5 text-xs font-medium text-slate-600">
+                                <div className="mb-1.5 text-xs font-medium text-muted-foreground">
                                   Delivery triggers
                                 </div>
                                 <div className="workspace-choice-grid">
@@ -1206,7 +1206,7 @@ export default async function NotificationsPage() {
                                       }
                                     />
                                     <span>
-                                      <strong className="block text-sm font-medium text-slate-900">
+                                      <strong className="block text-sm font-medium text-foreground">
                                         Instant change alerts
                                       </strong>
                                     </span>
@@ -1222,7 +1222,7 @@ export default async function NotificationsPage() {
                                       }
                                     />
                                     <span>
-                                      <strong className="block text-sm font-medium text-slate-900">
+                                      <strong className="block text-sm font-medium text-foreground">
                                         Scheduled digests
                                       </strong>
                                     </span>
@@ -1231,7 +1231,7 @@ export default async function NotificationsPage() {
                               </div>
 
                               <div>
-                                <div className="mb-1.5 text-xs font-medium text-slate-600">
+                                <div className="mb-1.5 text-xs font-medium text-muted-foreground">
                                   Digest schedules
                                 </div>
                                 <div className="workspace-choice-grid">
@@ -1249,7 +1249,7 @@ export default async function NotificationsPage() {
                                             period,
                                           )}
                                         />
-                                        <span className="text-sm font-medium text-slate-900">
+                                        <span className="text-sm font-medium text-foreground">
                                           {
                                             DIGEST_PERIOD_LABELS[
                                               period
@@ -1286,11 +1286,11 @@ export default async function NotificationsPage() {
                               </div>
                             </WorkspaceActionForm>
 
-                            <div className="workspace-destructive border-t border-slate-200 pt-5">
-                              <div className="text-sm font-semibold text-red-700">
+                            <div className="workspace-destructive border-t border-border pt-5">
+                              <div className="text-sm font-semibold text-destructive">
                                 Remove channel
                               </div>
-                              <p className="mt-2 text-xs leading-5 text-slate-500">
+                              <p className="mt-2 text-xs leading-5 text-muted-foreground">
                                 This permanently removes the delivery channel and its delivery ledger entries from this workspace.
                               </p>
 
@@ -1308,7 +1308,7 @@ export default async function NotificationsPage() {
                                 />
                                 <button
                                   type="submit"
-                                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-red-200 bg-white px-3.5 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
+                                  className="inline-flex min-h-10 items-center justify-center rounded-xl border border-destructive-border bg-card px-3.5 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive-bg"
                                 >
                                   Remove channel
                                 </button>

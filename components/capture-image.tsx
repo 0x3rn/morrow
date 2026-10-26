@@ -20,7 +20,7 @@ function CaptureImageContent({ src, alt }: CaptureImageProps) {
   }, []);
 
   return (
-    <div className="workspace-capture-frame max-h-[560px] overflow-auto bg-slate-100 sm:max-h-[680px] lg:max-h-[720px]" data-state={state} aria-busy={state === "loading"}>
+    <div className="workspace-capture-frame max-h-[560px] overflow-auto bg-muted sm:max-h-[680px] lg:max-h-[720px]" data-state={state} aria-busy={state === "loading"}>
       {state !== "loaded" ? (
         <p className="workspace-capture-status" role="status">
           {state === "loading"

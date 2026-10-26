@@ -16,16 +16,16 @@ export default function DashboardError({
   );
 
   return (
-    <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="workspace-surface">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Workspace notice
           </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-[-0.025em] text-slate-950">
+          <h1 className="mt-2 text-2xl font-semibold tracking-[-0.025em] text-foreground">
             Unable to complete this request
           </h1>
-          <p className="mt-3 text-sm leading-6 text-slate-600" role="alert">
+          <p className="mt-3 text-sm leading-6 text-muted-foreground" role="alert">
             {message}
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">

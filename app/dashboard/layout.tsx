@@ -8,6 +8,7 @@ import {
   WorkspaceNav,
 } from "@/components/workspace-nav";
 import { AccountSettings } from "@/components/account-settings";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { WorkspaceFeedback } from "@/components/workspace-feedback";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import {
@@ -47,6 +48,10 @@ export default async function DashboardLayout({
                   {workspace.name} · {WORKSPACE_ROLE_DETAILS[workspace.role].label}
                 </div>
               )}
+              <div className="workspace-account-theme">
+                <span className="workspace-meta">Appearance</span>
+                <ThemeToggle />
+              </div>
               {workspaces.length > 1 && workspace && (
                 <WorkspaceSwitcher
                   workspaces={workspaces}

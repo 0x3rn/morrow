@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import styles from "@/app/page.module.css";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { BrandLogo } from "./brand-logo";
 import { MobileMenu } from "./mobile-menu";
 
@@ -25,6 +26,7 @@ export function Header() {
           ))}
         </nav>
         <div className={styles.desktopActions}>
+          <ThemeToggle />
           <Link className={styles.loginLink} href="/login">Log in</Link>
           <Link className={styles.navCta} href="/register">Start monitoring</Link>
         </div>

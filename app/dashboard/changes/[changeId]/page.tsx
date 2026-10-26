@@ -98,13 +98,13 @@ function getSignificanceClasses(
 ) {
   switch (significance) {
     case "major":
-      return "border-red-200 bg-red-50 text-red-700";
+      return "border-destructive-border bg-destructive-bg text-destructive";
 
     case "moderate":
-      return "border-amber-200 bg-amber-50 text-amber-700";
+      return "border-warning-border bg-warning-bg text-warning";
 
     default:
-      return "border-slate-200 bg-slate-50 text-slate-600";
+      return "border-border bg-muted text-muted-foreground";
   }
 }
 
@@ -116,14 +116,14 @@ function getHttpStatusClasses(
     status >= 200 &&
     status < 400
   ) {
-    return "text-emerald-700";
+    return "text-success";
   }
 
   if (status !== null) {
-    return "text-red-700";
+    return "text-destructive";
   }
 
-  return "text-slate-500";
+  return "text-muted-foreground";
 }
 
 export default async function ChangeDetailPage({
@@ -277,34 +277,34 @@ export default async function ChangeDetailPage({
       : null;
 
   return (
-    <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <nav className="mb-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
           <Link
             href="/dashboard/changes"
-            className="inline-flex items-center gap-2 font-medium text-slate-500 hover:text-slate-950"
+            className="inline-flex items-center gap-2 font-medium text-muted-foreground hover:text-foreground"
           >
             <ArrowLeftIcon />
             <span>Change history</span>
           </Link>
 
-          <span className="text-slate-300">
+          <span className="text-muted-foreground">
             /
           </span>
 
           <a
             href={`/dashboard/competitors/${change.competitor_id}`}
-            className="font-medium text-slate-500 hover:text-indigo-600"
+            className="font-medium text-muted-foreground hover:text-primary-text"
           >
             {change.competitor_name}
           </a>
         </nav>
 
-        <header className="workspace-change-detail-header rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <header className="workspace-change-detail-header rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
             <div>
               <div className="workspace-detail-badges">
-                <span className="workspace-badge workspace-category bg-indigo-50 text-indigo-700">
+                <span className="workspace-badge workspace-category bg-primary-subtle text-primary-text">
                   {change.category}
                 </span>
 
@@ -317,13 +317,13 @@ export default async function ChangeDetailPage({
                 </span>
               </div>
 
-              <h1 className="mt-5 max-w-4xl text-2xl font-semibold leading-9 tracking-tight text-slate-950 sm:text-3xl">
+              <h1 className="mt-5 max-w-4xl text-2xl font-semibold leading-9 tracking-tight text-foreground sm:text-3xl">
                 {change.summary ||
                   "Change detected"}
               </h1>
 
               {change.why_it_matters ? (
-                <p className="mt-4 max-w-4xl text-sm leading-7 text-slate-600 sm:text-[15px]">
+                <p className="mt-4 max-w-4xl text-sm leading-7 text-muted-foreground sm:text-[15px]">
                   {
                     change.why_it_matters
                   }
@@ -331,29 +331,29 @@ export default async function ChangeDetailPage({
               ) : null}
             </div>
 
-            <time className="shrink-0 text-xs text-slate-400">
+            <time className="shrink-0 text-xs text-muted-foreground">
               {formatDateTime(
                 change.detected_at
               )}
             </time>
           </div>
 
-          <div className="mt-7 grid gap-5 border-t border-slate-100 pt-6 sm:grid-cols-2">
+          <div className="mt-7 grid gap-5 border-t border-border pt-6 sm:grid-cols-2">
             <div>
-              <div className="text-xs font-medium text-slate-400">
+              <div className="text-xs font-medium text-muted-foreground">
                 Competitor
               </div>
 
               <a
                 href={`/dashboard/competitors/${change.competitor_id}`}
-                className="mt-1 block font-semibold text-slate-900 hover:text-indigo-600"
+                className="mt-1 block font-semibold text-foreground hover:text-primary-text"
               >
                 {
                   change.competitor_name
                 }
               </a>
 
-              <div className="mt-1 text-sm text-slate-500">
+              <div className="mt-1 text-sm text-muted-foreground">
                 {
                   change.competitor_domain
                 }
@@ -361,11 +361,11 @@ export default async function ChangeDetailPage({
             </div>
 
             <div>
-              <div className="text-xs font-medium text-slate-400">
+              <div className="text-xs font-medium text-muted-foreground">
                 Monitored page
               </div>
 
-              <div className="mt-1 font-semibold text-slate-900">
+              <div className="mt-1 font-semibold text-foreground">
                 {change.monitored_page_label ||
                   "Unlabelled page"}
               </div>
@@ -376,7 +376,7 @@ export default async function ChangeDetailPage({
                 }
                 target="_blank"
                 rel="noreferrer"
-                className="mt-1 block break-all text-sm text-indigo-600 hover:text-indigo-500"
+                className="mt-1 block break-all text-sm text-primary-text hover:underline"
               >
                 {
                   change.monitored_page_url
@@ -392,30 +392,30 @@ export default async function ChangeDetailPage({
               Before and after
             </h2>
 
-            <p className="mt-1 text-sm leading-6 text-slate-500">
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
               The text Morrow recorded before
               and after this change.
             </p>
           </div>
 
-          <div className="workspace-evidence grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:grid-cols-2">
-            <div className="bg-red-50/40 p-5 sm:p-6">
-              <div className="text-xs font-semibold uppercase tracking-wide text-red-700">
+          <div className="workspace-evidence grid overflow-hidden rounded-2xl border border-border bg-card shadow-sm lg:grid-cols-2">
+            <div className="bg-destructive-bg p-5 sm:p-6">
+              <div className="text-xs font-semibold uppercase tracking-wide text-destructive">
                 Previous
               </div>
 
-              <pre className="mt-4 whitespace-pre-wrap break-words font-mono text-sm leading-7 text-slate-700">
+              <pre className="mt-4 whitespace-pre-wrap break-words font-mono text-sm leading-7 text-foreground">
                 {change.previous_text ||
                   "No previous text is available for this change."}
               </pre>
             </div>
 
-            <div className="border-t border-slate-200 bg-emerald-50/40 p-5 sm:p-6 lg:border-l lg:border-t-0">
-              <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+            <div className="border-t border-border bg-success-bg p-5 sm:p-6 lg:border-l lg:border-t-0">
+              <div className="text-xs font-semibold uppercase tracking-wide text-success">
                 Current
               </div>
 
-              <pre className="mt-4 whitespace-pre-wrap break-words font-mono text-sm leading-7 text-slate-700">
+              <pre className="mt-4 whitespace-pre-wrap break-words font-mono text-sm leading-7 text-foreground">
                 {change.current_text ||
                   "No current text is available for this change."}
               </pre>
@@ -428,19 +428,19 @@ export default async function ChangeDetailPage({
             <h2 className="text-xl font-semibold">
               Visual comparison
             </h2>
-            <p className="mt-1 text-sm leading-6 text-slate-500">
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
               Captured page before and after
               this change.
             </p>
           </div>
           <div className="grid gap-5 lg:grid-cols-2">
-            <article className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-5">
+            <article className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-4 sm:px-5">
                 <div>
-                  <h3 className="font-semibold text-slate-900">
+                  <h3 className="font-semibold text-foreground">
                     Previous capture
                   </h3>
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {formatDateTime(
                       change.previous_snapshot_captured_at
                     )}
@@ -451,7 +451,7 @@ export default async function ChangeDetailPage({
                     href={previousScreenshotUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex min-h-9 items-center rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                    className="inline-flex min-h-9 items-center rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
                   >
                     Open full capture
                   </a>
@@ -466,19 +466,19 @@ export default async function ChangeDetailPage({
                   }`}
                 />
               ) : (
-                <div className="flex min-h-64 items-center justify-center p-6 text-center text-sm leading-6 text-slate-500">
+                <div className="flex min-h-64 items-center justify-center p-6 text-center text-sm leading-6 text-muted-foreground">
                   No previous screenshot is
                   available for this change.
                 </div>
               )}
             </article>
-            <article className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-5">
+            <article className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-4 sm:px-5">
                 <div>
-                  <h3 className="font-semibold text-slate-900">
+                  <h3 className="font-semibold text-foreground">
                     Current capture
                   </h3>
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {formatDateTime(
                       change.current_snapshot_captured_at
                     )}
@@ -489,7 +489,7 @@ export default async function ChangeDetailPage({
                     href={currentScreenshotUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex min-h-9 items-center rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                    className="inline-flex min-h-9 items-center rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
                   >
                     Open full capture
                   </a>
@@ -504,7 +504,7 @@ export default async function ChangeDetailPage({
                   }`}
                 />
               ) : (
-                <div className="flex min-h-64 items-center justify-center p-6 text-center text-sm leading-6 text-slate-500">
+                <div className="flex min-h-64 items-center justify-center p-6 text-center text-sm leading-6 text-muted-foreground">
                   No current screenshot is
                   available for this change.
                 </div>
@@ -515,24 +515,24 @@ export default async function ChangeDetailPage({
 
         <details className="workspace-source-captures workspace-secondary-disclosure"><summary><h2 className="text-xl font-semibold">
               Source captures
-            </h2></summary><p className="mt-1 text-sm leading-6 text-slate-500">
+            </h2></summary><p className="mt-1 text-sm leading-6 text-muted-foreground">
               Capture details for the page
               versions used to record this
               change.
             </p><div className="grid gap-5 lg:grid-cols-2">
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-              <h3 className="font-semibold text-slate-900">
+            <article className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+              <h3 className="font-semibold text-foreground">
                 Previous capture
               </h3>
 
               {change.previous_snapshot_id ? (
                 <dl className="mt-5 space-y-4">
                   <div>
-                    <dt className="text-xs text-slate-400">
+                    <dt className="text-xs text-muted-foreground">
                       Capture ID
                     </dt>
 
-                    <dd className="mt-1 break-all font-mono text-xs text-slate-700">
+                    <dd className="mt-1 break-all font-mono text-xs text-foreground">
                       {
                         change.previous_snapshot_id
                       }
@@ -540,11 +540,11 @@ export default async function ChangeDetailPage({
                   </div>
 
                   <div>
-                    <dt className="text-xs text-slate-400">
+                    <dt className="text-xs text-muted-foreground">
                       Captured
                     </dt>
 
-                    <dd className="mt-1 text-sm font-medium text-slate-800">
+                    <dd className="mt-1 text-sm font-medium text-foreground">
                       {formatDateTime(
                         change.previous_snapshot_captured_at
                       )}
@@ -552,7 +552,7 @@ export default async function ChangeDetailPage({
                   </div>
 
                   <div>
-                    <dt className="text-xs text-slate-400">
+                    <dt className="text-xs text-muted-foreground">
                       HTTP status
                     </dt>
 
@@ -567,36 +567,36 @@ export default async function ChangeDetailPage({
                   </div>
 
                   <div>
-                    <dt className="text-xs text-slate-400">
+                    <dt className="text-xs text-muted-foreground">
                       Content hash
                     </dt>
 
-                    <dd className="mt-1 break-all font-mono text-xs text-slate-600">
+                    <dd className="mt-1 break-all font-mono text-xs text-muted-foreground">
                       {change.previous_snapshot_hash ||
                         "Not available"}
                     </dd>
                   </div>
                 </dl>
               ) : (
-                <p className="mt-4 text-sm leading-6 text-slate-500">
+                <p className="mt-4 text-sm leading-6 text-muted-foreground">
                   No previous capture is available
                   for this change.
                 </p>
               )}
             </article>
 
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-              <h3 className="font-semibold text-slate-900">
+            <article className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+              <h3 className="font-semibold text-foreground">
                 Current capture
               </h3>
 
               <dl className="mt-5 space-y-4">
                 <div>
-                  <dt className="text-xs text-slate-400">
+                  <dt className="text-xs text-muted-foreground">
                     Capture ID
                   </dt>
 
-                  <dd className="mt-1 break-all font-mono text-xs text-slate-700">
+                  <dd className="mt-1 break-all font-mono text-xs text-foreground">
                     {
                       change.current_snapshot_id
                     }
@@ -604,11 +604,11 @@ export default async function ChangeDetailPage({
                 </div>
 
                 <div>
-                  <dt className="text-xs text-slate-400">
+                  <dt className="text-xs text-muted-foreground">
                     Captured
                   </dt>
 
-                  <dd className="mt-1 text-sm font-medium text-slate-800">
+                  <dd className="mt-1 text-sm font-medium text-foreground">
                     {formatDateTime(
                       change.current_snapshot_captured_at
                     )}
@@ -616,7 +616,7 @@ export default async function ChangeDetailPage({
                 </div>
 
                 <div>
-                  <dt className="text-xs text-slate-400">
+                  <dt className="text-xs text-muted-foreground">
                     HTTP status
                   </dt>
 
@@ -631,11 +631,11 @@ export default async function ChangeDetailPage({
                 </div>
 
                 <div>
-                  <dt className="text-xs text-slate-400">
+                  <dt className="text-xs text-muted-foreground">
                     Content hash
                   </dt>
 
-                  <dd className="mt-1 break-all font-mono text-xs text-slate-600">
+                  <dd className="mt-1 break-all font-mono text-xs text-muted-foreground">
                     {change.current_snapshot_hash ||
                       "Not available"}
                   </dd>

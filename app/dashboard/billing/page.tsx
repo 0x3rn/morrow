@@ -216,16 +216,16 @@ export default async function BillingPage() {
     );
 
   return (
-    <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <header className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
           <div>
 
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">
+            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-foreground sm:text-4xl">
               Billing &amp; plan limits
             </h1>
 
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-[15px]">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
               Manage your subscription plan, billing cycle, and account entitlements.
             </p>
           </div>
@@ -235,10 +235,10 @@ export default async function BillingPage() {
           <div className="workspace-surface">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <h2 className="text-xl font-semibold text-slate-950">
+                <h2 className="text-xl font-semibold text-foreground">
                   Your subscription plan
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-muted-foreground">
                   {entitlements.effectivePlanId === "scale"
                     ? "Plan changes take effect immediately. You are on the highest tier with maximum workspace, competitor, and monitoring allowances."
                     : "Plan changes take effect immediately. Upgrading unlocks additional workspaces, higher monitoring limits, faster check intervals, and extended history retention."}
@@ -247,7 +247,7 @@ export default async function BillingPage() {
             </div>
 
             {!canManageBilling ? (
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+              <div className="mt-4 rounded-xl border border-border bg-muted px-4 py-3 text-xs text-muted-foreground">
                 Only the account <strong>Owner</strong> can upgrade, downgrade, or modify subscription billing intervals.
               </div>
             ) : null}
@@ -307,12 +307,12 @@ export default async function BillingPage() {
                 return (
                   <article
                     key={`${plan.id}-${cardInterval}`}
-                    className="billing-plan-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                    className="billing-plan-card rounded-2xl border border-border bg-card p-5 shadow-sm"
                   >
                     <div className="billing-plan-card-header">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-lg font-semibold text-slate-950">
+                          <h3 className="text-lg font-semibold text-foreground">
                             {plan.name}
                           </h3>
 
@@ -326,18 +326,18 @@ export default async function BillingPage() {
                         {options?.headerAction}
                       </div>
 
-                      <p className="mt-2 text-xs leading-5 text-slate-500">
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground">
                         {plan.tagline}
                       </p>
                     </div>
 
-                    <div className="billing-plan-card-price mt-4 border-t border-slate-200 pt-4 pb-3">
+                    <div className="billing-plan-card-price mt-4 border-t border-border pt-4 pb-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-baseline gap-1.5">
                           <span className="billing-plan-price-value">
                             ${displayedMonthlyPrice}
                           </span>
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-muted-foreground">
                             / month
                           </span>
                         </div>
@@ -350,7 +350,7 @@ export default async function BillingPage() {
                           </span>
                         ) : null}
                       </div>
-                      <div className="mt-1 text-xs text-slate-500">
+                      <div className="mt-1 text-xs text-muted-foreground">
                         {plan.id === "free"
                           ? "Free forever · No credit card required"
                           : cardInterval === "annual"
@@ -458,7 +458,7 @@ export default async function BillingPage() {
                     {!isEffectiveCurrentPlan ? (
                       <div className="billing-plan-card-notice">
                         {transition.pagesRequiringFrequencyAdjustment > 0 ? (
-                          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800">
+                          <div className="mt-3 rounded-xl border border-warning-border bg-warning-bg px-3.5 py-2.5 text-xs text-warning">
                             Switching to <strong>{plan.name}</strong> will
                             automatically adjust{" "}
                             <strong>
@@ -478,7 +478,7 @@ export default async function BillingPage() {
                     {!isEffectiveCurrentPlan ? (
                       <div className="billing-plan-card-notice">
                         {(transition.pagesRequiringSelectorClear ?? 0) > 0 ? (
-                          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800">
+                          <div className="mt-3 rounded-xl border border-warning-border bg-warning-bg px-3.5 py-2.5 text-xs text-warning">
                             Switching to <strong>{plan.name}</strong> will clear
                             CSS selectors on{" "}
                             <strong>
@@ -493,7 +493,7 @@ export default async function BillingPage() {
                     {!isEffectiveCurrentPlan ? (
                       <div className="billing-plan-card-notice">
                         {!transition.allowed ? (
-                          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700">
+                          <div className="mt-3 rounded-xl border border-destructive-border bg-destructive-bg px-3.5 py-2.5 text-xs text-destructive">
                             <div className="font-semibold">
                               Current usage exceeds {plan.name} limits:
                             </div>
@@ -508,7 +508,7 @@ export default async function BillingPage() {
                     ) : null}
 
                     {!isEffectiveCurrentPlan ? (
-                      <div className="billing-plan-card-cta mt-6 pt-4 border-t border-slate-200">
+                      <div className="billing-plan-card-cta mt-6 pt-4 border-t border-border">
                         {canManageBilling ? (
                           <WorkspaceActionForm
                             action={changeSubscriptionPlanAction}
@@ -545,7 +545,7 @@ export default async function BillingPage() {
                             </WorkspaceSubmitButton>
                           </WorkspaceActionForm>
                         ) : (
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-muted-foreground">
                             Only the account Owner can switch to {plan.name}.
                           </div>
                         )}
@@ -837,7 +837,7 @@ export default async function BillingPage() {
               </dl>
 
               {hasLifecycleActions ? (
-                <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 pt-4">
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
                   {subscription.providerSubscriptionId &&
                   subscription.status !== "canceled" ? (
                     subscription.cancelAtPeriodEnd ? (
@@ -945,10 +945,10 @@ export default async function BillingPage() {
                         key={event.id}
                         className="workspace-record"
                       >
-                        <div className="font-semibold text-slate-900">
+                        <div className="font-semibold text-foreground">
                           {formatted.title}
                         </div>
-                        <p className="mt-1 text-xs text-slate-600">
+                        <p className="mt-1 text-xs text-muted-foreground">
                           {formatted.detail}
                         </p>
                         <div className="workspace-record-meta">

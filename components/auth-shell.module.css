@@ -1,14 +1,12 @@
 .shell {
-  --paper: #f4f0e8;
-  --ink: #17201d;
-  --ink-soft: #55605b;
-  --night: #101815;
-  --purple: #6764e8;
-  --purple-soft: #aaa8ff;
-  --coral: #ff8b73;
+  --paper: var(--background);
+  --ink: var(--foreground);
+  --ink-soft: var(--muted-foreground);
+  --night: var(--panel);
+  --coral: var(--primary);
   min-height: 100svh;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--background);
+  color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, sans-serif;
 }
 
@@ -58,7 +56,7 @@
 
 .eyebrow {
   margin: 0 0 24px;
-  color: #a3ada8;
+  color: var(--panel-muted);
 }
 
 .brandCopy h2 {
@@ -72,35 +70,35 @@
 }
 
 .brandCopy h2 em {
-  color: var(--purple-soft);
+  color: var(--panel-primary-text);
   font-weight: 400;
 }
 
 .brandCopy > p:last-child {
   max-width: 440px;
   margin: 24px 0 0;
-  color: #9aa59f;
+  color: var(--panel-muted);
   font-size: 15px;
   line-height: 1.6;
 }
 
 .changePanel {
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--panel-border);
   padding: 18px 20px 20px;
-  color: #f5f3ed;
+  color: var(--panel-foreground);
 }
 
 .changeMeta {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  color: #89958f;
+  color: var(--panel-muted);
   font-size: 9px;
 }
 
 .changePanel > p {
   margin: 26px 0 7px;
-  color: var(--coral);
+  color: var(--panel-primary-text);
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   letter-spacing: 0.14em;
@@ -115,13 +113,13 @@
 
 .changeValue {
   margin-top: 10px;
-  color: #d6ddd9;
+  color: var(--panel-muted);
   font-size: 14px;
 }
 
 .changeValue span {
   padding: 0 8px;
-  color: var(--purple-soft);
+  color: var(--panel-primary-text);
 }
 
 .authPanel {
@@ -138,8 +136,15 @@
   gap: 18px;
 }
 
+.authHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: auto;
+}
+
 .mobileBrand {
-  color: var(--ink);
+  color: var(--foreground);
   font-size: 19px;
 }
 
@@ -147,11 +152,15 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
-  color: #68736d;
+  color: var(--muted-foreground);
   font-size: 12px;
   font-weight: 600;
   text-decoration: none;
+  min-height: 44px;
+}
+
+.backLink:hover {
+  color: var(--foreground);
 }
 
 .backLink svg {
@@ -192,13 +201,13 @@
 
 .formKicker {
   margin: 0 0 14px;
-  color: var(--purple);
+  color: var(--muted-foreground);
 }
 
 .formHeader > p:last-child {
   max-width: 440px;
   margin: 12px 0 0;
-  color: var(--ink-soft);
+  color: var(--muted-foreground);
   font-size: 16px;
   line-height: 1.5;
 }
@@ -215,7 +224,7 @@
 }
 
 .field label {
-  color: #39443f;
+  color: var(--foreground);
   font-family: var(--font-geist-mono), monospace;
   font-size: 11px;
   font-weight: 650;
@@ -227,11 +236,11 @@
 .passwordControl input {
   width: 100%;
   height: 50px;
-  border: 1px solid rgba(23, 32, 29, 0.2);
+  border: 1px solid var(--input);
   border-radius: 1px;
   outline: none;
-  background: rgba(255, 255, 255, 0.38);
-  color: var(--ink);
+  background: var(--card);
+  color: var(--foreground);
   font: inherit;
   font-size: 16px;
   padding: 0 14px;
@@ -239,14 +248,14 @@
 
 .field input::placeholder,
 .passwordControl input::placeholder {
-  color: #929b96;
+  color: var(--muted-foreground);
 }
 
 .field input:focus,
 .passwordControl input:focus {
-  border-color: var(--coral);
-  box-shadow: 0 0 0 2px rgba(255, 139, 115, 0.25);
-  outline: none;
+  border-color: var(--ring);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .passwordControl {
@@ -268,7 +277,7 @@
   height: 50px;
   border: 0;
   background: transparent;
-  color: var(--purple);
+  color: var(--primary-text);
   cursor: pointer;
   font: inherit;
   font-size: 12px;
@@ -276,18 +285,18 @@
 }
 
 .passwordToggle:hover {
-  color: var(--ink);
+  color: var(--foreground);
 }
 
 .fieldHint {
   margin: -1px 0 0;
-  color: #74807a;
+  color: var(--muted-foreground);
   font-size: 12px;
 }
 
 .verificationNotice {
   margin: 0;
-  color: var(--ink-soft);
+  color: var(--muted-foreground);
   font-size: 14px;
   line-height: 1.6;
   overflow-wrap: anywhere;
@@ -311,17 +320,17 @@
   border: 0;
   padding: 8px 0;
   background: transparent;
-  color: var(--purple);
+  color: var(--primary-text);
   cursor: pointer;
   font: inherit;
   font-size: 13px;
   font-weight: 600;
+  min-height: 44px;
 }
 
 .textButton:disabled {
-  color: var(--ink-soft);
+  color: var(--text-disabled);
   cursor: default;
-  opacity: 0.65;
 }
 
 .submitLink {
@@ -329,8 +338,9 @@
   align-items: center;
   justify-content: center;
   min-height: 52px;
-  background: var(--ink);
-  color: #fff;
+  background: var(--primary);
+  border: 1px solid var(--primary-border);
+  color: var(--primary-foreground);
   font-size: 14px;
   font-weight: 680;
   text-decoration: none;
@@ -339,9 +349,10 @@
 .error {
   margin: -2px 0 0;
   padding: 11px 13px;
-  border-left: 3px solid var(--coral);
-  background: rgba(255, 139, 115, 0.1);
-  color: #7c4337;
+  border: 1px solid var(--destructive-border);
+  border-left: 3px solid var(--destructive);
+  background: var(--destructive-bg);
+  color: var(--destructive);
   font-size: 13px;
   line-height: 1.45;
 }
@@ -350,10 +361,10 @@
   width: 100%;
   height: 52px;
   margin-top: 4px;
-  border: 0;
+  border: 1px solid var(--primary-border);
   border-radius: 0;
-  background: var(--ink);
-  color: #fff;
+  background: var(--primary);
+  color: var(--primary-foreground);
   cursor: pointer;
   font: inherit;
   font-size: 14px;
@@ -361,38 +372,49 @@
 }
 
 .submit:hover:not(:disabled) {
-  background: var(--purple);
+  background: var(--primary-hover);
+}
+
+.submit:active:not(:disabled) {
+  background: var(--primary-active);
 }
 
 .submit:disabled {
+  background: var(--muted);
+  border-color: var(--border);
+  color: var(--text-disabled);
   cursor: wait;
-  opacity: 0.62;
 }
 
 .accountSwitch {
   margin: 20px 0 0;
-  color: #737e78;
+  color: var(--muted-foreground);
   font-size: 13px;
   text-align: center;
 }
 
 .accountSwitch a {
   margin-left: 7px;
-  color: var(--ink);
+  color: var(--foreground);
   font-weight: 680;
   text-decoration: none;
 }
 
+.accountSwitch a:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--primary-text);
+}
+
 .shell a:focus-visible,
 .shell button:focus-visible {
-  outline: 2px solid var(--coral);
-  outline-offset: 3px;
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .shell input:focus-visible {
-  border-color: var(--coral);
-  box-shadow: 0 0 0 2px rgba(255, 139, 115, 0.25);
-  outline: none;
+  border-color: var(--ring);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 @media (min-width: 700px) and (max-width: 959px) {
@@ -419,8 +441,9 @@
     height: 100svh;
     padding: 42px clamp(34px, 4.5vw, 64px) 44px;
     flex-direction: column;
-    background: var(--night);
-    color: #f5f3ed;
+    background: var(--panel);
+    border-right: 1px solid var(--panel-border);
+    color: var(--panel-foreground);
   }
 
   .brandLogo {
