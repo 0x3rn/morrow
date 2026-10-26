@@ -25,7 +25,7 @@ export function ThemeToggle() {
   }, [mounted, resolvedTheme]);
 
   if (!mounted) {
-    return <div className="min-h-11 w-[168px]" aria-hidden />;
+    return <div className="min-h-11 w-[156px]" aria-hidden />;
   }
 
   const options = ["light", "dark", "system"] as const;
@@ -42,7 +42,7 @@ export function ThemeToggle() {
           role="radio"
           aria-checked={theme === o}
           onClick={() => setTheme(o)}
-          className={`min-h-9 rounded-md px-3 py-1.5 text-sm capitalize ${
+          className={`inline-flex min-h-9 flex-1 items-center justify-center whitespace-nowrap rounded-md px-2.5 py-1 text-[13px] font-medium leading-5 capitalize ${
             theme === o
               ? "border border-border bg-card text-foreground"
               : "border border-transparent text-muted-foreground"

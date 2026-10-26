@@ -36,7 +36,10 @@
 .workspace-account-content { display: grid; gap: 4px; padding: 8px 0 0; }
 .workspace-account-content > div:not(.workspace-account-mobile-links) { padding: 0 12px; }
 .workspace-account-email { color: var(--muted-foreground); font-size: 13px; }
-.workspace-account-theme { display: grid; gap: 6px; padding: 8px 12px !important; margin: 4px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.workspace-account-theme { display: grid; gap: 6px; padding: 8px 6px !important; margin: 4px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.workspace-account-theme > .workspace-meta { padding: 0 6px; }
+.workspace-account-theme [role="radiogroup"] { width: 100%; }
+.workspace-account-theme [role="radio"] { min-height: 36px; padding-left: 8px; padding-right: 8px; white-space: nowrap; overflow-wrap: normal; word-break: keep-all; }
 .workspace-content { position: relative; padding-left: 208px; }
 .morrow-dashboard main { position: relative; background: transparent; min-height: auto; color: var(--foreground); }
 .workspace-page, .morrow-dashboard main:not(.workspace-page) > div { width: 100%; max-width: 1280px; margin: 0 auto; padding: 28px 32px 40px; }
@@ -320,11 +323,14 @@ body:has(.billing-plan-dialog[open]), body:has(.workspace-switcher-dialog[open])
   .workspace-nav .workspace-nav-desktop-only { display: none; }
   .workspace-nav-label-desktop { display: none; }
   .workspace-nav-label-mobile { display: inline; }
+  .workspace-nav a:hover, .workspace-nav a[aria-current="page"] { background: transparent; }
   .workspace-nav a[aria-current="page"]::before { inset: auto 25% 0; width: auto; height: 3px; }
   .workspace-account { margin: 0; padding: 0; border: 0; }
   .workspace-account summary { padding: 8px 0 8px 12px; }
-  .workspace-account-content { position: absolute; z-index: 40; top: calc(100% - 4px); right: 16px; width: max-content; min-width: 172px; max-width: min(240px,calc(100vw - 32px)); border: 1px solid var(--border); border-radius: 8px; background: var(--popover); color: var(--popover-foreground); padding: 10px 8px 8px; box-shadow: var(--shadow-pop); }
+  .workspace-account-content { position: absolute; z-index: 40; top: calc(100% - 4px); right: 16px; width: max-content; min-width: 224px; max-width: min(268px,calc(100vw - 32px)); border: 1px solid var(--border); border-radius: 8px; background: var(--popover); color: var(--popover-foreground); padding: 10px 8px 8px; box-shadow: var(--shadow-pop); }
   .workspace-account-content > div:not(.workspace-account-mobile-links) { padding: 0 10px; }
+  .workspace-account-theme { padding: 8px 10px !important; }
+  .workspace-account-theme > .workspace-meta { padding: 0; }
   .workspace-account-content > :is(.workspace-panel-trigger, .morrow-signout), .workspace-account-content > .workspace-account-mobile-links > .workspace-panel-trigger { min-height: 44px; padding: 8px 10px; }
   .workspace-account-content > :is(.workspace-panel-trigger, .morrow-signout):hover, .workspace-account-content > .workspace-account-mobile-links > .workspace-panel-trigger:hover { background: var(--popover-hover); color: var(--foreground); }
   .workspace-account-mobile-links { display: grid; gap: 4px; padding-top: 6px; margin-top: 4px; border-top: 1px solid var(--border); }
