@@ -66,36 +66,36 @@
 .dark {
   color-scheme: dark;
 
-  /* Surfaces: lighter = higher elevation */
-  --background: #121212;           /* 0dp base */
-  --card: #1E1E1E;                 /* 1dp cards, panels */
+  /* Surfaces: brand-tinted deep green-black; borders do most of the separation */
+  --background: #0B110E;           /* page base */
+  --card: #111915;                 /* cards, panels */
   --card-foreground: var(--foreground);
-  --surface-bar: #272727;          /* 4dp sticky header, bottom tab bar */
-  --popover: #2E2E2E;              /* 8dp menus, dropdowns, tooltips */
+  --surface-bar: #161F1A;          /* sticky header, bottom tab bar */
+  --popover: #1A241F;              /* menus, dropdowns, tooltips */
   --popover-foreground: var(--foreground);
-  --dialog: #383838;               /* 24dp modals, sheets */
-  --muted: #272727;                /* nested areas inside cards, inputs, table headers */
-  --popover-hover: var(--dialog);  /* visibly lighter than #2E2E2E in dark mode */
+  --dialog: #1F2B25;               /* modals, sheets */
+  --muted: #161F1A;                /* nested areas inside cards, inputs, table headers */
+  --popover-hover: var(--dialog);  /* visibly lighter than the popover in dark mode */
   --scrim: rgba(0, 0, 0, 0.6);     /* modal/sheet backdrop */
 
-  /* Text: dimmed white, never #FFFFFF */
-  --foreground: #E0E0E0;           /* headings + body (about 14:1 on base) */
-  --muted-foreground: #A0A0A0;     /* secondary text (about 7:1 on base) */
-  --text-disabled: #6C6C6C;        /* disabled ONLY: about 3.6:1, fails for real content */
+  /* Text: dimmed off-white, never #FFFFFF */
+  --foreground: #E9EEEA;           /* headings + body */
+  --muted-foreground: #9AA7A0;     /* secondary text */
+  --text-disabled: #66726B;        /* disabled ONLY, fails for real content */
 
   /* Lines */
-  --border: #2C2C2C;
-  --input: #666666;                /* form control outline (3:1 on cards) */
+  --border: #243029;
+  --input: #5E6B64;                /* form control outline (3:1 on cards) */
   --ring: #EE9A84;
-  --grid-line: rgba(255, 255, 255, 0.04);
+  --grid-line: rgba(233, 238, 234, 0.04);
 
   /* Brand orange, softened for dark */
-  --primary: #E8856D;              /* about 7.6:1 on #121212, 6.9:1 on #1E1E1E */
-  --primary-foreground: #121212;   /* dark text on the orange stays dark */
-  --primary-hover: #EE957F;        /* lighter on hover (lighter = higher) */
+  --primary: #E8856D;
+  --primary-foreground: #0B110E;   /* dark text on the orange stays dark */
+  --primary-hover: #EE957F;        /* lighter on hover */
   --primary-active: #DE7760;
   --primary-border: #E8856D;       /* no separate outline needed */
-  --primary-text: #EE9A84;         /* orange as text/links (about 9:1 on base) */
+  --primary-text: #EE9A84;         /* orange as text/links */
   --primary-subtle: rgba(232, 133, 109, 0.14);
 
   /* Status: desaturated and lighter so they don't glare */
@@ -109,12 +109,12 @@
   --destructive-bg: rgba(240, 113, 120, 0.12);
   --destructive-border: rgba(240, 113, 120, 0.30);
 
-  /* Dark preview / hero / feature panels: neutral card elevation in dark mode */
-  --panel: #1E1E1E;
-  --panel-foreground: #E0E0E0;
-  --panel-muted: #A0A0A0;
-  --panel-border: #2C2C2C;
-  --panel-hover: #272727;
+  /* Dark preview / hero / feature panels: same brand ink as light mode */
+  --panel: #101815;
+  --panel-foreground: #E9EEEA;
+  --panel-muted: #9AA7A0;
+  --panel-border: #243029;
+  --panel-hover: #161F1A;
   --panel-accent: #C8EE79;
   --panel-primary-text: #EE9A84;
   --panel-primary-subtle: rgba(232, 133, 109, 0.14);

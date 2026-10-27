@@ -15,7 +15,7 @@ export function ThemeToggle() {
   useEffect(() => {
     if (!mounted) return;
     // Intentional exception: update browser chrome <meta name="theme-color"> to match active theme
-    const color = resolvedTheme === "dark" ? "#121212" : "#FFFFFF";
+    const color = resolvedTheme === "dark" ? "#0B110E" : "#FFFFFF";
     const metaTags = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
     metaTags.forEach((meta) => {
       if (!meta.media || window.matchMedia(meta.media).matches) {
