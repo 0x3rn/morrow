@@ -36,6 +36,8 @@
   --primary-border: #D9755F;       /* the outline on the big orange button */
   --primary-text: #B5442A;         /* orange used AS text, links, small icons (5.5:1 on white) */
   --primary-subtle: rgba(255, 139, 115, 0.16); /* tinted backgrounds, selected rows */
+  --cta-surface: var(--primary-subtle);
+  --feed-shadow: var(--primary-subtle);
 
   /* Status */
   --success: #2F6B3A;
@@ -66,37 +68,39 @@
 .dark {
   color-scheme: dark;
 
-  /* Surfaces: brand-tinted deep green-black; borders do most of the separation */
-  --background: #0B110E;           /* page base */
-  --card: #111915;                 /* cards, panels */
+  /* Surfaces: neutral black; borders do most of the separation */
+  --background: #0A0A0A;           /* page base */
+  --card: #111111;                 /* cards, panels */
   --card-foreground: var(--foreground);
-  --surface-bar: #161F1A;          /* sticky header, bottom tab bar */
-  --popover: #1A241F;              /* menus, dropdowns, tooltips */
+  --surface-bar: #171717;          /* sticky header, bottom tab bar */
+  --popover: #1C1C1C;              /* menus, dropdowns, tooltips */
   --popover-foreground: var(--foreground);
-  --dialog: #1F2B25;               /* modals, sheets */
-  --muted: #161F1A;                /* nested areas inside cards, inputs, table headers */
+  --dialog: #222222;               /* modals, sheets */
+  --muted: #171717;                /* nested areas inside cards, inputs, table headers */
   --popover-hover: var(--dialog);  /* visibly lighter than the popover in dark mode */
   --scrim: rgba(0, 0, 0, 0.6);     /* modal/sheet backdrop */
 
   /* Text: dimmed off-white, never #FFFFFF */
-  --foreground: #E9EEEA;           /* headings + body */
-  --muted-foreground: #9AA7A0;     /* secondary text */
-  --text-disabled: #66726B;        /* disabled ONLY, fails for real content */
+  --foreground: #EDEDED;           /* headings + body */
+  --muted-foreground: #A1A1A1;     /* secondary text */
+  --text-disabled: #6B6B6B;        /* disabled ONLY, fails for real content */
 
   /* Lines */
-  --border: #243029;
-  --input: #5E6B64;                /* form control outline (3:1 on cards) */
+  --border: #2A2A2A;
+  --input: #6B6B6B;                /* form control outline (3:1 on cards) */
   --ring: #EE9A84;
-  --grid-line: rgba(233, 238, 234, 0.04);
+  --grid-line: rgba(255, 255, 255, 0.04);
 
   /* Brand orange, softened for dark */
   --primary: #E8856D;
-  --primary-foreground: #0B110E;   /* dark text on the orange stays dark */
+  --primary-foreground: #0A0A0A;   /* dark text on the orange stays dark */
   --primary-hover: #EE957F;        /* lighter on hover */
   --primary-active: #DE7760;
   --primary-border: #E8856D;       /* no separate outline needed */
   --primary-text: #EE9A84;         /* orange as text/links */
   --primary-subtle: rgba(232, 133, 109, 0.14);
+  --cta-surface: var(--card);
+  --feed-shadow: var(--border);
 
   /* Status: desaturated and lighter so they don't glare */
   --success: #86D19A;
@@ -109,12 +113,12 @@
   --destructive-bg: rgba(240, 113, 120, 0.12);
   --destructive-border: rgba(240, 113, 120, 0.30);
 
-  /* Dark preview / hero / feature panels: same brand ink as light mode */
-  --panel: #101815;
-  --panel-foreground: #E9EEEA;
-  --panel-muted: #9AA7A0;
-  --panel-border: #243029;
-  --panel-hover: #161F1A;
+  /* Dark preview / hero / feature panels: near-black with visible borders */
+  --panel: #0F0F0F;
+  --panel-foreground: #EDEDED;
+  --panel-muted: #A1A1A1;
+  --panel-border: #2A2A2A;
+  --panel-hover: #171717;
   --panel-accent: #C8EE79;
   --panel-primary-text: #EE9A84;
   --panel-primary-subtle: rgba(232, 133, 109, 0.14);
@@ -152,6 +156,8 @@
     --primary-border: #D9755F;
     --primary-text: #B5442A;
     --primary-subtle: rgba(255, 139, 115, 0.16);
+    --cta-surface: var(--primary-subtle);
+    --feed-shadow: var(--primary-subtle);
     --success: #2F6B3A;
     --success-bg: #E7F2E4;
     --success-border: #BFDDB8;
