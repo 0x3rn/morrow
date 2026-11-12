@@ -67,5 +67,76 @@
 			"bucket_name": "morrow-snapshots",
 			"binding": "morrow_snapshots"
 		}
-	]
+	],
+
+	// STAGING ENVIRONMENT (pen-test / vulnerability-test target).
+	// Deploy with: npm run deploy:staging  ->  worker "morrow-staging".
+	// Wrangler does NOT inherit bindings, vars or triggers into an env, so every
+	// binding is repeated here and points at STAGING-ONLY resources. Never put the
+	// production database/KV/bucket ids in this block.
+	// Secrets (BETTER_AUTH_SECRET, BETTER_AUTH_URL, MORROW_APP_URL, RESEND_API_KEY,
+	// LEMONSQUEEZY_*, MORROW_TELEGRAM_*) are set per environment with:
+	//   npx wrangler secret put <NAME> --env staging
+	"env": {
+		"staging": {
+			"name": "morrow-staging",
+			"workers_dev": true,
+			"preview_urls": false,
+			// No scheduled monitoring runs in staging, so it never fetches sites or
+			// sends alerts on its own. Trigger it by hand when a test needs it.
+			"triggers": {
+				"crons": []
+			},
+			"vars": {
+				"MORROW_EMAIL_FROM": "noreply@morrow.corstack.dev",
+				"MORROW_TELEGRAM_BOT_USERNAME": "morrowalertbot"
+			},
+			"observability": {
+				"logs": {
+					"enabled": true,
+					"head_sampling_rate": 1,
+					"invocation_logs": true,
+					"persist": true
+				}
+			},
+			"browser": {
+				"binding": "BROWSER",
+				"remote": true
+			},
+			"assets": {
+				"directory": "dist/client",
+				"not_found_handling": "none",
+				"binding": "ASSETS"
+			},
+			"cache": {
+				"enabled": true
+			},
+			"ai": {
+				"binding": "AI"
+			},
+			"images": {
+				"binding": "IMAGES"
+			},
+			"kv_namespaces": [
+				{
+					"binding": "VINEXT_KV_CACHE",
+					"id": "0e529c9731a2413d8a0755641026360b"
+				}
+			],
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "morrow-db-staging",
+					"database_id": "4f6a14de-458c-482e-8c20-fc3baa2cd600",
+					"migrations_dir": "migrations"
+				}
+			],
+			"r2_buckets": [
+				{
+					"bucket_name": "morrow-snapshots-staging",
+					"binding": "morrow_snapshots"
+				}
+			]
+		}
+	}
 }
