@@ -33,7 +33,7 @@ export function ThemeToggle() {
     <div
       role="radiogroup"
       aria-label="Theme"
-      className="inline-flex min-h-11 items-center rounded-lg border border-border bg-muted p-1"
+      className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] border border-border bg-muted p-1"
     >
       {options.map((o) => (
         <button
@@ -42,10 +42,11 @@ export function ThemeToggle() {
           role="radio"
           aria-checked={theme === o}
           onClick={() => setTheme(o)}
-          className={`inline-flex min-h-9 flex-1 items-center justify-center whitespace-nowrap rounded-md px-2.5 py-1 text-[13px] font-medium leading-5 capitalize ${
+          // The ::after extends the 36px segment to a 44px touch target without growing the control.
+          className={`relative inline-flex min-h-9 flex-1 items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] px-2.5 py-1 text-[13px] font-medium leading-5 capitalize transition-colors after:absolute after:inset-x-0 after:-inset-y-1 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${
             theme === o
               ? "border border-border bg-card text-foreground"
-              : "border border-transparent text-muted-foreground"
+              : "border border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
           {o}

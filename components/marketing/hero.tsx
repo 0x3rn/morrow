@@ -26,7 +26,7 @@ export function Hero() {
               {proofPoints.map((point) => <li key={point}>{point}</li>)}
             </ul>
           </div>
-          <div className={styles.changeFeed} aria-label="Illustrative change feed">
+          <div className={styles.changeFeed} role="group" aria-label="Illustrative change feed">
             <div className={styles.feedTopbar}>
               <span>MORROW</span>
               <span className={styles.feedLiveState}><i aria-hidden="true" /> Monitoring</span>
