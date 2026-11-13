@@ -22,10 +22,11 @@ const monitoringRows = Array.from({length:3},(_,i)=>({id:`page-${i}`,competitor_
 const recentChanges = Array.from({length:8},(_,i)=>({id:`change-${i}`,category:'content',significance:i%2?'moderate':'minor',summary:`Complete untruncated change title ${i}: detailed wording that must remain available.`,why_it_matters:`Complete descriptive paragraph ${i} with all original detail.`,detected_at:`2026-10-${String(9-i).padStart(2,'0')}T02:46:00Z`,competitor_id:`competitor-${i%3}`,competitor_name:`Complete competitor name ${i%3}`,monitored_page_url:monitoringRows[i%3].url,monitored_page_label:`Page label ${i%3}`}));
 const render = overrides => load(renderToStaticMarkup(React.createElement(exports.DashboardOverview,{metrics,usage,monitoringRows,recentChanges,...overrides})));
 
-test('dashboard keeps all metrics, zero health states, monitored pages, distinct timings and usage facts',()=>{
+test('dashboard keeps all metrics, per-page health badges, monitored pages, distinct timings and usage facts',()=>{
  const $=render();
  assert.deepEqual($('.workspace-metric-value').map((i,e)=>$(e).text()).get(),['3','3','43','0']);
- assert.deepEqual($('.workspace-health-cell').map((i,e)=>$(e).text()).get(),['Healthy3','Overdue0','Awaiting first capture0','Capture errors0','Paused0']);
+ assert.equal($('.workspace-health-cell').length,0,'The aggregate health strip was removed; health shows per page');
+ assert.deepEqual($('.monitoring-record .workspace-badge').map((i,e)=>$(e).text()).get(),['Healthy','Healthy','Healthy']);
  assert.equal($('.monitoring-record').length,3);
  $('.monitoring-record').each((i,e)=>{
   const row=$(e);
@@ -36,8 +37,6 @@ test('dashboard keeps all metrics, zero health states, monitored pages, distinct
  const summary=$('.workspace-usage-summary');
  for(const text of ['3 / 10','7 competitors remaining','3 / 50','47 pages remaining','Per-competitor page cap','10']) assert.ok(summary.text().includes(text),text);
  assert.equal(summary.parents('details').length,0,'Capacity figures stay outside the help disclosure');
- assert.ok($('.workspace-usage-copy').text().includes('These are launch safety caps, not subscription or billing limits.'));
- assert.ok($('.workspace-usage-copy').text().includes('Each competitor can contain up to 10 monitored pages. Paused pages still count toward capacity.'));
  assert.ok($('.workspace-latest').text().includes('11 Oct 2026, 02:55 UTC'));
  assert.ok($('.workspace-latest').text().includes('9 Oct 2026, 02:46 UTC'));
 });
