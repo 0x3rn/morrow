@@ -54,10 +54,13 @@ export function EmailDigestFields({
     firstPeriodInputRef.current?.setCustomValidity(
       isScheduleMissing ? DIGEST_SCHEDULE_REQUIRED_MESSAGE : "",
     );
-    if (!isScheduleMissing) {
-      setShowScheduleError(false);
-    }
   }, [isScheduleMissing]);
+
+  // Clear a stale "invalid" flag as soon as the schedule is valid again, so the
+  // error does not reappear the next time the schedule is emptied.
+  if (!isScheduleMissing && showScheduleError) {
+    setShowScheduleError(false);
+  }
 
   function togglePeriod(period: string, checked: boolean) {
     setSelectedPeriods((current) => {

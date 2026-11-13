@@ -39,10 +39,16 @@ export function MobilePlanSelector({
   const plans =
     selectedInterval === "annual" ? annualPlans : monthlyPlans;
 
+  // When the active plan or billing interval changes, reset the selection
+  // during render (not in an effect) to avoid a cascading extra render.
+  const planKey = `${activePlanId}|${billingInterval}`;
+  const [syncedPlanKey, setSyncedPlanKey] = useState(planKey);
+  if (syncedPlanKey !== planKey) {
+    setSyncedPlanKey(planKey);
+    setSelectedInterval(normalizedDefaultInterval);
+  }
+
   useEffect(() => {
-    setSelectedInterval(
-      billingInterval === "annual" ? "annual" : "monthly",
-    );
     dialogRef.current?.close();
   }, [activePlanId, billingInterval]);
 
