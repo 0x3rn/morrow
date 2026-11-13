@@ -1513,23 +1513,29 @@ export function createTelegramLinkValidationHandler(
       env.MORROW_TELEGRAM_WEBHOOK_SECRET ?? ""
     ).trim();
 
-    if (configuredSecret) {
-      const providedSecret = (
-        request.headers.get(
-          "x-telegram-bot-api-secret-token",
-        ) ??
-        request.headers
-          .get("authorization")
-          ?.replace(/^Bearer\s+/i, "") ??
-        ""
-      ).trim();
+    // Fail closed: without a configured secret nobody can be authenticated.
+    if (!configuredSecret) {
+      return Response.json(
+        { error: "Telegram link validation is not configured." },
+        { status: 503 },
+      );
+    }
 
-      if (!telegramSecretMatches(providedSecret, configuredSecret)) {
-        return Response.json(
-          { error: "Unauthorized Telegram link validation request." },
-          { status: 401 },
-        );
-      }
+    const providedSecret = (
+      request.headers.get(
+        "x-telegram-bot-api-secret-token",
+      ) ??
+      request.headers
+        .get("authorization")
+        ?.replace(/^Bearer\s+/i, "") ??
+      ""
+    ).trim();
+
+    if (!telegramSecretMatches(providedSecret, configuredSecret)) {
+      return Response.json(
+        { error: "Unauthorized Telegram link validation request." },
+        { status: 401 },
+      );
     }
 
     let body: {
@@ -1597,19 +1603,25 @@ export function createTelegramWebhookHandler(
       env.MORROW_TELEGRAM_WEBHOOK_SECRET ?? ""
     ).trim();
 
-    if (configuredSecret) {
-      const providedSecret = (
-        request.headers.get(
-          "x-telegram-bot-api-secret-token",
-        ) ?? ""
-      ).trim();
+    // Fail closed: without a configured secret nobody can be authenticated.
+    if (!configuredSecret) {
+      return Response.json(
+        { error: "Telegram webhook is not configured." },
+        { status: 503 },
+      );
+    }
 
-      if (!telegramSecretMatches(providedSecret, configuredSecret)) {
-        return Response.json(
-          { error: "Unauthorized Telegram webhook request." },
-          { status: 401 },
-        );
-      }
+    const providedSecret = (
+      request.headers.get(
+        "x-telegram-bot-api-secret-token",
+      ) ?? ""
+    ).trim();
+
+    if (!telegramSecretMatches(providedSecret, configuredSecret)) {
+      return Response.json(
+        { error: "Unauthorized Telegram webhook request." },
+        { status: 401 },
+      );
     }
 
     let update: TelegramUpdate;

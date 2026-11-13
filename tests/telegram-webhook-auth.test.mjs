@@ -64,6 +64,22 @@ test("telegram link validation accepts the secret by header or bearer token only
   assert.notEqual((await call({ "x-telegram-bot-api-secret-token": SECRET })).status, 401);
 });
 
+test("telegram handlers fail closed when no secret is configured", async () => {
+  for (const configured of [undefined, "", "   "]) {
+    const env = { DB: fakeDb(), MORROW_TELEGRAM_WEBHOOK_SECRET: configured };
+    const webhook = createTelegramWebhookHandler(env);
+    const link = createTelegramLinkValidationHandler(env);
+    assert.equal((await webhook(webhookRequest(undefined))).status, 503);
+    assert.equal((await webhook(webhookRequest("anything"))).status, 503);
+    const linkResponse = await link(new Request("https://morrow.test/api/telegram/link", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code: "MRW-ABCDEFGH", chatId: "1" }),
+    }));
+    assert.equal(linkResponse.status, 503);
+  }
+});
+
 test("telegram handlers never compare the shared secret with !== or ===", () => {
   const source = readFileSync("lib/telegram-bot.ts", "utf8");
   assert.doesNotMatch(source, /providedSecret\s*[!=]==\s*configuredSecret/);
