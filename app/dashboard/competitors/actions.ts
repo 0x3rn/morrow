@@ -1,11 +1,13 @@
 "use server";
 
 import { auth } from "@/lib/auth";
+import { findFaviconUrl } from "@/lib/competitor-favicon";
 import { getActiveWorkspaceMembership } from "@/lib/team-workspaces";
 import {
   toUserFacingErrorMessage,
   type WorkspaceActionResult,
 } from "@/lib/user-facing-error";
+import { normalizeCompetitorDomain } from "@/lib/url-safety";
 import { getWorkspaceEntitlements } from "@/lib/workspace-billing";
 import {
   canDeleteMonitoringResources,
@@ -40,36 +42,9 @@ interface CountRow {
 
 function normalizeDomain(
   value: string
-) {
-  let domain =
-    value
-      .trim()
-      .toLowerCase();
-
-  domain =
-    domain.replace(
-      /^https?:\/\//,
-      ""
-    );
-
-  domain =
-    domain.replace(
-      /^www\./,
-      ""
-    );
-
-  domain =
-    domain.split(
-      "/"
-    )[0];
-
-  domain =
-    domain.replace(
-      /\/+$/,
-      ""
-    );
-
-  return domain;
+): string {
+  /* Blank input is reported by the caller; anything else must be a public domain. */
+  return value.trim() ? normalizeCompetitorDomain(value) : "";
 }
 
 function isUniqueConstraintError(
@@ -85,101 +60,6 @@ function isUniqueConstraintError(
   );
 }
 
-async function findFaviconUrl(
-  domain: string
-) {
-  const homepageUrl =
-    `https://${domain}`;
-
-  const fallbackUrl =
-    `${homepageUrl}/favicon.ico`;
-
-  try {
-    const response =
-      await fetch(
-        homepageUrl,
-        {
-          redirect:
-            "follow",
-
-          headers: {
-            "User-Agent":
-              "Morrow favicon fetcher",
-          },
-        }
-      );
-
-    if (
-      !response.ok
-    ) {
-      return fallbackUrl;
-    }
-
-    const html =
-      await response.text();
-
-    const linkTags =
-      html.match(
-        /<link\b[^>]*>/gi
-      ) || [];
-
-    for (
-      const tag
-      of linkTags
-    ) {
-      const relMatch =
-        tag.match(
-          /\brel=["']([^"']+)["']/i
-        );
-
-      if (
-        !relMatch ||
-        !relMatch[1]
-          .toLowerCase()
-          .includes(
-            "icon"
-          )
-      ) {
-        continue;
-      }
-
-      const hrefMatch =
-        tag.match(
-          /\bhref=["']([^"']+)["']/i
-        );
-
-      if (
-        !hrefMatch
-      ) {
-        continue;
-      }
-
-      const faviconUrl =
-        new URL(
-          hrefMatch[1],
-          response.url
-        );
-
-      if (
-        faviconUrl.protocol ===
-          "http:" ||
-        faviconUrl.protocol ===
-          "https:"
-      ) {
-        return faviconUrl.toString();
-      }
-    }
-  } catch {
-    /*
-     * Favicon discovery is best-effort.
-     *
-     * Network or parsing problems must never
-     * prevent competitor creation/editing.
-     */
-  }
-
-  return fallbackUrl;
-}
 
 async function getUserWorkspace(
   userId: string

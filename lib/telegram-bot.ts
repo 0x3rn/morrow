@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 
 import { resolveWorkspaceEntitlements } from "./billing-plans.ts";
 import { getActiveWorkspaceMembership } from "./team-workspaces.ts";
@@ -1490,6 +1490,19 @@ export async function sendTelegramBotPlainMessage(
   }
 }
 
+/**
+ * Constant-time comparison of a presented shared secret with the configured one.
+ * Both values are hashed first so length differences are not observable.
+ */
+export function telegramSecretMatches(
+  provided: string,
+  expected: string,
+): boolean {
+  const digest = (value: string) =>
+    createHash("sha256").update(value, "utf8").digest();
+  return timingSafeEqual(digest(provided), digest(expected));
+}
+
 export function createTelegramLinkValidationHandler(
   env: TelegramBotEnv,
 ) {
@@ -1511,7 +1524,7 @@ export function createTelegramLinkValidationHandler(
         ""
       ).trim();
 
-      if (providedSecret !== configuredSecret) {
+      if (!telegramSecretMatches(providedSecret, configuredSecret)) {
         return Response.json(
           { error: "Unauthorized Telegram link validation request." },
           { status: 401 },
@@ -1591,7 +1604,7 @@ export function createTelegramWebhookHandler(
         ) ?? ""
       ).trim();
 
-      if (providedSecret !== configuredSecret) {
+      if (!telegramSecretMatches(providedSecret, configuredSecret)) {
         return Response.json(
           { error: "Unauthorized Telegram webhook request." },
           { status: 401 },

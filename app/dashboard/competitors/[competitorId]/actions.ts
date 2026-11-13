@@ -6,6 +6,10 @@ import {
   parseMonitoringSelectorInput,
 } from "@/lib/monitoring-selectors";
 import { auth } from "@/lib/auth";
+import {
+  fetchPublicText,
+  normalizeMonitoredPageUrl,
+} from "@/lib/url-safety";
 import { getDefaultFrequencyForPlan } from "@/lib/billing-plans";
 import {
   toUserFacingErrorMessage,
@@ -63,37 +67,8 @@ interface UsageCountRow {
 function normalizeMonitoredUrl(
   value: string
 ) {
-  let input =
-    value.trim();
-
-  if (
-    !/^https?:\/\//i.test(
-      input
-    )
-  ) {
-    input =
-      `https://${input}`;
-  }
-
-  const url =
-    new URL(
-      input
-    );
-
-  if (
-    url.protocol !==
-      "http:" &&
-    url.protocol !==
-      "https:"
-  ) {
-    throw new Error(
-      "Only HTTP and HTTPS URLs can be monitored."
-    );
-  }
-
-  url.hash = "";
-
-  return url.toString();
+  /* Only public http(s) pages can be monitored (SSRF defence). */
+  return normalizeMonitoredPageUrl(value);
 }
 
 function isUniqueConstraintError(
@@ -1155,41 +1130,24 @@ async function loadMonitoredPageHtmlForAnalysis(
   }
 
   try {
-    const controller =
-      new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      10000
-    );
-
     const response =
-      await fetch(pageUrl, {
+      await fetchPublicText(pageUrl, {
         headers: {
           "User-Agent":
             "Mozilla/5.0 (compatible; MorrowBot/1.0)",
           Accept:
             "text/html,application/xhtml+xml",
         },
-        signal:
-          controller.signal,
-      }).finally(() =>
-        clearTimeout(timeout)
-      );
+        timeoutMs: 10000,
+        maxBytes: 2_000_000,
+      });
 
-    if (response.ok) {
-      const liveHtml =
-        await response.text();
-
-      if (
-        liveHtml.trim().length >
-        0
-      ) {
-        return {
-          ok: true,
-          html: liveHtml,
-          capturedAt: null,
-        };
-      }
+    if (response.ok && response.text.trim().length > 0) {
+      return {
+        ok: true,
+        html: response.text,
+        capturedAt: null,
+      };
     }
   } catch {
     // Fall through to snapshot error message below.
