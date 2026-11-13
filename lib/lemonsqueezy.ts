@@ -3049,6 +3049,8 @@ export async function processLemonSqueezyWebhook(
   }
 }
 
+const MAX_LEMON_SQUEEZY_WEBHOOK_BYTES = 1024 * 1024;
+
 export function createLemonSqueezyWebhookHandler(
   runtimeEnv: LemonSqueezyRuntimeEnv,
 ) {
@@ -3056,7 +3058,27 @@ export function createLemonSqueezyWebhookHandler(
     request: Request,
   ): Promise<Response> {
     try {
+      // Bound the body before the signature check so an unauthenticated
+      // caller cannot make the Worker buffer an arbitrarily large payload.
+      const declaredLength = Number(
+        request.headers.get("content-length") ?? 0,
+      );
+      if (declaredLength > MAX_LEMON_SQUEEZY_WEBHOOK_BYTES) {
+        return Response.json(
+          { ok: false, error: "Webhook payload is too large." },
+          { status: 413 },
+        );
+      }
       const rawBody = await request.text();
+      if (
+        new TextEncoder().encode(rawBody).length >
+        MAX_LEMON_SQUEEZY_WEBHOOK_BYTES
+      ) {
+        return Response.json(
+          { ok: false, error: "Webhook payload is too large." },
+          { status: 413 },
+        );
+      }
       const signatureHeader =
         request.headers.get("X-Signature") ??
         request.headers.get("x-signature");
