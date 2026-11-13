@@ -7,7 +7,7 @@ export function MonitoringScopePreview() {
     <section className={styles.scopeSection} id="monitoring-scope">
       <div className={`${styles.container} ${styles.scopeGrid}`}>
         <div className={styles.scopeCopy}><p className={styles.sectionLabel}>Control the scope</p><h2>Watch the part of the page you actually care about.</h2><p>A changing footer, rotating testimonial or live counter should not create a change record.</p><p>Monitor specific sections and tell Morrow which regions to ignore.</p><ul>{supportingPoints.map((point) => <li key={point}>{point}</li>)}</ul></div>
-        <div className={styles.scopePreview} aria-label="Illustrative monitoring scope interface">
+        <div className={styles.scopePreview} role="group" aria-label="Illustrative monitoring scope interface">
           <div className={styles.previewTop}><strong>Monitoring scope</strong><span>Selected sections</span></div>
           <p className={styles.previewDescription}>Choose which parts of this page Morrow should compare and which parts to ignore.</p>
           <div className={styles.scopeColumns}>
