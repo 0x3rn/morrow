@@ -10,6 +10,7 @@ import {
   type DigestCompetitorGroup,
   type DigestSignificance,
 } from "./digest-query.ts";
+import { assertPublicUrl } from "../lib/url-safety.ts";
 
 export const EXTERNAL_DELIVERY_CHANNELS = [
   "slack",
@@ -251,22 +252,8 @@ export function assertHttpsUrl(
   label: string,
 ): string {
   const trimmed = assertNonEmptyString(rawUrl, label);
-  let parsed: URL;
-  try {
-    parsed = new URL(trimmed);
-  } catch {
-    throw new Error(`${label} must be a valid URL.`);
-  }
-
-  if (parsed.protocol !== "https:") {
-    throw new Error(`${label} must use HTTPS.`);
-  }
-
-  if (parsed.username || parsed.password) {
-    throw new Error(
-      `${label} must not embed credentials in the URL.`,
-    );
-  }
+  // Outbound requests must only reach public internet hosts (SSRF defence).
+  const parsed = assertPublicUrl(trimmed, { protocols: ["https:"], label });
 
   return parsed.toString();
 }
