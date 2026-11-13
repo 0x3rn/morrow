@@ -31,6 +31,7 @@ import {
   notifyDigestByExternalChannels,
 } from "./external-notifications";
 import { getWorkspaceEntitlements } from "../lib/workspace-billing";
+import { assertPublicUrl } from "../lib/url-safety";
 
 interface Env {
   DB: D1Database;
@@ -319,6 +320,15 @@ async function captureRenderedPage(
   env: Env,
   pageToCapture: MonitoredPageRow
 ): Promise<CaptureResult> {
+  /*
+   * Stored URLs are re-validated at capture time so rows created before
+   * URL validation existed can never make the browser reach internal hosts.
+   */
+  assertPublicUrl(pageToCapture.url, {
+    protocols: ["http:", "https:"],
+    label: "Monitored page URL",
+  });
+
   let lastError:
     unknown = null;
 
@@ -394,6 +404,14 @@ async function captureRenderedPage(
               45_000,
           }
         );
+
+      /*
+       * A redirect chain must not end on a non-public host.
+       */
+      assertPublicUrl(page.url(), {
+        protocols: ["http:", "https:"],
+        label: "Redirected page URL",
+      });
 
       /*
        * Give delayed client-side content a short stable

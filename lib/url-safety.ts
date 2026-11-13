@@ -174,6 +174,20 @@ export function assertPublicUrl(raw: string, options: PublicUrlOptions = {}): UR
 }
 
 /**
+ * Normalise a page URL supplied for monitoring. A missing scheme defaults to
+ * https, fragments are dropped, and non-public hosts are rejected.
+ */
+export function normalizeMonitoredPageUrl(value: string): string {
+  let input = value.trim();
+  if (!/^https?:\/\//i.test(input)) {
+    input = `https://${input}`;
+  }
+  const url = assertPublicUrl(input, { protocols: ["http:", "https:"], label: "Page URL" });
+  url.hash = "";
+  return url.toString();
+}
+
+/**
  * Normalise a competitor domain such as "https://www.Example.com/pricing" to
  * "example.com". Rejects ports, credentials, IP literals and internal names.
  */
