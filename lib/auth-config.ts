@@ -72,12 +72,17 @@ function resolveAuthBaseUrl() {
   }
 
   /*
-   * Local development remains zero-configuration.
-   *
-   * Production acceptance will explicitly verify
-   * that a public application origin is configured
-   * before release.
+   * Local development remains zero-configuration, but a
+   * production build must never silently fall back to
+   * localhost: that would trust the wrong origin and send
+   * sign-in links to it.
    */
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "BETTER_AUTH_URL or MORROW_APP_URL must be set in production."
+    );
+  }
+
   return LOCAL_AUTH_URL;
 }
 
@@ -87,6 +92,17 @@ function resolveAuthSecret() {
       ?.trim() ||
     runtimeEnv.AUTH_SECRET
       ?.trim();
+
+  /*
+   * Outside production Better Auth falls back to a published
+   * default secret. In production a missing secret must stop
+   * the request instead.
+   */
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error(
+      "BETTER_AUTH_SECRET must be set in production."
+    );
+  }
 
   return secret ||
     undefined;
