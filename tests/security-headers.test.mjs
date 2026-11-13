@@ -5,8 +5,8 @@ async function loadHeaders(nodeEnv) {
   const previous = process.env.NODE_ENV;
   process.env.NODE_ENV = nodeEnv;
   try {
-    const module = await import(`../next.config.ts?env=${nodeEnv}`);
-    const config = module.default;
+    const loaded = await import(`../next.config.ts?env=${nodeEnv}`);
+    const config = loaded.default;
     assert.equal(typeof config.headers, "function", "next.config must define security headers");
     const rules = await config.headers();
     const all = rules.find((rule) => rule.source === "/:path*");
