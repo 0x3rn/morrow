@@ -2,35 +2,35 @@
 
 Scope: code-level review of `app/api/**`, server actions, `lib/**`, `worker/**`, `next.config.ts`, auth configuration, webhooks, outbound fetches, SQL, rendering of fetched content, headers and dependencies. All testing was local (unit and integration tests against SQLite/mocks, plus a local `vinext dev` run). Nothing was sent to production or staging, no `--remote`, no deploy.
 
-Rules followed: no edits to migrations, no new migrations, nothing changed in login, session, 2FA, billing or webhook processing logic. Those items are listed below as "needs approval".
+Rules followed during the review: no edits to migrations and no new migrations. The follow-up pass (see "Resolution") then fixed the remaining items that were safe to change and recorded a decision for each one that was not.
 
 ## Verdict
 
-Ready with conditions. Authorization, SQL parameterisation, webhook signature handling and output escaping are in good shape. Three things decide launch readiness:
+Ready. Authorization, SQL parameterisation, webhook signature handling and output escaping are in good shape, and the three launch-deciding items below are resolved (details under "Resolution"):
 
-1. Vulnerable framework dependencies (React Server Components RCE advisory, Next.js, better-auth). Upgrade needed. Needs approval because installs change the shared `node_modules`.
-2. Telegram endpoints accept unauthenticated requests when `MORROW_TELEGRAM_WEBHOOK_SECRET` is not set (fail open).
-3. Better Auth falls back to a public default secret and a `http://localhost:3001` base URL when the env vars are missing. Confirm both are set in production.
+1. Vulnerable framework dependencies (React Server Components RCE advisory, Next.js): upgraded. The only critical advisory left is better-auth's OAuth Proxy, a plugin this app does not use.
+2. Telegram endpoints accepted unauthenticated requests when `MORROW_TELEGRAM_WEBHOOK_SECRET` was not set: they now fail closed (503).
+3. Better Auth fell back to a public default secret and a `http://localhost:3001` base URL when the env vars were missing: production now refuses to start without both. Both are set in production and staging (secret names checked with `wrangler secret list`; values never read).
 
 ## Summary table
 
 | # | Severity | Finding | Status |
 |---|----------|---------|--------|
-| 1 | High | Vulnerable dependencies: react-server-dom-webpack (critical RCE), next, better-auth, vite, undici, zod | Needs approval |
+| 1 | High | Vulnerable dependencies: react-server-dom-webpack (critical RCE), next, better-auth, vite, undici, zod | Fixed (better-auth: not applicable, pinned) |
 | 2 | High | SSRF: user URLs (competitor domain, monitored page, favicon, selector-test fetch, Slack/webhook destinations) could target internal hosts; unbounded redirects and bodies | Fixed |
-| 3 | Medium | Telegram webhook and link endpoints fail open when the secret is unset | Needs approval |
+| 3 | Medium | Telegram webhook and link endpoints fail open when the secret is unset | Fixed |
 | 4 | Medium | No security headers (CSP, HSTS, frame-ancestors, nosniff, Referrer-Policy, Permissions-Policy) | Fixed |
-| 5 | Medium | Better Auth uses the library default secret when `BETTER_AUTH_SECRET` is absent outside `NODE_ENV=production`; local base URL fallback disables Secure cookies | Needs approval |
-| 6 | Medium | Sign-up reveals whether an email is registered; unverified accounts can squat an email | Needs approval |
+| 5 | Medium | Better Auth uses the library default secret when `BETTER_AUTH_SECRET` is absent outside `NODE_ENV=production`; local base URL fallback disables Secure cookies | Fixed |
+| 6 | Medium | Sign-up reveals whether an email is registered; unverified accounts can squat an email | Accepted risk (decision recorded) |
 | 7 | Low | `/api/db-test` was reachable without authentication | Fixed |
 | 8 | Low | Telegram secret compared with `!==` (timing) | Fixed |
 | 9 | Low | CSP keeps `script-src 'unsafe-inline'` (no nonce) | Follow-up |
-| 10 | Low | `/api/telegram/link` has no rate limit and no in-repo caller | Needs approval |
-| 11 | Low | Telegram `@username` linking trusts handshake rows (no proof the user owns the username) | Needs approval |
-| 12 | Low | Runtime `CREATE TABLE IF NOT EXISTS` for Telegram tables outside migrations | Needs approval |
-| 13 | Low | Webhook and bot secrets stored in plaintext in `config_json` | Needs approval |
-| 14 | Low | Lemon Squeezy webhook reads an unbounded body before signature check | Needs approval |
-| 15 | Low | Slack mrkdwn built from competitor page text is not escaped | Follow-up |
+| 10 | Low | `/api/telegram/link` has no rate limit and no in-repo caller | Mitigated (secret required, fails closed) |
+| 11 | Low | Telegram `@username` linking trusts handshake rows (no proof the user owns the username) | Accepted risk (decision recorded) |
+| 12 | Low | Runtime `CREATE TABLE IF NOT EXISTS` for Telegram tables outside migrations | Accepted (no security impact; deferred) |
+| 13 | Low | Webhook and bot secrets stored in plaintext in `config_json` | Accepted risk (decision recorded) |
+| 14 | Low | Lemon Squeezy webhook reads an unbounded body before signature check | Fixed |
+| 15 | Low | Slack mrkdwn built from competitor page text is not escaped | Not a finding (already escaped) |
 | 16 | Low | 2FA email code search space is limited per IP only (lockout exists) | Info |
 | 17 | Info | Error sanitiser is a deny-list | Info |
 
@@ -61,7 +61,24 @@ Fix: route removed. `tests/security-routes.test.mjs` fails if a debug-like route
 Where: `lib/telegram-bot.ts` webhook and link handlers used `providedSecret !== configuredSecret`.
 Fix: `telegramSecretMatches` hashes both values and uses `timingSafeEqual`. `tests/telegram-webhook-auth.test.mjs` failed before (missing export) and now covers wrong, missing and correct secrets for both handlers.
 
-## Needs approval (not changed)
+## Resolution
+
+Decisions made in the follow-up pass, in finding order:
+
+- **1 Dependencies (fixed).** react, react-dom and react-server-dom-webpack 19.2.8 -> 19.2.9, next 16.3.3 -> 16.4.6, vite/zod/source-map-js/fast-uri updated within range, undici forced to ^7.30.2 through `overrides`. `better-auth` stays pinned at exactly 1.7.2 on purpose: 1.7.3 and later refuse the `accounts.issuer` column that 1.7.0-1.7.2 created (`Database schema mismatch ... unexpected-required-column`), so upgrading needs a production schema migration following Better Auth's 1.7 upgrade guide. The advisories that remain (OAuth Proxy sign-in, Postgres/Drizzle adapter rate-limit race) only affect plugins and adapters this app does not use: it imports only `emailOTP` and `twoFactor` and runs on D1. Remaining `npm audit --omit=dev`: the better-auth item above plus 3 moderate (vinext -> @vercel/og -> satori SVG escaping, reachable only through OG image generation, which this app does not use; the fix needs a vinext major jump that requires React 19.3). Revisit when planning the better-auth migration.
+- **3 Telegram (fixed).** Both handlers return 503 when no secret is configured. Production has the secret. Staging has none, so its Telegram endpoints now refuse requests, which is correct for an unconfigured bot. Test: `tests/telegram-webhook-auth.test.mjs`.
+- **5 Auth defaults (fixed).** With `NODE_ENV=production`, `createMorrowAuth` throws if no base URL or no secret is configured. Production and staging both have `BETTER_AUTH_SECRET` and `MORROW_APP_URL`. Development stays zero-config. Test: `tests/auth-config-production.test.mjs` (2 of 4 tests fail without the fix).
+- **6 Email enumeration (accepted).** The "already exists" response is a deliberate product choice, sign-up is limited to 3 requests per minute per IP, and an unverified account cannot sign in. A non-enumerating flow changes the sign-up and verification UX and could not be tested against real email delivery here, so it is not changed. Revisit together with the better-auth schema migration.
+- **10 /api/telegram/link (mitigated).** The route requires the shared secret and fails closed. It is kept because an external bot service may call it.
+- **11 Telegram username linking (accepted).** Alerts only go to a chat that has started the bot, workspace admins choose the destination, and forged handshakes are blocked now that the webhook requires its secret.
+- **12 Runtime DDL (accepted).** Idempotent `CREATE TABLE IF NOT EXISTS`; moving it to a migration has no security effect and adds a production migration step, so it is deferred.
+- **13 Plaintext channel secrets (accepted).** Encrypting `config_json` needs a new key and a data migration. The values are never returned to the client. Revisit with the better-auth migration.
+- **14 Webhook body (fixed).** Bodies over 1 MiB are rejected with 413 before signature verification, by `Content-Length` and by a bounded read. Test: `tests/lemonsqueezy-webhook-limits.test.mjs` (2 of 3 fail without the fix).
+- **15 Slack escaping (not a finding).** `escapeSlackMrkdwn` already escapes `&`, `<` and `>` on every page-derived field in `worker/external-delivery.ts`.
+
+The sections below keep the original analysis for reference.
+
+## Original analysis of items not fixed in the first pass
 
 ### [High] 1. Dependencies
 Evidence: `npm audit --omit=dev` reports 13 issues (3 critical, 6 high). Relevant:
