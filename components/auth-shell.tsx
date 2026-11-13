@@ -58,7 +58,9 @@ export function AuthShell({ children, mode }: AuthShellProps) {
             <span>Morrow</span>
           </Link>
           <div className={styles.authHeaderActions}>
-            <ThemeToggle />
+            <div className={styles.themeSlot}>
+              <ThemeToggle />
+            </div>
             <Link className={styles.backLink} href="/">
               <BackIcon />
               <span className={styles.desktopBack}>Back to Morrow</span>
