@@ -129,7 +129,7 @@ export default function PrivacyPage() {
           data only with vetted infrastructure sub-processors under enforceable Data Processing
           Agreements:
         </p>
-        <div className={styles.tableWrap}>
+        <div className={styles.tableWrap} role="region" aria-label="Sub-processors" tabIndex={0}>
           <table className={styles.table}>
             <thead>
               <tr>
@@ -169,7 +169,7 @@ export default function PrivacyPage() {
           We adhere to strict data minimization principles. Data is retained only for the duration
           necessary to fulfill contractual monitoring services or statutory obligations:
         </p>
-        <div className={styles.tableWrap}>
+        <div className={styles.tableWrap} role="region" aria-label="Data retention" tabIndex={0}>
           <table className={styles.table}>
             <thead>
               <tr>

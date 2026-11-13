@@ -160,10 +160,10 @@ export function LegalPageShell({
           <nav className={styles.footerNav} aria-label="Footer navigation">
             <div>
               <p>Product</p>
-              <a href="/#how-it-works">How it works</a>
-              <a href="/#monitoring-scope">Monitoring scope</a>
-              <a href="/#capabilities">Capabilities</a>
-              <a href="/#use-cases">Use cases</a>
+              <Link href="/#how-it-works">How it works</Link>
+              <Link href="/#monitoring-scope">Monitoring scope</Link>
+              <Link href="/#capabilities">Capabilities</Link>
+              <Link href="/#use-cases">Use cases</Link>
             </div>
             <div>
               <p>Legal</p>

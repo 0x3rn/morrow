@@ -301,7 +301,7 @@ export default function TermsPage() {
           competitors, monitored pages per competitor, minimum check frequency, and historical
           Snapshot retention windows:
         </p>
-        <div className={styles.tableWrap}>
+        <div className={styles.tableWrap} role="region" aria-label="Plan limits" tabIndex={0}>
           <table className={styles.table}>
             <thead>
               <tr>

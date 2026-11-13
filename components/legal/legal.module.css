@@ -16,6 +16,7 @@
   background: var(--background);
   color: var(--foreground);
   min-height: 100vh;
+  min-height: 100dvh;
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -52,7 +53,7 @@
 .headerInner {
   align-items: center;
   display: flex;
-  height: 76px;
+  min-height: 76px;
   justify-content: space-between;
   margin: 0 auto;
   max-width: var(--container);
@@ -67,6 +68,7 @@
   gap: 9px;
   letter-spacing: -0.045em;
   color: var(--foreground);
+  min-height: 44px;
 }
 
 .brandLogo {
@@ -77,16 +79,19 @@
 
 .desktopNav {
   display: flex;
-  gap: 29px;
+  gap: 28px;
   margin-left: auto;
-  margin-right: 42px;
+  margin-right: 40px;
 }
 
 .desktopNav a,
 .loginLink {
+  align-items: center;
   color: var(--muted-foreground);
+  display: inline-flex;
   font-size: 14px;
   font-weight: 590;
+  min-height: 44px;
   transition: color 180ms ease;
 }
 
@@ -95,6 +100,7 @@
   color: var(--foreground);
   text-decoration: underline;
   text-decoration-color: var(--primary-text);
+  text-underline-offset: 4px;
 }
 
 .desktopActions {
@@ -115,12 +121,11 @@
   min-height: 46px;
   padding: 0 17px;
   text-decoration: none !important;
-  transition: background 180ms ease, transform 180ms ease;
+  transition: background 180ms ease;
 }
 
 .navCta:hover {
   background: var(--primary-hover);
-  transform: translateY(-1px);
 }
 
 .navCta:active {
@@ -137,53 +142,62 @@
 .eyebrow {
   color: var(--muted-foreground);
   font-family: var(--font-geist-mono), monospace;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.1em;
+  line-height: 1.5;
   margin: 0 0 14px;
+  overflow-wrap: anywhere;
   text-transform: uppercase;
 }
 
 .title {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(36px, 4.2vw, 52px);
+  font-size: clamp(34px, 5vw, 52px);
   font-weight: 400;
   letter-spacing: -0.04em;
-  line-height: 1.05;
-  margin: 0 0 14px;
+  line-height: 1.08;
+  margin: 0 0 16px;
   color: var(--foreground);
+  text-wrap: balance;
 }
 
 .description {
   color: var(--muted-foreground);
   font-size: 17px;
-  line-height: 1.55;
-  max-width: 760px;
-  margin: 0 0 24px;
+  line-height: 1.6;
+  max-width: 720px;
+  margin: 0 0 28px;
 }
 
 .metaRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 28px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 10px 28px;
   font-family: var(--font-geist-mono), monospace;
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.5;
   color: var(--muted-foreground);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   padding-bottom: 24px;
   border-bottom: 1px solid var(--border);
 }
 
+.metaItem {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .metaItem strong {
   color: var(--foreground);
+  font-weight: 650;
 }
 
 .tabsNav {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 24px;
-  overflow-x: auto;
-  padding-bottom: 2px;
 }
 
 .tab {
@@ -193,15 +207,14 @@
   color: var(--muted-foreground);
   display: inline-flex;
   font-family: var(--font-geist-mono), monospace;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   min-height: 44px;
   padding: 9px 16px;
   text-decoration: none;
   text-transform: uppercase;
-  transition: all 180ms ease;
-  white-space: nowrap;
+  transition: border-color 180ms ease, color 180ms ease;
 }
 
 .tab:hover {
@@ -215,30 +228,32 @@
   color: var(--primary-foreground) !important;
 }
 
+.activeTab:hover {
+  border-color: var(--primary-border);
+}
+
 /* Two-column layout */
 .contentGrid {
   display: grid;
-  grid-template-columns: 290px minmax(0, 1fr);
-  gap: 56px;
-  padding: 48px 0 96px;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  padding: 32px 0 72px;
   align-items: start;
 }
 
 .sidebar {
-  position: sticky;
-  top: 28px;
   background: var(--muted);
   border: 1px solid var(--border);
-  padding: 22px;
+  padding: 20px;
 }
 
 .sidebarTitle {
   font-family: var(--font-geist-mono), monospace;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  margin: 0 0 14px;
+  margin: 0 0 8px;
   color: var(--foreground);
 }
 
@@ -246,17 +261,19 @@
   list-style: none;
   padding: 0;
   margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
+  display: grid;
+  gap: 0;
 }
 
 .tocItem a {
-  font-size: 12.5px;
+  align-items: center;
   color: var(--muted-foreground);
-  text-decoration: none;
+  display: flex;
+  font-size: 14px;
   line-height: 1.4;
-  display: block;
+  min-height: 44px;
+  padding-block: 6px;
+  text-decoration: none;
   transition: color 150ms ease;
 }
 
@@ -264,17 +281,19 @@
   color: var(--foreground);
   text-decoration: underline;
   text-decoration-color: var(--primary-text);
+  text-underline-offset: 3px;
 }
 
 .mainContent {
+  max-width: 760px;
   min-width: 0;
 }
 
 .section {
-  padding-bottom: 44px;
-  margin-bottom: 44px;
+  padding-bottom: 40px;
+  margin-bottom: 40px;
   border-bottom: 1px solid var(--border);
-  scroll-margin-top: 36px;
+  scroll-margin-top: 24px;
 }
 
 .section:last-child {
@@ -285,54 +304,82 @@
 
 .section h2 {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 400;
   letter-spacing: -0.03em;
-  margin: 0 0 16px;
+  line-height: 1.2;
+  margin: 0 0 18px;
   color: var(--foreground);
+  text-wrap: balance;
 }
 
 .section h3 {
-  font-size: 15.5px;
+  font-size: 17px;
   font-weight: 650;
   letter-spacing: -0.015em;
-  margin: 24px 0 10px;
+  line-height: 1.35;
+  margin: 28px 0 10px;
   color: var(--foreground);
 }
 
 .bodyText {
-  font-size: 14.5px;
+  font-size: 16px;
   line-height: 1.7;
   color: var(--foreground);
-  margin: 0 0 15px;
+  margin: 0 0 16px;
+  max-width: 70ch;
+  overflow-wrap: break-word;
 }
 
 .bodyText strong {
   color: var(--foreground);
-  font-weight: 600;
+  font-weight: 650;
+}
+
+.legalWrapper .bodyText a,
+.legalWrapper .bulletList a,
+.legalWrapper .noticePanel a {
+  text-decoration: underline;
+  text-decoration-color: var(--primary-text);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.legalWrapper .bodyText a:hover,
+.legalWrapper .bulletList a:hover,
+.legalWrapper .noticePanel a:hover {
+  text-decoration-thickness: 2px;
 }
 
 .bulletList {
-  margin: 0 0 18px 22px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
+  margin: 0 0 20px;
+  padding: 0 0 0 1.4em;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  max-width: 70ch;
 }
 
 .bulletList li {
-  font-size: 14px;
-  line-height: 1.62;
+  font-size: 16px;
+  line-height: 1.65;
   color: var(--foreground);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding-left: 0.2em;
+}
+
+.bulletList li::marker {
+  color: var(--muted-foreground);
 }
 
 .bulletList li strong {
   color: var(--foreground);
-  font-weight: 600;
+  font-weight: 650;
 }
 
 .tableWrap {
-  margin: 20px 0 24px;
+  margin: 20px 0 28px;
   overflow-x: auto;
   border: 1px solid var(--border);
   background: var(--card);
@@ -340,33 +387,36 @@
 
 .table {
   width: 100%;
+  min-width: 640px;
   border-collapse: collapse;
-  font-size: 12.5px;
+  font-size: 14px;
   text-align: left;
 }
 
 .table th {
   background: var(--muted);
   font-family: var(--font-geist-mono), monospace;
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 650;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 11px 14px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
   color: var(--foreground);
+  white-space: nowrap;
 }
 
 .table td {
-  padding: 11px 14px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
   color: var(--foreground);
   vertical-align: top;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .table td strong {
   color: var(--foreground);
+  font-weight: 650;
 }
 
 .table tr:last-child td {
@@ -376,19 +426,21 @@
 .noticePanel {
   border: 1px solid var(--border);
   background: var(--muted);
-  padding: 18px 22px;
-  margin: 20px 0;
+  padding: 20px 24px;
+  margin: 24px 0 0;
 }
 
 .noticePanel h4 {
-  font-size: 14px;
-  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.4;
+  margin: 0 0 8px;
   color: var(--foreground);
 }
 
 .noticePanel p {
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 14.5px;
+  line-height: 1.6;
   color: var(--muted-foreground);
   margin: 0;
 }
@@ -397,24 +449,25 @@
   background: var(--panel);
   color: var(--panel-foreground);
   padding: 28px 32px;
-  margin-top: 36px;
+  margin-top: 40px;
   border: 1px solid var(--panel-border);
 }
 
 .contactBox h3 {
   color: var(--panel-foreground);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 400;
   letter-spacing: -0.025em;
+  line-height: 1.25;
   margin: 0 0 10px;
 }
 
 .contactBox p {
   color: var(--panel-muted);
-  font-size: 13.5px;
+  font-size: 15px;
   line-height: 1.6;
-  margin: 0 0 16px;
+  margin: 0 0 20px;
 }
 
 .contactBox a {
@@ -428,18 +481,24 @@
 
 .contactDetails {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  padding-top: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 20px 24px;
+  padding-top: 20px;
   border-top: 1px solid var(--panel-border);
   font-family: var(--font-geist-mono), monospace;
-  font-size: 11px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.contactDetails div {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .contactDetails div span {
   display: block;
   color: var(--panel-muted);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin-bottom: 4px;
@@ -447,7 +506,9 @@
 
 .contactDetails div a {
   color: var(--panel-foreground);
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-color: var(--panel-primary-text);
+  text-underline-offset: 3px;
 }
 
 .contactDetails div a:hover {
@@ -459,13 +520,15 @@
   background: var(--panel);
   border-top: 1px solid var(--panel-border);
   color: var(--panel-foreground);
-  padding: 64px 0 0;
+  padding: 56px 0 0;
 }
 
 .footerMain {
   display: flex;
+  flex-direction: column;
+  gap: 40px;
   justify-content: space-between;
-  padding-bottom: 64px;
+  padding-bottom: 48px;
 }
 
 .footerBrand {
@@ -476,31 +539,33 @@
   font-weight: 650;
   gap: 9px;
   letter-spacing: -0.045em;
+  min-height: 44px;
 }
 
 .footerIdentity > p {
   color: var(--panel-muted);
   font-size: 14px;
   line-height: 1.55;
-  margin: 19px 0 0;
+  margin: 12px 0 0;
   max-width: 312px;
 }
 
 .footerNav {
-  display: flex;
-  gap: 72px;
+  display: grid;
+  gap: 32px 40px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .footerNav div {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 0;
 }
 
 .footerNav p {
   color: var(--panel-muted);
   font-family: var(--font-geist-mono), monospace;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 650;
   letter-spacing: 0.1em;
   margin: 0 0 4px;
@@ -508,25 +573,32 @@
 }
 
 .footerNav a {
+  align-items: center;
   color: var(--panel-foreground);
-  font-size: 13.5px;
+  display: inline-flex;
+  font-size: 14px;
+  min-height: 44px;
 }
 
 .footerNav a:hover {
   color: var(--panel-foreground);
   text-decoration: underline;
   text-decoration-color: var(--panel-primary-text);
+  text-underline-offset: 3px;
 }
 
 .footerBottom {
   border-top: 1px solid var(--panel-border);
   color: var(--panel-muted);
   display: flex;
+  flex-direction: column;
   font-family: var(--font-geist-mono), monospace;
-  font-size: 10px;
-  justify-content: space-between;
-  letter-spacing: 0.07em;
-  padding-bottom: 21px;
+  font-size: 11px;
+  gap: 6px;
+  line-height: 1.5;
+  letter-spacing: 0.05em;
+  overflow-wrap: anywhere;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
   padding-top: 20px;
 }
 
@@ -534,25 +606,100 @@
   margin: 0;
 }
 
-@media (max-width: 960px) {
+/* Tablet and up */
+@media (min-width: 600px) {
+  .tocList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 32px;
+  }
+
+  .footerNav {
+    grid-template-columns: repeat(3, auto);
+    justify-content: start;
+    gap: 32px 56px;
+  }
+}
+
+@media (min-width: 768px) {
+  .banner {
+    padding: 64px 0 36px;
+  }
+
+  .section h2 {
+    font-size: 28px;
+  }
+
+  .footerBottom {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 24px;
+  }
+}
+
+/* The shared mobile menu takes over below 850px (see app/page.module.css). Between
+   850px and 1179px the nav links no longer fit beside the actions, so they wrap to
+   their own row rather than overflowing. */
+@media (min-width: 850px) and (max-width: 1179px) {
+  .headerInner {
+    flex-wrap: wrap;
+    padding-block: 8px 0;
+  }
+
+  .desktopNav {
+    border-top: 1px solid var(--border);
+    flex-basis: 100%;
+    gap: 28px;
+    margin: 8px 0 0;
+    order: 3;
+  }
+}
+
+@media (min-width: 1024px) {
   .contentGrid {
-    grid-template-columns: 1fr;
-    gap: 36px;
-    padding: 36px 0 72px;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 56px;
+    padding: 48px 0 96px;
   }
+
   .sidebar {
-    position: static;
+    position: sticky;
+    top: 24px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
   }
+
+  .tocList {
+    grid-template-columns: 1fr;
+  }
+
+  .tocItem a {
+    min-height: 0;
+    padding-block: 5px;
+  }
+
+  .footerMain {
+    flex-direction: row;
+    gap: 48px;
+    padding-bottom: 64px;
+  }
+
+  .footerNav {
+    gap: 32px 72px;
+  }
+
+  .footerNav a {
+    min-height: 32px;
+  }
+}
+
+@media (max-width: 849px) {
   .desktopNav,
   .desktopActions {
     display: none;
   }
-  .footerMain {
-    flex-direction: column;
-    gap: 48px;
-  }
-  .footerNav {
-    gap: 40px;
+
+  .headerInner {
+    min-height: 64px;
   }
 }
 
@@ -560,7 +707,33 @@
   .legalWrapper {
     --gutter: 20px;
   }
-  .headerInner {
-    height: 64px;
+
+  .banner {
+    padding: 36px 0 28px;
+  }
+
+  .description {
+    font-size: 16px;
+    margin-bottom: 24px;
+  }
+
+  .contactBox {
+    padding: 24px 20px;
+  }
+
+  .noticePanel {
+    padding: 18px 20px;
+  }
+}
+
+@media (max-width: 374px) {
+  .legalWrapper {
+    --gutter: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .legalWrapper * {
+    transition-duration: 0.01ms !important;
   }
 }
