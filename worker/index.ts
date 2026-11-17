@@ -18,6 +18,20 @@ import {
 } from "./change-summarizer";
 
 import {
+  assessPageHealth,
+  buildAvailabilityNotice,
+  detectAvailabilityTransition,
+  type AvailabilityTransition,
+  type PageHealth,
+} from "./page-availability";
+
+import {
+  assessPreviousSnapshotHealth,
+  getLastGoodSnapshot,
+  type SnapshotRow,
+} from "./snapshot-baseline";
+
+import {
   notifyChangeByEmail,
   notifyDigestByEmail,
 } from "./change-email";
@@ -51,6 +65,16 @@ interface Env {
    * Wrangler should still provide this binding normally.
    */
   AI?: MorrowAiBinding;
+
+  /*
+   * Optional summary model override. Leave both unset to keep the
+   * default Workers AI model. To use a model from AI Gateway, set
+   * both, for example:
+   *   MORROW_SUMMARY_MODEL = "deepseek/deepseek-v4-pro"
+   *   MORROW_AI_GATEWAY_ID = "<your gateway name>"
+   */
+  MORROW_SUMMARY_MODEL?: string;
+  MORROW_AI_GATEWAY_ID?: string;
 
   /*
    * THE-19
@@ -95,17 +119,6 @@ interface MonitoredPageRow {
   next_check_at: string | null;
   include_selectors_json: string;
   ignore_selectors_json: string;
-}
-
-interface SnapshotRow {
-  id: string;
-  monitored_page_id: string;
-  content_hash: string | null;
-  text_object_key: string | null;
-  html_object_key: string | null;
-  screenshot_object_key: string | null;
-  http_status: number | null;
-  captured_at: string;
 }
 
 interface CaptureResult {
@@ -703,6 +716,11 @@ async function getHistoricalVolatileLines(
 
           AND id != ?
 
+          AND (
+            http_status IS NULL
+            OR http_status < 400
+          )
+
         ORDER BY
           captured_at DESC
 
@@ -761,6 +779,22 @@ async function getHistoricalVolatileLines(
     }
 
     if (text === null) {
+      continue;
+    }
+
+    /*
+     * An error page that answered "200" must not teach the
+     * volatility filter that normal lines come and go. (With a
+     * monitored-section scope, `text` is only that section, so
+     * the whole-page check does not apply.)
+     */
+    if (
+      !hasConfiguredScope &&
+      assessPageHealth(
+        snapshot.http_status,
+        text
+      ).failed
+    ) {
       continue;
     }
 
@@ -1058,6 +1092,215 @@ async function notifyPersistedChange(
  * ------------------------------------------------------
  */
 
+interface PageContextRow {
+  competitor_name: string;
+  page_label: string | null;
+}
+
+/*
+ * Names given to the summarizer so it can say which competitor and
+ * page changed. Best effort: a lookup failure only makes the summary
+ * less specific, so it must never stop a detected change being saved.
+ */
+async function getPageContext(
+  env: Env,
+  monitoredPageId: string
+): Promise<PageContextRow | null> {
+  try {
+    return await env.DB.prepare(
+      `
+        SELECT
+          competitors.name
+            AS competitor_name,
+
+          monitored_pages.label
+            AS page_label
+
+        FROM monitored_pages
+
+        INNER JOIN competitors
+          ON competitors.id =
+             monitored_pages.competitor_id
+
+        WHERE monitored_pages.id = ?
+
+        LIMIT 1
+      `
+    )
+      .bind(monitoredPageId)
+      .first<PageContextRow>();
+  } catch (error) {
+    console.error(
+      "Morrow page context lookup failed; summarizing without it",
+      {
+        monitoredPageId,
+
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error),
+      }
+    );
+
+    return null;
+  }
+}
+
+/*
+ * Records the "page stopped loading" / "page loads again" notice as
+ * a change so it flows through the existing email, Telegram and
+ * dashboard paths. It uses the existing 'other' category and a
+ * 'moderate' significance because the changes table restricts both
+ * columns to a fixed list.
+ *
+ * A page that keeps failing records nothing: one outage gives one
+ * notice when it starts and one when it ends.
+ */
+async function handleAvailabilityTransition(
+  env: Env,
+  ctx: ExecutionContext,
+  pageToCapture: MonitoredPageRow,
+  previousSnapshot: SnapshotRow,
+  currentSnapshotId: string,
+  previousHealth: PageHealth,
+  currentHealth: PageHealth,
+  transition: AvailabilityTransition,
+  comparingWithEarlierVersion: boolean
+) {
+  const notice =
+    buildAvailabilityNotice(
+      transition,
+      previousHealth,
+      currentHealth,
+      {
+        comparingWithEarlierVersion,
+      }
+    );
+
+  console.log(
+    "Morrow page availability transition",
+    {
+      monitoredPageId:
+        pageToCapture.id,
+
+      transition,
+
+      previousReason:
+        previousHealth.reason,
+
+      previousHttpStatus:
+        previousHealth.httpStatus,
+
+      currentReason:
+        currentHealth.reason,
+
+      currentHttpStatus:
+        currentHealth.httpStatus,
+
+      matchedPhrase:
+        currentHealth.matched ??
+        previousHealth.matched,
+
+      notifying:
+        notice !== null,
+
+      comparingWithEarlierVersion,
+    }
+  );
+
+  if (!notice) {
+    return;
+  }
+
+  const changeId =
+    crypto.randomUUID();
+
+  const diffJson =
+    JSON.stringify({
+      kind:
+        "page_availability",
+
+      transition,
+
+      previousReason:
+        previousHealth.reason,
+
+      currentReason:
+        currentHealth.reason,
+
+      previousHttpStatus:
+        previousHealth.httpStatus,
+
+      currentHttpStatus:
+        currentHealth.httpStatus,
+
+      addedLines: 0,
+      removedLines: 0,
+      missingIncludeSelectors: [],
+      parts: [],
+    });
+
+  await env.DB.prepare(
+    `
+      INSERT INTO changes (
+        id,
+        monitored_page_id,
+        previous_snapshot_id,
+        current_snapshot_id,
+        category,
+        significance,
+        summary,
+        why_it_matters,
+        previous_text,
+        current_text,
+        diff_json
+      )
+      VALUES (
+        ?,
+        ?,
+        ?,
+        ?,
+        'other',
+        'moderate',
+        ?,
+        ?,
+        NULL,
+        NULL,
+        ?
+      )
+    `
+  )
+    .bind(
+      changeId,
+      pageToCapture.id,
+      previousSnapshot.id,
+      currentSnapshotId,
+      notice.summary,
+      notice.whyItMatters,
+      diffJson
+    )
+    .run();
+
+  console.log(
+    "Morrow availability notice recorded",
+    {
+      changeId,
+
+      monitoredPageId:
+        pageToCapture.id,
+
+      transition,
+    }
+  );
+
+  ctx.waitUntil(
+    notifyPersistedChange(
+      env,
+      changeId
+    )
+  );
+}
+
 async function processCapturedPage(
   env: Env,
   pageToCapture:
@@ -1245,6 +1488,94 @@ async function processCapturedPage(
 
     return;
   }
+  /*
+   * ----------------------------------------------------
+   * Page availability
+   * ----------------------------------------------------
+   *
+   * A page that answers with an HTTP error is not a content
+   * change by the competitor, and an error page's text must
+   * never be diffed against the working page (or the other
+   * way round). Instead the user is told once when the page
+   * stops loading and once when it loads again.
+   */
+  const readStoredText = (
+    objectKey: string | null
+  ) =>
+    readSnapshotText(
+      env,
+      objectKey
+    );
+
+  const currentHealth =
+    assessPageHealth(
+      capture.status,
+      readableText
+    );
+
+  const previousHealth =
+    await assessPreviousSnapshotHealth(
+      readStoredText,
+      previousSnapshot,
+      readableText,
+      previousSnapshot.content_hash ===
+        contentHash
+    );
+
+  const availabilityTransition =
+    detectAvailabilityTransition(
+      previousHealth,
+      currentHealth
+    );
+
+  /*
+   * The snapshot the new capture is compared against. Normally
+   * that is the previous capture. After an outage it is the last
+   * good capture from before the problem, so anything the
+   * competitor really changed while the page was broken is still
+   * reported.
+   */
+  let baselineSnapshot: SnapshotRow =
+    previousSnapshot;
+
+  if (availabilityTransition !== "none") {
+    const lastGoodSnapshot =
+      availabilityTransition ===
+      "recovered"
+        ? await getLastGoodSnapshot(
+            env.DB,
+            readStoredText,
+            pageToCapture.id,
+            snapshotId
+          )
+        : null;
+
+    await handleAvailabilityTransition(
+      env,
+      ctx,
+      pageToCapture,
+      previousSnapshot,
+      snapshotId,
+      previousHealth,
+      currentHealth,
+      availabilityTransition,
+      lastGoodSnapshot !== null
+    );
+
+    if (!lastGoodSnapshot) {
+      await updateCaptureSchedule(
+        env,
+        pageToCapture,
+        capturedAt
+      );
+
+      return;
+    }
+
+    baselineSnapshot =
+      lastGoodSnapshot;
+  }
+
   if (
   !monitoringConfigurationValid
 ) {
@@ -1272,7 +1603,7 @@ async function processCapturedPage(
 }
 
   const contentChanged =
-    previousSnapshot.content_hash !==
+    baselineSnapshot.content_hash !==
     contentHash;
 
   console.log(
@@ -1282,13 +1613,13 @@ async function processCapturedPage(
         pageToCapture.id,
 
       previousSnapshotId:
-        previousSnapshot.id,
+        baselineSnapshot.id,
 
       currentSnapshotId:
         snapshotId,
 
       previousContentHash:
-        previousSnapshot.content_hash,
+        baselineSnapshot.content_hash,
 
       currentContentHash:
         contentHash,
@@ -1311,7 +1642,7 @@ async function processCapturedPage(
           pageToCapture.id,
 
         previousSnapshotId:
-          previousSnapshot.id,
+          baselineSnapshot.id,
 
         currentSnapshotId:
           snapshotId,
@@ -1346,7 +1677,7 @@ if (hasConfiguredScope) {
   const previousHtml =
     await readSnapshotHtml(
       env,
-      previousSnapshot
+      baselineSnapshot
         .html_object_key
     );
 
@@ -1378,7 +1709,7 @@ if (hasConfiguredScope) {
   previousComparisonText =
     await readSnapshotText(
       env,
-      previousSnapshot
+      baselineSnapshot
         .text_object_key
     );
 }
@@ -1434,7 +1765,7 @@ if (
         pageToCapture.id,
 
       previousSnapshotId:
-        previousSnapshot.id,
+        baselineSnapshot.id,
 
       hasConfiguredScope,
     }
@@ -1578,7 +1909,7 @@ if (
         pageToCapture.id,
 
       previousSnapshotId:
-        previousSnapshot.id,
+        baselineSnapshot.id,
 
       currentSnapshotId:
         snapshotId,
@@ -1610,13 +1941,13 @@ if (
           pageToCapture.id,
 
         previousSnapshotId:
-          previousSnapshot.id,
+          baselineSnapshot.id,
 
         currentSnapshotId:
           snapshotId,
 
         previousContentHash:
-          previousSnapshot.content_hash,
+          baselineSnapshot.content_hash,
 
         currentContentHash:
           contentHash,
@@ -1680,6 +2011,12 @@ if (
    * fallback rather than preventing persistence.
    */
 
+  const pageContext =
+    await getPageContext(
+      env,
+      pageToCapture.id
+    );
+
   const changeSummary =
     await summarizeChange(
       env.AI,
@@ -1702,6 +2039,30 @@ if (
 
         parts:
           meaningfulDiffParts,
+
+        competitorName:
+          pageContext?.competitor_name ??
+          null,
+
+        pageLabel:
+          pageContext?.page_label ??
+          null,
+
+        pageUrl:
+          pageToCapture.url,
+
+        previousHttpStatus:
+          baselineSnapshot.http_status,
+
+        currentHttpStatus:
+          capture.status,
+      },
+      {
+        model:
+          env.MORROW_SUMMARY_MODEL,
+
+        gatewayId:
+          env.MORROW_AI_GATEWAY_ID,
       }
     );
 
@@ -1837,7 +2198,7 @@ if (
 
       pageToCapture.id,
 
-      previousSnapshot.id,
+      baselineSnapshot.id,
 
       snapshotId,
 
@@ -1866,7 +2227,7 @@ if (
         pageToCapture.id,
 
       previousSnapshotId:
-        previousSnapshot.id,
+        baselineSnapshot.id,
 
       currentSnapshotId:
         snapshotId,

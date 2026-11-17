@@ -13,7 +13,9 @@
 	},
 	"vars": {
 	"MORROW_EMAIL_FROM": "noreply@morrow.corstack.dev",
-    "MORROW_TELEGRAM_BOT_USERNAME": "morrowalertbot"
+    "MORROW_TELEGRAM_BOT_USERNAME": "morrowalertbot",
+    "MORROW_SUMMARY_MODEL": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+    "MORROW_AI_GATEWAY_ID": "my-gateway"
   	},
 	"observability": {
 		"logs": {

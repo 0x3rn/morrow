@@ -12,17 +12,42 @@ export interface ChangeSummaryInput {
   addedLines: number;
   removedLines: number;
   parts: SummaryDiffPart[];
+
+  /*
+   * Context the model needs to name what changed. All optional so
+   * older callers keep working.
+   */
+  competitorName?: string | null;
+  pageLabel?: string | null;
+  pageUrl?: string | null;
+  previousHttpStatus?: number | null;
+  currentHttpStatus?: number | null;
 }
 
 export interface MorrowAiBinding {
   run(
     model: string,
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
+    options?: Record<string, unknown>
   ): Promise<unknown>;
+}
+
+/*
+ * Which model writes the summary.
+ *
+ * Both are optional. With neither set, the original Workers AI model
+ * is used and nothing changes. To use a model from AI Gateway (for
+ * example DeepSeek), set both: a model id in the form
+ * "provider/model" and the name of your gateway.
+ */
+export interface SummaryModelOptions {
+  model?: string | null;
+  gatewayId?: string | null;
 }
 
 export type ChangeSummarySource =
   | "workers_ai"
+  | "ai_gateway"
   | "fallback";
 
 export interface ChangeSummaryResult {
@@ -46,8 +71,92 @@ interface StructuredModelSummary {
   why_it_matters: string;
 }
 
-const SUMMARY_MODEL =
+export const DEFAULT_SUMMARY_MODEL =
   "@cf/meta/llama-3.1-8b-instruct-fast";
+
+const WORKERS_AI_MODEL_PREFIX = "@cf/";
+
+/* "deepseek/deepseek-v4-pro", "openai/gpt-4.1-mini", "@cf/meta/llama-..." */
+const MODEL_ID_PATTERN =
+  /^(?:@cf\/)?[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._:-]*)+$/i;
+
+const GATEWAY_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
+
+export interface ResolvedSummaryModel {
+  model: string;
+  gatewayId: string | null;
+  isWorkersAiModel: boolean;
+  /* Set when the supplied settings were unusable and the default was used. */
+  warning: string | null;
+}
+
+/*
+ * Never throws. A bad or half-finished setting falls back to the
+ * default model with a warning, because summarization must not
+ * become a reason a detected change goes unrecorded.
+ */
+export function resolveSummaryModel(
+  options?: SummaryModelOptions
+): ResolvedSummaryModel {
+  const requestedModel =
+    options?.model?.trim() || "";
+
+  const requestedGateway =
+    options?.gatewayId?.trim() || "";
+
+  const fallback = (
+    warning: string | null
+  ): ResolvedSummaryModel => ({
+    model: DEFAULT_SUMMARY_MODEL,
+    gatewayId:
+      GATEWAY_ID_PATTERN.test(requestedGateway)
+        ? requestedGateway
+        : null,
+    isWorkersAiModel: true,
+    warning,
+  });
+
+  if (!requestedModel) {
+    return fallback(null);
+  }
+
+  if (!MODEL_ID_PATTERN.test(requestedModel)) {
+    return fallback(
+      "MORROW_SUMMARY_MODEL is not a valid model id; using the default model."
+    );
+  }
+
+  const isWorkersAiModel =
+    requestedModel.startsWith(
+      WORKERS_AI_MODEL_PREFIX
+    );
+
+  if (
+    requestedGateway &&
+    !GATEWAY_ID_PATTERN.test(requestedGateway)
+  ) {
+    return fallback(
+      "MORROW_AI_GATEWAY_ID is not a valid gateway name; using the default model."
+    );
+  }
+
+  /*
+   * Models from other providers can only be reached through an
+   * AI Gateway, so a gateway name is required for them.
+   */
+  if (!isWorkersAiModel && !requestedGateway) {
+    return fallback(
+      "MORROW_SUMMARY_MODEL names a non-Workers-AI model but MORROW_AI_GATEWAY_ID is not set; using the default model."
+    );
+  }
+
+  return {
+    model: requestedModel,
+    gatewayId: requestedGateway || null,
+    isWorkersAiModel,
+    warning: null,
+  };
+}
 
 const MAX_EVIDENCE_LINES = 20;
 const MAX_EVIDENCE_CHARS = 3000;
@@ -413,7 +522,24 @@ function tryParseJson(
   try {
     return JSON.parse(value);
   } catch {
-    return null;
+    /*
+     * Some models wrap JSON in a ```json fence or add a sentence
+     * around it. Retry on the outermost {...} before giving up.
+     */
+    const start = value.indexOf("{");
+    const end = value.lastIndexOf("}");
+
+    if (start === -1 || end <= start) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(
+        value.slice(start, end + 1)
+      );
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -505,49 +631,292 @@ function extractStructuredResponse(
   };
 }
 
-function buildPromptInput(
+/*
+ * The model is told what the page is, how each check loaded, and the
+ * exact text that left and arrived. Classifier confidence and reasons
+ * are deliberately NOT sent: they only tempted the model to talk about
+ * "classification" and "lines of code" in messages for end users.
+ */
+export function buildPromptInput(
   input: ChangeSummaryInput,
   previousText: string | null,
   currentText: string | null
 ) {
   return JSON.stringify(
     {
-      fixed_classification: {
-        category:
-          input.category,
+      competitor:
+        input.competitorName ?? null,
 
-        significance:
-          input.significance,
+      page_name:
+        input.pageLabel ?? null,
 
-        confidence:
-          input.classificationConfidence,
+      page_url:
+        input.pageUrl ?? null,
 
-        reasons:
-          input.classificationReasons,
-      },
+      previous_check_http_status:
+        input.previousHttpStatus ?? null,
 
-      changed_evidence: {
-        previous:
-          previousText,
+      current_check_http_status:
+        input.currentHttpStatus ?? null,
 
-        current:
-          currentText,
+      topic:
+        input.category,
 
-        removed_line_count:
-          input.removedLines,
+      importance:
+        input.significance,
 
-        added_line_count:
-          input.addedLines,
-      },
+      removed_text:
+        previousText,
+
+      added_text:
+        currentText,
     },
     null,
     2
   );
 }
 
+/*
+ * The reader sees this text in an email or a Telegram message and
+ * has seconds to understand it, so the prompt demands concrete
+ * before/after values and forbids filler.
+ */
+export const SUMMARY_SYSTEM_PROMPT = `
+You write change alerts for Morrow, a tool that watches competitor websites.
+The reader sees your text in an email or Telegram message and must understand
+what happened in under ten seconds.
+
+You receive: the competitor, the page, the HTTP status of the previous and
+current check, and the exact text that was removed and added. The topic and
+importance were decided by other code. Do not change them or mention them.
+
+Reply with JSON only, with two string fields: "summary" and "why_it_matters".
+
+SUMMARY (1-2 short sentences)
+- Say exactly what changed and quote the real old and new values.
+  Good: "Pro plan price went from $99 to $129 per month."
+  Bad: "Pricing content was updated."
+- If there is only added_text, say what appeared. If there is only
+  removed_text, say what disappeared. Do not call that "updated".
+- Name the plan, feature or section when the text shows it.
+- Quote short phrases only. Never paste long blocks.
+
+PAGE LOAD PROBLEMS (check this first)
+- If previous_check_http_status is 400 or higher and current_check_http_status
+  is below 400, the page was broken last time and works now. Say that. Do NOT
+  describe the page text as new or as something the competitor changed.
+- If removed_text looks like an error page ("something went wrong", "try
+  again in a moment", "not found", "access denied"), treat it the same way.
+
+WHY IT MATTERS (1 sentence)
+- Tie it to the specific fact in your summary and say what the reader could
+  check or do. Use "may" or "could" for effects you cannot see.
+- If the change is minor (wording, layout, link text, a page that works
+  again), say so plainly, for example "No clear business impact."
+
+NEVER
+- Invent numbers, dates, products, motives or reasons. Use only the text given.
+- Use vague filler such as "content was updated", "significantly updated",
+  "pricing strategy shift", "new service offerings" or "customer purchasing
+  decisions".
+- Mention topic, importance, classification, confidence, lines of code,
+  evidence, JSON or prompts. The reader does not know these exist.
+- Count lines. Describe what the text says.
+`.trim();
+
+/*
+ * Worked examples, sent as earlier chat turns so the model copies the
+ * shape and level of detail of the answers.
+ */
+const SUMMARY_EXAMPLES: ReadonlyArray<{
+  input: Record<string, unknown>;
+  output: StructuredModelSummary;
+}> = [
+  {
+    input: {
+      competitor: "Acme Analytics",
+      page_name: "Pricing",
+      page_url: "https://acme.example/pricing",
+      previous_check_http_status: 200,
+      current_check_http_status: 200,
+      topic: "pricing",
+      importance: "major",
+      removed_text: "Pro\n$99 / month",
+      added_text: "Pro\n$129 / month",
+    },
+    output: {
+      summary:
+        "The Pro plan price went from $99 to $129 per month.",
+      why_it_matters:
+        "A $30 rise may make competing plans look cheaper; check how your own mid-tier plan compares.",
+    },
+  },
+  {
+    input: {
+      competitor: "Northwind Tools",
+      page_name: "Homepage",
+      page_url: "https://northwind.example/",
+      previous_check_http_status: 200,
+      current_check_http_status: 200,
+      topic: "pricing",
+      importance: "moderate",
+      removed_text:
+        "Something went wrong. Please try again in a moment.",
+      added_text:
+        "Starter $20\nTeam $60\nBusiness $150",
+    },
+    output: {
+      summary:
+        "The page was showing an error message last time and now shows its normal content, including plans at $20, $60 and $150.",
+      why_it_matters:
+        "This is a page that works again, not a competitor edit, so there is nothing to act on yet.",
+    },
+  },
+  {
+    input: {
+      competitor: "Globex CRM",
+      page_name: "Features",
+      page_url: "https://globex.example/features",
+      previous_check_http_status: 200,
+      current_check_http_status: 200,
+      topic: "feature",
+      importance: "moderate",
+      removed_text: null,
+      added_text: "Single sign-on (SSO) and SCIM for Enterprise",
+    },
+    output: {
+      summary:
+        "The Enterprise plan now lists single sign-on (SSO) and SCIM.",
+      why_it_matters:
+        "This may close a gap for larger buyers; check whether your own Enterprise tier covers it.",
+    },
+  },
+];
+
+function buildExampleMessages() {
+  return SUMMARY_EXAMPLES.flatMap(
+    (example) => [
+      {
+        role: "user",
+        content: JSON.stringify(
+          example.input,
+          null,
+          2
+        ),
+      },
+      {
+        role: "assistant",
+        content: JSON.stringify(
+          example.output
+        ),
+      },
+    ]
+  );
+}
+
+/*
+ * Models do not all accept the same request. Three shapes are used:
+ *
+ *  - workers_ai_legacy_schema: the Llama family that Morrow has always
+ *    used. Takes the JSON schema directly in "json_schema".
+ *  - openai_json_schema: newer Workers AI models (for example
+ *    DeepSeek V4.1 Flash). They use the OpenAI chat shape, where
+ *    "json_schema" must be { name, schema, strict }.
+ *  - openai_json_object: models from other providers reached through
+ *    AI Gateway. Plain "json_object" mode, because several providers
+ *    (DeepSeek among them) do not accept json_schema.
+ */
+export type RequestStyle =
+  | "workers_ai_legacy_schema"
+  | "openai_json_schema"
+  | "openai_json_object";
+
+export function requestStyleFor(
+  model: string
+): RequestStyle {
+  if (!model.startsWith(WORKERS_AI_MODEL_PREFIX)) {
+    return "openai_json_object";
+  }
+
+  if (model.startsWith("@cf/meta/")) {
+    return "workers_ai_legacy_schema";
+  }
+
+  return "openai_json_schema";
+}
+
+/*
+ * DeepSeek V4 on Workers AI is a reasoning model and thinks at
+ * "high" effort by default. A two-sentence summary does not need
+ * that, and the thinking would spend the token budget and the money
+ * before any answer is written, so it is switched off.
+ */
+function isWorkersAiDeepSeekV4(
+  model: string
+) {
+  return model.startsWith(
+    "@cf/deepseek-ai/deepseek-v4"
+  );
+}
+
+export function buildModelRequest(
+  model: string,
+  userPrompt: string
+): Record<string, unknown> {
+  const style =
+    requestStyleFor(model);
+
+  const request: Record<string, unknown> = {
+    messages: [
+      {
+        role: "system",
+        content:
+          SUMMARY_SYSTEM_PROMPT,
+      },
+      ...buildExampleMessages(),
+      {
+        role: "user",
+        content: userPrompt,
+      },
+    ],
+
+    temperature: 0.1,
+  };
+
+  if (style === "workers_ai_legacy_schema") {
+    request.response_format = {
+      type: "json_schema",
+      json_schema: summarySchema,
+    };
+    request.max_tokens = 400;
+  } else if (style === "openai_json_schema") {
+    request.response_format = {
+      type: "json_schema",
+      json_schema: {
+        name: "change_summary",
+        schema: summarySchema,
+        strict: true,
+      },
+    };
+    request.max_tokens = 800;
+  } else {
+    request.response_format = {
+      type: "json_object",
+    };
+    request.max_tokens = 1500;
+  }
+
+  if (isWorkersAiDeepSeekV4(model)) {
+    request.reasoning_effort = "none";
+  }
+
+  return request;
+}
+
 export async function summarizeChange(
   ai: MorrowAiBinding | undefined,
-  input: ChangeSummaryInput
+  input: ChangeSummaryInput,
+  modelOptions?: SummaryModelOptions
 ): Promise<ChangeSummaryResult> {
   const changedLines =
     splitChangedLines(
@@ -604,22 +973,6 @@ export async function summarizeChange(
     return fallback;
   }
 
-  const systemPrompt = `
-You write concise competitor-monitoring change explanations for Morrow.
-
-Important rules:
-
-1. The supplied category and significance are already decided by deterministic code.
-2. Never override, question, rename, or recalculate the category or significance.
-3. Use only the supplied changed evidence.
-4. Do not invent prices, dates, products, features, motives, causes, customer reactions, or business outcomes.
-5. "why_it_matters" must describe plausible relevance only. Use language such as "may" or "could" when impact is not directly proven.
-6. Do not mention classifiers, confidence scores, prompts, evidence objects, JSON, or internal system names.
-7. summary should clearly explain what changed in 1-2 short sentences.
-8. why_it_matters should be 1-2 short sentences.
-9. Do not reproduce large blocks of page text.
-`.trim();
-
   const userPrompt =
     buildPromptInput(
       input,
@@ -627,66 +980,106 @@ Important rules:
       currentText
     );
 
-  try {
-    const modelResponse =
-      await ai.run(
-        SUMMARY_MODEL,
-        {
-          messages: [
-            {
-              role: "system",
-              content:
-                systemPrompt,
-            },
-            {
-              role: "user",
-              content:
-                userPrompt,
-            },
-          ],
-
-          response_format: {
-            type: "json_schema",
-            json_schema:
-              summarySchema,
-          },
-
-          temperature: 0.1,
-          max_tokens: 300,
-        }
-      );
-
-    const structured =
-      extractStructuredResponse(
-        modelResponse
-      );
-
-    if (!structured) {
-      return fallback;
-    }
-
-    return {
-      summary:
-        structured.summary,
-
-      whyItMatters:
-        structured.why_it_matters,
-
-      previousText,
-      currentText,
-
-      source:
-        "workers_ai",
-
-      model:
-        SUMMARY_MODEL,
-    };
-  } catch (error) {
-    console.error(
-      "Morrow change summarization failed; using fallback",
-      error
+  const resolvedModel =
+    resolveSummaryModel(
+      modelOptions
     );
 
-    return fallback;
+  if (resolvedModel.warning) {
+    console.warn(
+      "Morrow summary model configuration",
+      resolvedModel.warning
+    );
   }
+
+  /*
+   * The configured model goes first. If it fails or returns
+   * something unusable (for example its plan or credits are not
+   * set up yet), the default model gets one try before the plain
+   * template text is used, so a model setting can never make
+   * summaries worse than they were.
+   */
+  const attempts: ResolvedSummaryModel[] = [
+    resolvedModel,
+  ];
+
+  if (
+    resolvedModel.model !==
+    DEFAULT_SUMMARY_MODEL
+  ) {
+    attempts.push({
+      model: DEFAULT_SUMMARY_MODEL,
+      gatewayId:
+        resolvedModel.gatewayId,
+      isWorkersAiModel: true,
+      warning: null,
+    });
+  }
+
+  for (const attempt of attempts) {
+    try {
+      const modelResponse =
+        await ai.run(
+          attempt.model,
+          buildModelRequest(
+            attempt.model,
+            userPrompt
+          ),
+          attempt.gatewayId
+            ? {
+                gateway: {
+                  id: attempt.gatewayId,
+                },
+              }
+            : undefined
+        );
+
+      const structured =
+        extractStructuredResponse(
+          modelResponse
+        );
+
+      if (structured) {
+        return {
+          summary:
+            structured.summary,
+
+          whyItMatters:
+            structured.why_it_matters,
+
+          previousText,
+          currentText,
+
+          source:
+            attempt.isWorkersAiModel
+              ? "workers_ai"
+              : "ai_gateway",
+
+          model:
+            attempt.model,
+        };
+      }
+
+      console.warn(
+        "Morrow summary model returned an unusable reply",
+        {
+          model: attempt.model,
+        }
+      );
+    } catch (error) {
+      console.error(
+        "Morrow summary model call failed",
+        {
+          model: attempt.model,
+
+          error:
+            error instanceof Error
+              ? error.message
+              : String(error),
+        }
+      );
+    }
+  }
+
+  return fallback;
 }
