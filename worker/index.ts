@@ -70,11 +70,16 @@ interface Env {
    * Optional summary model override. Leave both unset to keep the
    * default Workers AI model. To use a model from AI Gateway, set
    * both, for example:
-   *   MORROW_SUMMARY_MODEL = "deepseek/deepseek-v4-pro"
+   *   MORROW_SUMMARY_MODEL = "deepseek-direct/deepseek-flash"
    *   MORROW_AI_GATEWAY_ID = "<your gateway name>"
+   *
+   * A "<provider>-direct/..." model calls the provider through the
+   * gateway with the key stored there, so it also needs the gateway
+   * token, set with:  npx wrangler secret put CF_AIG_TOKEN
    */
   MORROW_SUMMARY_MODEL?: string;
   MORROW_AI_GATEWAY_ID?: string;
+  CF_AIG_TOKEN?: string;
 
   /*
    * THE-19
@@ -2063,6 +2068,9 @@ if (
 
         gatewayId:
           env.MORROW_AI_GATEWAY_ID,
+
+        gatewayToken:
+          env.CF_AIG_TOKEN,
       }
     );
 

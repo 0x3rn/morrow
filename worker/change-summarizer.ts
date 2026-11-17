@@ -30,6 +30,14 @@ export interface MorrowAiBinding {
     input: Record<string, unknown>,
     options?: Record<string, unknown>
   ): Promise<unknown>;
+
+  /*
+   * Used only by the direct provider route, to learn the gateway's
+   * base URL without storing the account id anywhere.
+   */
+  gateway?(gatewayId: string): {
+    getUrl(provider?: string): Promise<string>;
+  };
 }
 
 /*
@@ -43,6 +51,12 @@ export interface MorrowAiBinding {
 export interface SummaryModelOptions {
   model?: string | null;
   gatewayId?: string | null;
+
+  /*
+   * Gateway authentication token (the CF_AIG_TOKEN secret). Only the
+   * direct provider route needs it. It is never logged.
+   */
+  gatewayToken?: string | null;
 }
 
 export type ChangeSummarySource =
@@ -82,10 +96,55 @@ const MODEL_ID_PATTERN =
 
 const GATEWAY_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
 
+/*
+ * "Direct" models call the provider's own endpoint on your gateway
+ * instead of going through env.AI.run(). That is the route that uses
+ * the provider key stored in the gateway (BYOK) and bills it to you.
+ * The id is "<provider>-direct/<provider model name>", for example
+ * "deepseek-direct/deepseek-flash".
+ */
+const DIRECT_ROUTE_PROVIDERS: Readonly<
+  Record<string, string>
+> = {
+  "deepseek-direct": "deepseek",
+};
+
+const GATEWAY_TOKEN_PATTERN = /^\S{8,}$/;
+
+export function parseDirectModel(
+  model: string
+): { provider: string; providerModel: string } | null {
+  const slash = model.indexOf("/");
+
+  if (slash <= 0) {
+    return null;
+  }
+
+  const provider =
+    DIRECT_ROUTE_PROVIDERS[
+      model.slice(0, slash)
+    ];
+
+  const providerModel =
+    model.slice(slash + 1);
+
+  if (!provider || !providerModel) {
+    return null;
+  }
+
+  return { provider, providerModel };
+}
+
 export interface ResolvedSummaryModel {
   model: string;
   gatewayId: string | null;
   isWorkersAiModel: boolean;
+  /* Set for direct provider models; null for everything else. */
+  direct: {
+    provider: string;
+    providerModel: string;
+    token: string;
+  } | null;
   /* Set when the supplied settings were unusable and the default was used. */
   warning: string | null;
 }
@@ -113,6 +172,7 @@ export function resolveSummaryModel(
         ? requestedGateway
         : null,
     isWorkersAiModel: true,
+    direct: null,
     warning,
   });
 
@@ -150,10 +210,33 @@ export function resolveSummaryModel(
     );
   }
 
+  const direct =
+    parseDirectModel(requestedModel);
+
+  if (direct) {
+    const token =
+      options?.gatewayToken?.trim() || "";
+
+    if (!GATEWAY_TOKEN_PATTERN.test(token)) {
+      return fallback(
+        "MORROW_SUMMARY_MODEL uses a direct provider route but the CF_AIG_TOKEN secret is missing or invalid; using the default model."
+      );
+    }
+
+    return {
+      model: requestedModel,
+      gatewayId: requestedGateway,
+      isWorkersAiModel: false,
+      direct: { ...direct, token },
+      warning: null,
+    };
+  }
+
   return {
     model: requestedModel,
     gatewayId: requestedGateway || null,
     isWorkersAiModel,
+    direct: null,
     warning: null,
   };
 }
@@ -913,6 +996,96 @@ export function buildModelRequest(
   return request;
 }
 
+const DIRECT_CALL_TIMEOUT_MS = 30_000;
+
+/*
+ * Request for DeepSeek's own chat API. Thinking is switched off
+ * because a two-sentence summary does not need it, and it would use
+ * the token budget and the money first. DeepSeek's JSON mode needs
+ * the word "JSON" in the prompt (it is) and a generous max_tokens.
+ */
+export function buildDirectDeepSeekRequest(
+  providerModel: string,
+  userPrompt: string
+): Record<string, unknown> {
+  const { messages } = buildModelRequest(
+    "deepseek-direct/" + providerModel,
+    userPrompt
+  );
+
+  return {
+    model: providerModel,
+    messages,
+    response_format: { type: "json_object" },
+    max_tokens: 1000,
+    thinking: { type: "disabled" },
+  };
+}
+
+/*
+ * Calls the provider's own endpoint on the gateway. No provider key
+ * is sent: AI Gateway substitutes the key stored under the "default"
+ * alias, so the provider bills you directly. "cf-aig-no-wholesale"
+ * makes the gateway refuse the request instead of silently falling
+ * back to Cloudflare-managed credentials if that key is not found.
+ */
+async function callDirectProvider(
+  ai: MorrowAiBinding,
+  attempt: ResolvedSummaryModel,
+  userPrompt: string
+): Promise<unknown> {
+  const direct = attempt.direct;
+
+  if (!direct || !attempt.gatewayId) {
+    throw new Error(
+      "Direct route is missing its provider or gateway."
+    );
+  }
+
+  if (typeof ai.gateway !== "function") {
+    throw new Error(
+      "The AI binding does not offer gateway(); cannot find the gateway URL."
+    );
+  }
+
+  const baseUrl = await ai
+    .gateway(attempt.gatewayId)
+    .getUrl(direct.provider);
+
+  const response = await fetch(
+    `${baseUrl.replace(/\/+$/, "")}/chat/completions`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "cf-aig-authorization": `Bearer ${direct.token}`,
+        "cf-aig-no-wholesale": "true",
+      },
+      body: JSON.stringify(
+        buildDirectDeepSeekRequest(
+          direct.providerModel,
+          userPrompt
+        )
+      ),
+      signal: AbortSignal.timeout(
+        DIRECT_CALL_TIMEOUT_MS
+      ),
+    }
+  );
+
+  if (!response.ok) {
+    const detail = (
+      await response.text().catch(() => "")
+    ).slice(0, 300);
+
+    throw new Error(
+      `Gateway returned HTTP ${response.status}: ${detail}`
+    );
+  }
+
+  return response.json();
+}
+
 export async function summarizeChange(
   ai: MorrowAiBinding | undefined,
   input: ChangeSummaryInput,
@@ -1012,6 +1185,7 @@ export async function summarizeChange(
       gatewayId:
         resolvedModel.gatewayId,
       isWorkersAiModel: true,
+      direct: null,
       warning: null,
     });
   }
@@ -1019,20 +1193,26 @@ export async function summarizeChange(
   for (const attempt of attempts) {
     try {
       const modelResponse =
-        await ai.run(
-          attempt.model,
-          buildModelRequest(
-            attempt.model,
-            userPrompt
-          ),
-          attempt.gatewayId
-            ? {
-                gateway: {
-                  id: attempt.gatewayId,
-                },
-              }
-            : undefined
-        );
+        attempt.direct
+          ? await callDirectProvider(
+              ai,
+              attempt,
+              userPrompt
+            )
+          : await ai.run(
+              attempt.model,
+              buildModelRequest(
+                attempt.model,
+                userPrompt
+              ),
+              attempt.gatewayId
+                ? {
+                    gateway: {
+                      id: attempt.gatewayId,
+                    },
+                  }
+                : undefined
+            );
 
       const structured =
         extractStructuredResponse(
