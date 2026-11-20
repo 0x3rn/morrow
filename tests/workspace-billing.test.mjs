@@ -58,16 +58,16 @@ import {
   updateWorkspaceBillingInterval,
 } from "../lib/workspace-billing.ts";
 import {
-  computeLemonSqueezySignature,
-  createLemonSqueezyWebhookHandler,
+  computePolarSignature,
+  createPolarWebhookHandler,
   initiateOrUpdateWorkspaceSubscription,
   isPlaceholderEnvValue,
-  processLemonSqueezyWebhook,
-  resolveLemonSqueezyConfig,
-  resolvePlanFromVariantId,
-  updateWorkspaceSubscriptionCancellationWithLemonSqueezy,
-  verifyLemonSqueezyWebhookSignature,
-} from "../lib/lemonsqueezy.ts";
+  processPolarWebhook,
+  resolvePlanFromProductId,
+  resolvePolarConfig,
+  updateWorkspaceSubscriptionCancellationWithPolar,
+  verifyPolarWebhookSignature,
+} from "../lib/polar.ts";
 import {
   BILLING_PROVIDER_CONNECTION_USER_FACING_MESSAGE,
   BILLING_UNAVAILABLE_USER_FACING_MESSAGE,
@@ -1070,35 +1070,123 @@ test("THE-28.3: retention window and metered history counts reflect plan history
   );
 });
 
-function createLemonSqueezyTestEnv(db, overrides = {}) {
+const POLAR_TEST_ORG_ID = "org_44001_test";
+const POLAR_TEST_PRODUCTS = {
+  personalMonthly: "prod_personal_monthly",
+  personalAnnual: "prod_personal_annual",
+  starterMonthly: "prod_starter_monthly",
+  starterAnnual: "prod_starter_annual",
+  growthMonthly: "prod_growth_monthly",
+  growthAnnual: "prod_growth_annual",
+  scaleMonthly: "prod_scale_monthly",
+  scaleAnnual: "prod_scale_annual",
+};
+
+function createPolarTestEnv(db, overrides = {}) {
   return {
     DB: db,
     MORROW_APP_URL: "https://morrow.example.com",
-    LEMONSQUEEZY_API_KEY: "unit-test-billing-api-key",
-    LEMONSQUEEZY_STORE_ID: "44001",
-    LEMONSQUEEZY_WEBHOOK_SECRET:
-      "unit-test-billing-webhook-secret",
-    LEMONSQUEEZY_PERSONAL_MONTHLY_VARIANT_ID: "501",
-    LEMONSQUEEZY_PERSONAL_ANNUAL_VARIANT_ID: "502",
-    LEMONSQUEEZY_STARTER_MONTHLY_VARIANT_ID: "1001",
-    LEMONSQUEEZY_STARTER_ANNUAL_VARIANT_ID: "1002",
-    LEMONSQUEEZY_GROWTH_MONTHLY_VARIANT_ID: "2001",
-    LEMONSQUEEZY_GROWTH_ANNUAL_VARIANT_ID: "2002",
-    LEMONSQUEEZY_SCALE_MONTHLY_VARIANT_ID: "3001",
-    LEMONSQUEEZY_SCALE_ANNUAL_VARIANT_ID: "3002",
+    POLAR_ACCESS_TOKEN: "unit-test-billing-access-token",
+    POLAR_ORGANIZATION_ID: POLAR_TEST_ORG_ID,
+    POLAR_WEBHOOK_SECRET: "unit-test-billing-webhook-secret",
+    POLAR_PERSONAL_MONTHLY_PRODUCT_ID:
+      POLAR_TEST_PRODUCTS.personalMonthly,
+    POLAR_PERSONAL_ANNUAL_PRODUCT_ID:
+      POLAR_TEST_PRODUCTS.personalAnnual,
+    POLAR_STARTER_MONTHLY_PRODUCT_ID:
+      POLAR_TEST_PRODUCTS.starterMonthly,
+    POLAR_STARTER_ANNUAL_PRODUCT_ID:
+      POLAR_TEST_PRODUCTS.starterAnnual,
+    POLAR_GROWTH_MONTHLY_PRODUCT_ID:
+      POLAR_TEST_PRODUCTS.growthMonthly,
+    POLAR_GROWTH_ANNUAL_PRODUCT_ID:
+      POLAR_TEST_PRODUCTS.growthAnnual,
+    POLAR_SCALE_MONTHLY_PRODUCT_ID:
+      POLAR_TEST_PRODUCTS.scaleMonthly,
+    POLAR_SCALE_ANNUAL_PRODUCT_ID:
+      POLAR_TEST_PRODUCTS.scaleAnnual,
     ...overrides,
   };
 }
 
-test("THE-28.5: Lemon Squeezy config validation, placeholder rejection, duplicate variant guard, and HMAC-SHA256 constant-time signature verification", () => {
+/** Builds a Polar Subscription object as returned by the API and embedded in webhooks. */
+function polarSubscription(overrides = {}) {
+  const productId =
+    overrides.product_id ?? POLAR_TEST_PRODUCTS.starterMonthly;
+  return {
+    id: "sub_88001_test",
+    created_at: "2026-10-01T00:00:00.000Z",
+    modified_at: "2026-10-14T12:00:00.000Z",
+    status: "active",
+    cancel_at_period_end: false,
+    customer_id: "cus_501_test",
+    product_id: productId,
+    current_period_end: "2026-11-14T00:00:00.000Z",
+    ends_at: null,
+    ended_at: null,
+    trial_end: null,
+    metadata: {},
+    product: {
+      id: productId,
+      organization_id: POLAR_TEST_ORG_ID,
+    },
+    ...overrides,
+  };
+}
+
+function polarEventBody(type, subscription) {
+  return JSON.stringify({
+    type,
+    timestamp: new Date().toISOString(),
+    data: subscription,
+  });
+}
+
+function polarWebhookParts(env, rawBody, id = "msg_test_1") {
+  const webhookTimestamp = String(
+    Math.floor(Date.now() / 1000),
+  );
+  return {
+    rawBody,
+    webhookId: id,
+    webhookTimestamp,
+    signatureHeader: computePolarSignature(
+      rawBody,
+      env.POLAR_WEBHOOK_SECRET,
+      id,
+      webhookTimestamp,
+    ),
+  };
+}
+
+function polarWebhookRequest(env, rawBody, id = "msg_test_1") {
+  const parts = polarWebhookParts(env, rawBody, id);
+  return new Request(
+    "https://morrow.example.com/api/webhooks/polar",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "webhook-id": parts.webhookId,
+        "webhook-timestamp": parts.webhookTimestamp,
+        "webhook-signature": parts.signatureHeader,
+      },
+      body: rawBody,
+    },
+  );
+}
+
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), { status });
+}
+
+test("THE-28.5: Polar config validation, placeholder rejection, duplicate product guard, and Standard Webhooks HMAC-SHA256 signature verification", () => {
   assert.equal(
-    isPlaceholderEnvValue("your_lemonsqueezy_api_key"),
+    isPlaceholderEnvValue("your_polar_access_token"),
     true,
   );
   assert.equal(
-    isPlaceholderEnvValue(
-      "replace_with_webhook_secret",
-    ),
+    isPlaceholderEnvValue("replace_with_webhook_secret"),
     true,
   );
   assert.equal(
@@ -1106,128 +1194,194 @@ test("THE-28.5: Lemon Squeezy config validation, placeholder rejection, duplicat
     true,
   );
   assert.equal(
-    isPlaceholderEnvValue("unit-test-billing-api-key"),
+    isPlaceholderEnvValue("unit-test-billing-access-token"),
     false,
   );
 
   // Placeholder values in .env.local must never be accepted as live secrets
-  const placeholderConfig = resolveLemonSqueezyConfig({
-    LEMONSQUEEZY_API_KEY: "your_lemonsqueezy_api_key",
-    LEMONSQUEEZY_STORE_ID: "your_lemonsqueezy_store_id",
-    LEMONSQUEEZY_WEBHOOK_SECRET:
-      "your_lemonsqueezy_webhook_signing_secret",
-    LEMONSQUEEZY_PERSONAL_MONTHLY_VARIANT_ID:
-      "your_personal_monthly_variant_id",
-    LEMONSQUEEZY_GROWTH_MONTHLY_VARIANT_ID:
-      "your_growth_monthly_variant_id",
+  const placeholderConfig = resolvePolarConfig({
+    POLAR_ACCESS_TOKEN: "your_polar_access_token",
+    POLAR_ORGANIZATION_ID: "your_polar_organization_id",
+    POLAR_WEBHOOK_SECRET: "your_polar_webhook_secret",
+    POLAR_PERSONAL_MONTHLY_PRODUCT_ID:
+      "your_personal_monthly_product_id",
+    POLAR_GROWTH_MONTHLY_PRODUCT_ID:
+      "your_growth_monthly_product_id",
   });
   assert.equal(placeholderConfig.isConfigured, false);
-  assert.equal(placeholderConfig.apiKey, null);
-  assert.equal(placeholderConfig.storeId, null);
+  assert.equal(placeholderConfig.accessToken, null);
+  assert.equal(placeholderConfig.organizationId, null);
   assert.equal(placeholderConfig.webhookSecret, null);
 
-  // Duplicate variant IDs across plans must throw to prevent variant confusion
+  // Duplicate product IDs across plans must throw to prevent product confusion
   assert.throws(
     () =>
-      resolveLemonSqueezyConfig({
-        LEMONSQUEEZY_API_KEY: "unit-test-billing-api-key",
-        LEMONSQUEEZY_STORE_ID: "44001",
-        LEMONSQUEEZY_WEBHOOK_SECRET:
-          "unit-test-billing-webhook-secret",
-        LEMONSQUEEZY_GROWTH_MONTHLY_VARIANT_ID: "2001",
-        LEMONSQUEEZY_SCALE_MONTHLY_VARIANT_ID: "2001",
+      resolvePolarConfig({
+        POLAR_ACCESS_TOKEN: "unit-test-billing-access-token",
+        POLAR_ORGANIZATION_ID: POLAR_TEST_ORG_ID,
+        POLAR_WEBHOOK_SECRET: "unit-test-billing-webhook-secret",
+        POLAR_GROWTH_MONTHLY_PRODUCT_ID: "prod_shared_id_1",
+        POLAR_SCALE_MONTHLY_PRODUCT_ID: "prod_shared_id_1",
       }),
-    /Duplicate Lemon Squeezy variant ID \(2001\)/,
+    /Duplicate Polar product ID \(prod_shared_id_1\)/,
   );
 
-  // Non-numeric store or variant IDs must throw
+  // Malformed organization or product IDs must throw
   assert.throws(
     () =>
-      resolveLemonSqueezyConfig({
-        LEMONSQUEEZY_STORE_ID: "store_abc",
+      resolvePolarConfig({
+        POLAR_ORGANIZATION_ID: "not a valid id!",
       }),
-    /LEMONSQUEEZY_STORE_ID must be a positive numeric Lemon Squeezy ID/,
+    /POLAR_ORGANIZATION_ID must be a valid Polar ID/,
   );
 
-  const validConfig = resolveLemonSqueezyConfig(
-    createLemonSqueezyTestEnv(null),
+  // Unknown server names must throw; sandbox switches the API base URL
+  assert.throws(
+    () => resolvePolarConfig({ POLAR_SERVER: "staging" }),
+    /POLAR_SERVER must be either/,
+  );
+  assert.equal(
+    resolvePolarConfig({ POLAR_SERVER: "sandbox" })
+      .apiBaseUrl,
+    "https://sandbox-api.polar.sh/v1",
+  );
+  assert.equal(
+    resolvePolarConfig({}).apiBaseUrl,
+    "https://api.polar.sh/v1",
+  );
+
+  const validConfig = resolvePolarConfig(
+    createPolarTestEnv(null),
   );
   assert.equal(validConfig.isConfigured, true);
   assert.deepEqual(
-    resolvePlanFromVariantId(validConfig, "501"),
+    resolvePlanFromProductId(
+      validConfig,
+      POLAR_TEST_PRODUCTS.personalMonthly,
+    ),
     {
       planId: "personal",
       billingInterval: "monthly",
     },
   );
   assert.deepEqual(
-    resolvePlanFromVariantId(validConfig, "2002"),
+    resolvePlanFromProductId(
+      validConfig,
+      POLAR_TEST_PRODUCTS.growthAnnual,
+    ),
     {
       planId: "growth",
       billingInterval: "annual",
     },
   );
   assert.equal(
-    resolvePlanFromVariantId(validConfig, "9999"),
+    resolvePlanFromProductId(validConfig, "prod_unknown"),
     null,
   );
 
-  // HMAC-SHA256 signature verification
-  const rawBody = JSON.stringify({
-    meta: { event_name: "subscription_created" },
-    data: { id: "7001" },
-  });
+  // Standard Webhooks signature verification
+  const rawBody = polarEventBody(
+    "subscription.created",
+    polarSubscription({ id: "sub_7001_test" }),
+  );
   const secret = "unit-test-billing-webhook-secret";
-  const validSig = computeLemonSqueezySignature(
+  const webhookId = "msg_sig_test";
+  const webhookTimestamp = String(
+    Math.floor(Date.now() / 1000),
+  );
+  const validSig = computePolarSignature(
     rawBody,
     secret,
+    webhookId,
+    webhookTimestamp,
   );
+  const base = {
+    rawBody,
+    webhookId,
+    webhookTimestamp,
+    signatureHeader: validSig,
+    webhookSecret: secret,
+  };
 
+  assert.equal(verifyPolarWebhookSignature(base), true);
+
+  // Multiple space-delimited signatures: any valid one is accepted
   assert.equal(
-    verifyLemonSqueezyWebhookSignature({
-      rawBody,
-      signatureHeader: validSig,
-      webhookSecret: secret,
+    verifyPolarWebhookSignature({
+      ...base,
+      signatureHeader: `v1,AAAA ${validSig}`,
     }),
     true,
   );
 
   // Tampered payload fails verification
   assert.equal(
-    verifyLemonSqueezyWebhookSignature({
-      rawBody: rawBody.replace("7001", "7002"),
-      signatureHeader: validSig,
-      webhookSecret: secret,
+    verifyPolarWebhookSignature({
+      ...base,
+      rawBody: rawBody.replace("sub_7001_test", "sub_7002_test"),
+    }),
+    false,
+  );
+
+  // A different webhook-id or timestamp invalidates the signature
+  assert.equal(
+    verifyPolarWebhookSignature({
+      ...base,
+      webhookId: "msg_other",
+    }),
+    false,
+  );
+
+  // Stale (replayed) timestamps are rejected even with a valid signature
+  const oldTimestamp = String(
+    Math.floor(Date.now() / 1000) - 3600,
+  );
+  assert.equal(
+    verifyPolarWebhookSignature({
+      ...base,
+      webhookTimestamp: oldTimestamp,
+      signatureHeader: computePolarSignature(
+        rawBody,
+        secret,
+        webhookId,
+        oldTimestamp,
+      ),
     }),
     false,
   );
 
   // Wrong secret, placeholder secret, or malformed signature fails verification
   assert.equal(
-    verifyLemonSqueezyWebhookSignature({
-      rawBody,
-      signatureHeader: validSig,
+    verifyPolarWebhookSignature({
+      ...base,
       webhookSecret: "unit-test-wrong-webhook-secret",
     }),
     false,
   );
   assert.equal(
-    verifyLemonSqueezyWebhookSignature({
-      rawBody,
-      signatureHeader: computeLemonSqueezySignature(
+    verifyPolarWebhookSignature({
+      ...base,
+      signatureHeader: computePolarSignature(
         rawBody,
-        "your_lemonsqueezy_webhook_signing_secret",
+        "your_polar_webhook_secret",
+        webhookId,
+        webhookTimestamp,
       ),
-      webhookSecret:
-        "your_lemonsqueezy_webhook_signing_secret",
+      webhookSecret: "your_polar_webhook_secret",
     }),
     false,
   );
   assert.equal(
-    verifyLemonSqueezyWebhookSignature({
-      rawBody,
-      signatureHeader: "not-a-hex-signature",
-      webhookSecret: secret,
+    verifyPolarWebhookSignature({
+      ...base,
+      signatureHeader: "not-a-signature",
+    }),
+    false,
+  );
+  assert.equal(
+    verifyPolarWebhookSignature({
+      ...base,
+      signatureHeader: null,
     }),
     false,
   );
@@ -1235,50 +1389,39 @@ test("THE-28.5: Lemon Squeezy config validation, placeholder rejection, duplicat
 
 test("THE-28.5: prevents payment bypass on checkout initiation, reuses pending checkouts on double-click, and blocks open-redirect URLs", async (t) => {
   const { db, sqlite } = createD1Fixture(t);
-  const env = createLemonSqueezyTestEnv(db);
+  const env = createPolarTestEnv(db);
 
   let checkoutApiCalls = 0;
   const mockFetcher = async (url, init) => {
     checkoutApiCalls += 1;
-    assert.equal(
-      url,
-      "https://api.lemonsqueezy.com/v1/checkouts",
-    );
+    assert.equal(url, "https://api.polar.sh/v1/checkouts/");
     assert.equal(init.method, "POST");
+    assert.equal(
+      init.headers.Authorization,
+      "Bearer unit-test-billing-access-token",
+    );
     const body = JSON.parse(init.body);
+    assert.deepEqual(body.products, [
+      POLAR_TEST_PRODUCTS.growthAnnual,
+    ]);
     assert.equal(
-      body.data.relationships.store.data.id,
-      "44001",
+      body.success_url,
+      "https://morrow.example.com/dashboard/billing?checkout=completed",
     );
-    assert.equal(
-      body.data.relationships.variant.data.id,
-      "2002",
-    );
-    assert.equal(
-      body.data.attributes.checkout_data.custom
-        .workspace_id,
-      "ws_acme",
-    );
-    assert.equal(
-      body.data.attributes.checkout_data.custom
-        .target_plan_id,
-      "growth",
-    );
+    assert.equal(body.customer_email, "owner@acme.test");
+    assert.equal(body.metadata.workspace_id, "ws_acme");
+    assert.equal(body.metadata.target_plan_id, "growth");
 
-    return new Response(
-      JSON.stringify({
-        data: {
-          id: "chk_live_101",
-          attributes: {
-            url: "https://morrow.lemonsqueezy.com/checkout/buy/chk_live_101",
-          },
-        },
-      }),
-      { status: 201 },
+    return jsonResponse(
+      {
+        id: "chk_live_101",
+        url: "https://buy.polar.sh/polar_cl_chk_live_101",
+      },
+      201,
     );
   };
 
-  // Non-owners cannot initiate Lemon Squeezy checkout
+  // Non-owners cannot initiate Polar checkout
   await assert.rejects(
     () =>
       initiateOrUpdateWorkspaceSubscription(
@@ -1312,7 +1455,7 @@ test("THE-28.5: prevents payment bypass on checkout initiation, reuses pending c
   assert.equal(firstCheckout.mode, "checkout_redirect");
   assert.equal(
     firstCheckout.checkoutUrl,
-    "https://morrow.lemonsqueezy.com/checkout/buy/chk_live_101",
+    "https://buy.polar.sh/polar_cl_chk_live_101",
   );
   assert.equal(checkoutApiCalls, 1);
 
@@ -1334,7 +1477,7 @@ test("THE-28.5: prevents payment bypass on checkout initiation, reuses pending c
   );
 
   // Rapid double-click / retry within 10 minutes reuses the existing pending checkout session
-  // instead of creating duplicate checkouts on Lemon Squeezy
+  // instead of creating duplicate checkouts on Polar
   const secondCheckout =
     await initiateOrUpdateWorkspaceSubscription(
       env,
@@ -1355,7 +1498,7 @@ test("THE-28.5: prevents payment bypass on checkout initiation, reuses pending c
   );
   assert.equal(checkoutApiCalls, 1);
 
-  // Rejects open-redirect / non-lemonsqueezy checkout URLs
+  // Rejects open-redirect / non-polar.sh checkout URLs
   sqlite
     .prepare(
       `DELETE FROM workspace_checkout_sessions WHERE workspace_id = 'ws_acme'`,
@@ -1373,27 +1516,45 @@ test("THE-28.5: prevents payment bypass on checkout initiation, reuses pending c
           billingInterval: "monthly",
         },
         async () =>
-          new Response(
-            JSON.stringify({
-              data: {
-                id: "chk_evil",
-                attributes: {
-                  url: "https://evil-phishing.example.com/checkout",
-                },
-              },
-            }),
-            { status: 201 },
+          jsonResponse(
+            {
+              id: "chk_evil",
+              url: "https://evil-phishing.example.com/checkout",
+            },
+            201,
           ),
       ),
-    /must point to an official lemonsqueezy\.com domain/,
+    /must point to an official polar\.sh domain/,
+  );
+
+  // A look-alike host that merely ends with "polar.sh" is rejected too
+  await assert.rejects(
+    () =>
+      initiateOrUpdateWorkspaceSubscription(
+        env,
+        {
+          actorUserId: "usr_owner",
+          workspaceId: "ws_acme",
+          planId: "scale",
+          billingInterval: "monthly",
+        },
+        async () =>
+          jsonResponse(
+            {
+              id: "chk_evil_2",
+              url: "https://evilpolar.sh/checkout",
+            },
+            201,
+          ),
+      ),
+    /must point to an official polar\.sh domain/,
   );
 });
 
 test("THE-28.5: webhook security, plan-spoofing defense, idempotency under replay, cross-workspace hijack prevention, and out-of-order race condition protection", async (t) => {
   const { db, sqlite } = createD1Fixture(t);
-  const env = createLemonSqueezyTestEnv(db);
-  const webhookHandler =
-    createLemonSqueezyWebhookHandler(env);
+  const env = createPolarTestEnv(db);
+  const webhookHandler = createPolarWebhookHandler(env);
 
   // Create a workspace owned by a different user (usr_admin) to test cross-account workspace hijack protection
   await createTeamWorkspace(db, {
@@ -1410,71 +1571,68 @@ test("THE-28.5: webhook security, plan-spoofing defense, idempotency under repla
   // 1. Forged signature -> 401 Unauthorized
   const forgedRes = await webhookHandler(
     new Request(
-      "https://morrow.example.com/api/webhooks/lemonsqueezy",
+      "https://morrow.example.com/api/webhooks/polar",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Signature": "0".repeat(64),
+          "webhook-id": "msg_forged",
+          "webhook-timestamp": String(
+            Math.floor(Date.now() / 1000),
+          ),
+          "webhook-signature": "v1,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
         },
-        body: JSON.stringify({
-          meta: { event_name: "subscription_created" },
-          data: { id: "9001", attributes: {} },
-        }),
+        body: polarEventBody(
+          "subscription.created",
+          polarSubscription({ id: "sub_9001_test" }),
+        ),
       },
     ),
   );
   assert.equal(forgedRes.status, 401);
 
-  // 2. Variant vs custom_data plan-spoofing attack:
-  // Attacker pays for Starter Monthly (variant "1001", $19), but sets custom_data.target_plan_id = "scale" ($99).
-  // Server MUST provision Starter Monthly based on variant_id "1001" and ignore custom_data.target_plan_id!
-  const spoofPayload = JSON.stringify({
-    meta: {
-      event_name: "subscription_created",
-      custom_data: {
+  // 1b. Missing signature headers -> 401 Unauthorized
+  const unsignedRes = await webhookHandler(
+    new Request(
+      "https://morrow.example.com/api/webhooks/polar",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: polarEventBody(
+          "subscription.created",
+          polarSubscription({ id: "sub_9002_test" }),
+        ),
+      },
+    ),
+  );
+  assert.equal(unsignedRes.status, 401);
+
+  // 2. Product vs metadata plan-spoofing attack:
+  // Attacker pays for Starter Monthly but sets metadata.target_plan_id = "scale".
+  // Server MUST provision Starter Monthly based on product_id and ignore metadata.target_plan_id!
+  const spoofPayload = polarEventBody(
+    "subscription.created",
+    polarSubscription({
+      id: "sub_88001_test",
+      product_id: POLAR_TEST_PRODUCTS.starterMonthly,
+      metadata: {
         workspace_id: "ws_acme",
         actor_user_id: "usr_owner",
         target_plan_id: "scale",
         billing_interval: "annual",
       },
-    },
-    data: {
-      id: "88001",
-      type: "subscriptions",
-      attributes: {
-        store_id: 44001,
-        customer_id: 501,
-        order_id: 601,
-        variant_id: 1001, // Starter Monthly!
-        status: "active",
-        cancelled: false,
-        renews_at: "2026-11-14T00:00:00.000Z",
-        updated_at: "2026-10-14T12:00:00.000Z",
-      },
-    },
-  });
+    }),
+  );
 
   const spoofRes = await webhookHandler(
-    new Request(
-      "https://morrow.example.com/api/webhooks/lemonsqueezy",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Signature": computeLemonSqueezySignature(
-            spoofPayload,
-            env.LEMONSQUEEZY_WEBHOOK_SECRET,
-          ),
-        },
-        body: spoofPayload,
-      },
-    ),
+    polarWebhookRequest(env, spoofPayload, "msg_spoof"),
   );
   assert.equal(spoofRes.status, 200);
 
-  const subAfterSpoofAttempt =
-    await getWorkspaceSubscription(db, "ws_acme");
+  const subAfterSpoofAttempt = await getWorkspaceSubscription(
+    db,
+    "ws_acme",
+  );
   assert.equal(subAfterSpoofAttempt.planId, "starter");
   assert.equal(
     subAfterSpoofAttempt.billingInterval,
@@ -1482,8 +1640,53 @@ test("THE-28.5: webhook security, plan-spoofing defense, idempotency under repla
   );
   assert.equal(
     subAfterSpoofAttempt.providerSubscriptionId,
-    "88001",
+    "sub_88001_test",
   );
+
+  // 2b. Subscriptions from a different Polar organization are rejected
+  const foreignOrgPayload = polarEventBody(
+    "subscription.updated",
+    polarSubscription({
+      id: "sub_88001_test",
+      product: {
+        id: POLAR_TEST_PRODUCTS.scaleAnnual,
+        organization_id: "org_someone_else",
+      },
+      product_id: POLAR_TEST_PRODUCTS.scaleAnnual,
+      metadata: { workspace_id: "ws_acme" },
+    }),
+  );
+  const foreignOrgRes = await webhookHandler(
+    polarWebhookRequest(env, foreignOrgPayload, "msg_foreign"),
+  );
+  assert.equal(foreignOrgRes.status, 400);
+
+  // 2c. Unpaid (incomplete) subscriptions and unrelated events are ignored
+  const incompleteResult = await processPolarWebhook(
+    env,
+    polarWebhookParts(
+      env,
+      polarEventBody(
+        "subscription.created",
+        polarSubscription({
+          id: "sub_88002_test",
+          status: "incomplete",
+          metadata: { workspace_id: "ws_acme" },
+        }),
+      ),
+      "msg_incomplete",
+    ),
+  );
+  assert.equal(incompleteResult.outcome, "ignored_event");
+  const ignoredEventResult = await processPolarWebhook(
+    env,
+    polarWebhookParts(
+      env,
+      JSON.stringify({ type: "order.paid", data: {} }),
+      "msg_order",
+    ),
+  );
+  assert.equal(ignoredEventResult.outcome, "ignored_event");
 
   // 3. Replay / duplicate delivery protection:
   // Sending the exact same signed webhook again returns outcome: "duplicate" without adding duplicate billing events.
@@ -1493,15 +1696,9 @@ test("THE-28.5: webhook security, plan-spoofing defense, idempotency under repla
     )
     .get().count;
 
-  const replayResult = await processLemonSqueezyWebhook(
+  const replayResult = await processPolarWebhook(
     env,
-    {
-      rawBody: spoofPayload,
-      signatureHeader: computeLemonSqueezySignature(
-        spoofPayload,
-        env.LEMONSQUEEZY_WEBHOOK_SECRET,
-      ),
-    },
+    polarWebhookParts(env, spoofPayload, "msg_spoof"),
   );
   assert.equal(replayResult.outcome, "duplicate");
 
@@ -1513,43 +1710,19 @@ test("THE-28.5: webhook security, plan-spoofing defense, idempotency under repla
   assert.equal(eventsAfterReplay, eventsBeforeReplay);
 
   // 4. Cross-workspace subscription hijacking attempt:
-  // Trying to bind subscription "88001" (already bound to ws_acme) to secondWorkspaceId is rejected with 409!
-  const hijackPayload = JSON.stringify({
-    meta: {
-      event_name: "subscription_updated",
-      custom_data: {
-        workspace_id: secondWorkspaceId,
-      },
-    },
-    data: {
-      id: "88001",
-      type: "subscriptions",
-      attributes: {
-        store_id: 44001,
-        variant_id: 3002,
-        status: "active",
-        cancelled: false,
-        renews_at: "2026-11-14T00:00:00.000Z",
-        updated_at: "2026-10-14T12:05:00.000Z",
-      },
-    },
-  });
+  // Trying to bind subscription "sub_88001_test" (already bound to ws_acme) to secondWorkspaceId is rejected with 409!
+  const hijackPayload = polarEventBody(
+    "subscription.updated",
+    polarSubscription({
+      id: "sub_88001_test",
+      product_id: POLAR_TEST_PRODUCTS.scaleAnnual,
+      modified_at: "2026-10-14T12:05:00.000Z",
+      metadata: { workspace_id: secondWorkspaceId },
+    }),
+  );
 
   const hijackRes = await webhookHandler(
-    new Request(
-      "https://morrow.example.com/api/webhooks/lemonsqueezy",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Signature": computeLemonSqueezySignature(
-            hijackPayload,
-            env.LEMONSQUEEZY_WEBHOOK_SECRET,
-          ),
-        },
-        body: hijackPayload,
-      },
-    ),
+    polarWebhookRequest(env, hijackPayload, "msg_hijack"),
   );
   assert.equal(hijackRes.status, 409);
 
@@ -1562,73 +1735,46 @@ test("THE-28.5: webhook security, plan-spoofing defense, idempotency under repla
   assert.equal(secondWsSub.providerSubscriptionId, null);
 
   // 5. Out-of-order webhook race condition:
-  // Newer webhook (Scale Annual, updated_at 12:20:00Z) arrives BEFORE older webhook (Growth Monthly, updated_at 12:10:00Z).
-  const newerScalePayload = JSON.stringify({
-    meta: {
-      event_name: "subscription_updated",
-      custom_data: { workspace_id: "ws_acme" },
-    },
-    data: {
-      id: "88001",
-      type: "subscriptions",
-      attributes: {
-        store_id: 44001,
-        variant_id: 3002, // Scale Annual
-        status: "active",
-        cancelled: false,
-        renews_at: "2027-10-14T00:00:00.000Z",
-        updated_at: "2026-10-14T12:20:00.000Z",
-      },
-    },
-  });
+  // Newer webhook (Scale Annual, modified_at 12:20:00Z) arrives BEFORE older webhook (Growth Monthly, modified_at 12:10:00Z).
+  const newerScalePayload = polarEventBody(
+    "subscription.updated",
+    polarSubscription({
+      id: "sub_88001_test",
+      product_id: POLAR_TEST_PRODUCTS.scaleAnnual,
+      current_period_end: "2027-10-14T00:00:00.000Z",
+      modified_at: "2026-10-14T12:20:00.000Z",
+      metadata: { workspace_id: "ws_acme" },
+    }),
+  );
 
-  const olderGrowthPayload = JSON.stringify({
-    meta: {
-      event_name: "subscription_updated",
-      custom_data: { workspace_id: "ws_acme" },
-    },
-    data: {
-      id: "88001",
-      type: "subscriptions",
-      attributes: {
-        store_id: 44001,
-        variant_id: 2001, // Growth Monthly (stale!)
-        status: "active",
-        cancelled: false,
-        renews_at: "2026-11-14T00:00:00.000Z",
-        updated_at: "2026-10-14T12:10:00.000Z",
-      },
-    },
-  });
+  const olderGrowthPayload = polarEventBody(
+    "subscription.updated",
+    polarSubscription({
+      id: "sub_88001_test",
+      product_id: POLAR_TEST_PRODUCTS.growthMonthly, // stale!
+      modified_at: "2026-10-14T12:10:00.000Z",
+      metadata: { workspace_id: "ws_acme" },
+    }),
+  );
 
-  const newerResult = await processLemonSqueezyWebhook(
+  const newerResult = await processPolarWebhook(
     env,
-    {
-      rawBody: newerScalePayload,
-      signatureHeader: computeLemonSqueezySignature(
-        newerScalePayload,
-        env.LEMONSQUEEZY_WEBHOOK_SECRET,
-      ),
-    },
+    polarWebhookParts(env, newerScalePayload, "msg_newer"),
   );
   assert.equal(newerResult.outcome, "processed");
   assert.equal(newerResult.planId, "scale");
 
   // Now the delayed older webhook arrives — it MUST be ignored as stale and NOT overwrite Scale!
-  const staleResult = await processLemonSqueezyWebhook(
+  const staleResult = await processPolarWebhook(
     env,
-    {
-      rawBody: olderGrowthPayload,
-      signatureHeader: computeLemonSqueezySignature(
-        olderGrowthPayload,
-        env.LEMONSQUEEZY_WEBHOOK_SECRET,
-      ),
-    },
+    polarWebhookParts(env, olderGrowthPayload, "msg_older"),
   );
   assert.equal(staleResult.outcome, "ignored_stale");
 
-  const subAfterStaleWebhook =
-    await getWorkspaceSubscription(db, "ws_acme");
+  const subAfterStaleWebhook = await getWorkspaceSubscription(
+    db,
+    "ws_acme",
+  );
   assert.equal(subAfterStaleWebhook.planId, "scale");
   assert.equal(
     subAfterStaleWebhook.billingInterval,
@@ -1636,11 +1782,14 @@ test("THE-28.5: webhook security, plan-spoofing defense, idempotency under repla
   );
 });
 
-test("THE-28.5: active Lemon Squeezy subscription upgrades, failed-payment upgrade block, cancellation grace period, and post-expiry fallback to Free", async (t) => {
+test("THE-28.5: active Polar subscription upgrades, failed-payment upgrade block, cancellation grace period, and post-expiry fallback to Free", async (t) => {
   const { db, sqlite } = createD1Fixture(t);
-  const env = createLemonSqueezyTestEnv(db);
+  const polarEnv = createPolarTestEnv(db, {
+    POLAR_CUSTOMER_PORTAL_URL:
+      "https://polar.sh/morrow/portal",
+  });
 
-  // Seed ws_acme with an active Growth Monthly subscription on Lemon Squeezy (#99001)
+  // Seed ws_acme with an active Growth Monthly subscription on Polar
   sqlite
     .prepare(
       `
@@ -1649,8 +1798,8 @@ test("THE-28.5: active Lemon Squeezy subscription upgrades, failed-payment upgra
           plan_id = 'growth',
           status = 'active',
           billing_interval = 'monthly',
-          provider_subscription_id = '99001',
-          provider_variant_id = '2001',
+          provider_subscription_id = 'sub_99001_test',
+          provider_variant_id = '${POLAR_TEST_PRODUCTS.growthMonthly}',
           provider_status = 'active',
           current_period_end = '2026-11-14T00:00:00.000Z'
         WHERE workspace_id = 'ws_acme'
@@ -1675,12 +1824,12 @@ test("THE-28.5: active Lemon Squeezy subscription upgrades, failed-payment upgra
     )
     .run();
 
-  // 1. If Lemon Squeezy reports the subscription is past_due when attempting an upgrade,
+  // 1. If Polar reports the subscription is past_due when attempting an upgrade,
   // the upgrade is blocked so unpaid accounts cannot upgrade to Scale!
   await assert.rejects(
     () =>
       initiateOrUpdateWorkspaceSubscription(
-        env,
+        polarEnv,
         {
           actorUserId: "usr_owner",
           workspaceId: "ws_acme",
@@ -1688,31 +1837,23 @@ test("THE-28.5: active Lemon Squeezy subscription upgrades, failed-payment upgra
           billingInterval: "monthly",
         },
         async () =>
-          new Response(
-            JSON.stringify({
-              data: {
-                id: "99001",
-                attributes: {
-                  store_id: 44001,
-                  variant_id: 2001,
-                  status: "past_due",
-                  cancelled: false,
-                  renews_at: "2026-11-14T00:00:00.000Z",
-                },
-              },
+          jsonResponse(
+            polarSubscription({
+              id: "sub_99001_test",
+              product_id: POLAR_TEST_PRODUCTS.growthMonthly,
+              status: "past_due",
             }),
-            { status: 200 },
           ),
       ),
     /past-due payment/,
   );
 
-  // 2. Valid in-place upgrade from Growth Monthly (2001) to Scale Annual (3002)
-  // verifies GET + PATCH with invoice_immediately: true
-  let patchBodyReceived = null;
+  // 2. Valid in-place upgrade from Growth Monthly to Scale Annual
+  // verifies GET + PATCH with proration_behavior: "invoice"
+  const requests = [];
   const upgradeResult =
     await initiateOrUpdateWorkspaceSubscription(
-      env,
+      polarEnv,
       {
         actorUserId: "usr_owner",
         workspaceId: "ws_acme",
@@ -1720,61 +1861,45 @@ test("THE-28.5: active Lemon Squeezy subscription upgrades, failed-payment upgra
         billingInterval: "annual",
       },
       async (url, init) => {
+        requests.push({
+          url,
+          method: init?.method,
+          body: init?.body ? JSON.parse(init.body) : null,
+        });
         if (init?.method === "GET") {
-          return new Response(
-            JSON.stringify({
-              data: {
-                id: "99001",
-                attributes: {
-                  store_id: 44001,
-                  variant_id: 2001,
-                  status: "active",
-                  cancelled: false,
-                  renews_at: "2026-11-14T00:00:00.000Z",
-                },
-              },
+          return jsonResponse(
+            polarSubscription({
+              id: "sub_99001_test",
+              product_id: POLAR_TEST_PRODUCTS.growthMonthly,
             }),
-            { status: 200 },
           );
         }
 
-        patchBodyReceived = JSON.parse(init.body);
-        return new Response(
-          JSON.stringify({
-            data: {
-              id: "99001",
-              attributes: {
-                store_id: 44001,
-                customer_id: 777,
-                order_id: 888,
-                variant_id: 3002,
-                status: "active",
-                cancelled: false,
-                renews_at: "2027-10-14T00:00:00.000Z",
-                updated_at: "2026-10-14T15:00:00.000Z",
-                urls: {
-                  customer_portal:
-                    "https://morrow.lemonsqueezy.com/billing",
-                  update_payment_method:
-                    "https://morrow.lemonsqueezy.com/billing/payment-method",
-                },
-              },
-            },
+        return jsonResponse(
+          polarSubscription({
+            id: "sub_99001_test",
+            customer_id: "cus_777_test",
+            product_id: POLAR_TEST_PRODUCTS.scaleAnnual,
+            current_period_end: "2027-10-14T00:00:00.000Z",
+            modified_at: "2026-10-14T15:00:00.000Z",
           }),
-          { status: 200 },
         );
       },
     );
 
+  const patchRequest = requests.find(
+    (request) => request.method === "PATCH",
+  );
+  assert.equal(
+    patchRequest.url,
+    "https://api.polar.sh/v1/subscriptions/sub_99001_test",
+  );
   assert.equal(upgradeResult.mode, "updated_in_place");
   assert.equal(
-    patchBodyReceived.data.attributes.variant_id,
-    3002,
+    patchRequest.body.product_id,
+    POLAR_TEST_PRODUCTS.scaleAnnual,
   );
-  assert.equal(
-    patchBodyReceived.data.attributes.invoice_immediately,
-    true,
-  );
+  assert.equal(patchRequest.body.proration_behavior, "invoice");
   assert.equal(upgradeResult.subscription.planId, "scale");
   assert.equal(
     upgradeResult.subscription.billingInterval,
@@ -1782,37 +1907,68 @@ test("THE-28.5: active Lemon Squeezy subscription upgrades, failed-payment upgra
   );
   assert.equal(
     upgradeResult.subscription.providerCustomerPortalUrl,
-    "https://morrow.lemonsqueezy.com/billing",
+    "https://polar.sh/morrow/portal",
   );
 
-  // 3. Schedule cancellation at period end via Lemon Squeezy API
+  // 2b. A PATCH response that does not confirm the requested product is rejected
+  await assert.rejects(
+    () =>
+      initiateOrUpdateWorkspaceSubscription(
+        polarEnv,
+        {
+          actorUserId: "usr_owner",
+          workspaceId: "ws_acme",
+          planId: "growth",
+          billingInterval: "annual",
+        },
+        async () =>
+          jsonResponse(
+            polarSubscription({
+              id: "sub_99001_test",
+              product_id: POLAR_TEST_PRODUCTS.scaleAnnual,
+              current_period_end: "2027-10-14T00:00:00.000Z",
+            }),
+          ),
+      ),
+    /did not confirm/,
+  );
+
+  // 3. Schedule cancellation at period end via Polar API
+  const cancelRequests = [];
   const cancelResult =
-    await updateWorkspaceSubscriptionCancellationWithLemonSqueezy(
-      env,
+    await updateWorkspaceSubscriptionCancellationWithPolar(
+      polarEnv,
       {
         actorUserId: "usr_owner",
         workspaceId: "ws_acme",
         cancelAtPeriodEnd: true,
       },
-      async () =>
-        new Response(
-          JSON.stringify({
-            data: {
-              id: "99001",
-              attributes: {
-                store_id: 44001,
-                variant_id: 3002,
-                status: "cancelled",
-                cancelled: true,
-                ends_at: "2027-10-14T00:00:00.000Z",
-                updated_at: "2026-10-14T15:05:00.000Z",
-              },
-            },
+      async (url, init) => {
+        cancelRequests.push({
+          method: init?.method,
+          body: init?.body ? JSON.parse(init.body) : null,
+        });
+        return jsonResponse(
+          polarSubscription({
+            id: "sub_99001_test",
+            product_id: POLAR_TEST_PRODUCTS.scaleAnnual,
+            cancel_at_period_end: init?.method === "PATCH",
+            current_period_end: "2027-10-14T00:00:00.000Z",
+            ends_at:
+              init?.method === "PATCH"
+                ? "2027-10-14T00:00:00.000Z"
+                : null,
+            modified_at: "2026-10-14T15:05:00.000Z",
           }),
-          { status: 200 },
-        ),
+        );
+      },
     );
 
+  assert.deepEqual(
+    cancelRequests.find((request) => request.method === "PATCH")
+      .body,
+    { cancel_at_period_end: true },
+  );
   assert.equal(
     cancelResult.subscription.cancelAtPeriodEnd,
     true,
@@ -1836,16 +1992,15 @@ test("THE-28.5: active Lemon Squeezy subscription upgrades, failed-payment upgra
     )
     .run();
 
-  const expiredEntitlements =
-    await getWorkspaceEntitlements(db, "ws_acme");
+  const expiredEntitlements = await getWorkspaceEntitlements(
+    db,
+    "ws_acme",
+  );
   assert.equal(
     expiredEntitlements.subscriptionStatus,
     "canceled",
   );
-  assert.equal(
-    expiredEntitlements.effectivePlanId,
-    "free",
-  );
+  assert.equal(expiredEntitlements.effectivePlanId, "free");
 
   await assert.rejects(
     () =>
@@ -1859,8 +2014,8 @@ test("THE-28.5: active Lemon Squeezy subscription upgrades, failed-payment upgra
 
   await assert.rejects(
     () =>
-      updateWorkspaceSubscriptionCancellationWithLemonSqueezy(
-        env,
+      updateWorkspaceSubscriptionCancellationWithPolar(
+        polarEnv,
         {
           actorUserId: "usr_owner",
           workspaceId: "ws_acme",
@@ -1870,39 +2025,28 @@ test("THE-28.5: active Lemon Squeezy subscription upgrades, failed-payment upgra
     /already expired/,
   );
 
-  // 5. When subscription_expired webhook arrives, plan_id resets to 'free', hourly pages normalize to 1440m, and custom CSS selectors are cleared
-  const expiredWebhookPayload = JSON.stringify({
-    meta: {
-      event_name: "subscription_expired",
-      custom_data: { workspace_id: "ws_acme" },
-    },
-    data: {
-      id: "99001",
-      type: "subscriptions",
-      attributes: {
-        store_id: 44001,
-        variant_id: 3002,
-        status: "expired",
-        cancelled: true,
-        ends_at: "2026-10-14T16:00:00.000Z",
-        updated_at: "2026-10-14T16:00:00.000Z",
-      },
-    },
-  });
-
-  const expiredResult = await processLemonSqueezyWebhook(
-    env,
-    {
-      rawBody: expiredWebhookPayload,
-      signatureHeader: computeLemonSqueezySignature(
-        expiredWebhookPayload,
-        env.LEMONSQUEEZY_WEBHOOK_SECRET,
-      ),
-    },
+  // 5. When subscription.revoked webhook arrives, plan_id resets to 'free', hourly pages normalize to 1440m, and custom CSS selectors are cleared
+  const revokedWebhookPayload = polarEventBody(
+    "subscription.revoked",
+    polarSubscription({
+      id: "sub_99001_test",
+      product_id: POLAR_TEST_PRODUCTS.scaleAnnual,
+      status: "canceled",
+      cancel_at_period_end: false,
+      ends_at: "2026-10-14T16:00:00.000Z",
+      ended_at: "2026-10-14T16:00:00.000Z",
+      modified_at: "2026-10-14T16:00:00.000Z",
+      metadata: { workspace_id: "ws_acme" },
+    }),
   );
-  assert.equal(expiredResult.outcome, "processed");
-  assert.equal(expiredResult.planId, "free");
-  assert.equal(expiredResult.status, "canceled");
+
+  const revokedResult = await processPolarWebhook(
+    polarEnv,
+    polarWebhookParts(polarEnv, revokedWebhookPayload, "msg_revoked"),
+  );
+  assert.equal(revokedResult.outcome, "processed");
+  assert.equal(revokedResult.planId, "free");
+  assert.equal(revokedResult.status, "canceled");
 
   const pageAfterExpiry = sqlite
     .prepare(
@@ -2354,11 +2498,11 @@ test("THE-28.7: user-facing error sanitizer masks RSC render/digest errors, .env
     DEFAULT_USER_FACING_ERROR_MESSAGE,
   );
 
-  // Unconfigured Lemon Squeezy / .env.local errors map to a polite customer-facing message
+  // Unconfigured Polar / .env.local errors map to a polite customer-facing message
   assert.equal(
     toUserFacingErrorMessage(
       new Error(
-        "Lemon Squeezy payment integration is not configured yet. Replace the placeholder LEMONSQUEEZY_* values in .env.local to enable live checkouts and plan changes.",
+        "Polar payment integration is not configured yet. Replace the placeholder POLAR_* values in .env.local to enable live checkouts and plan changes.",
       ),
     ),
     BILLING_UNAVAILABLE_USER_FACING_MESSAGE,
@@ -2366,7 +2510,7 @@ test("THE-28.7: user-facing error sanitizer masks RSC render/digest errors, .env
   assert.equal(
     toUserFacingErrorMessage(
       new Error(
-        "Lemon Squeezy variant ID is not configured for the Personal (monthly) plan. Set LEMONSQUEEZY_PERSONAL_MONTHLY_VARIANT_ID in .env.local.",
+        "Polar product ID is not configured for the Personal (monthly) plan. Set POLAR_PERSONAL_MONTHLY_PRODUCT_ID in .env.local.",
       ),
     ),
     BILLING_UNAVAILABLE_USER_FACING_MESSAGE,
@@ -2376,7 +2520,7 @@ test("THE-28.7: user-facing error sanitizer masks RSC render/digest errors, .env
   assert.equal(
     toUserFacingErrorMessage(
       new Error(
-        "Lemon Squeezy checkout creation failed: HTTP 502",
+        "Polar checkout creation failed: HTTP 502",
       ),
     ),
     BILLING_PROVIDER_CONNECTION_USER_FACING_MESSAGE,

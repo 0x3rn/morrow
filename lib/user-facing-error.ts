@@ -13,29 +13,29 @@ export const BILLING_PROVIDER_CONNECTION_USER_FACING_MESSAGE =
   "We couldn't connect to our billing provider right now. Please try again in a moment.";
 
 const BILLING_CONFIGURATION_PATTERNS: readonly RegExp[] = [
-  /Lemon Squeezy payment integration is not configured/i,
-  /Lemon Squeezy variant ID is not configured/i,
-  /Lemon Squeezy payment configuration is incomplete/i,
-  /Lemon Squeezy API configuration is missing/i,
-  /Duplicate Lemon Squeezy variant ID/i,
-  /must be a positive numeric Lemon Squeezy ID/i,
-  /\bLEMONSQUEEZY_[A-Z0-9_]+\b/,
+  /Polar payment integration is not configured/i,
+  /Polar product ID is not configured/i,
+  /Polar payment configuration is incomplete/i,
+  /Polar API configuration is missing/i,
+  /Duplicate Polar product ID/i,
+  /must be a valid Polar ID/i,
+  /\bPOLAR_[A-Z0-9_]+\b/,
 ];
 
 const BILLING_PROVIDER_UPSTREAM_PATTERNS: readonly RegExp[] =
   [
-    /Lemon Squeezy checkout creation failed/i,
-    /Lemon Squeezy checkout response/i,
-    /Failed to verify subscription with Lemon Squeezy/i,
-    /Lemon Squeezy subscription update failed/i,
-    /Lemon Squeezy subscription store ID/i,
-    /Invalid Lemon Squeezy subscription response/i,
-    /Lemon Squeezy response is missing/i,
-    /Lemon Squeezy subscription response is missing/i,
-    /Unrecognized Lemon Squeezy subscription status/i,
-    /Lemon Squeezy did not confirm/i,
-    /Lemon Squeezy subscription could not be upgraded because its status is/i,
-    /must point to an official lemonsqueezy\.com domain/i,
+    /Polar checkout creation failed/i,
+    /Polar checkout response/i,
+    /Failed to verify subscription with Polar/i,
+    /Polar subscription update failed/i,
+    /Polar subscription organization ID/i,
+    /Invalid Polar subscription response/i,
+    /Polar response is missing/i,
+    /Polar subscription response is missing/i,
+    /Unrecognized Polar subscription status/i,
+    /Polar did not confirm/i,
+    /Polar subscription could not be upgraded because its status is/i,
+    /must point to an official polar\.sh domain/i,
     /Checkout URL is missing or invalid/i,
     /Checkout URL must use HTTPS/i,
   ];
@@ -172,7 +172,7 @@ export function toUserFacingErrorMessage(
   }
 
   if (
-    /Your Lemon Squeezy subscription has expired/i.test(
+    /Your Polar subscription has expired/i.test(
       normalized,
     )
   ) {
@@ -180,7 +180,7 @@ export function toUserFacingErrorMessage(
   }
 
   if (
-    /Lemon Squeezy reported that this subscription has already expired/i.test(
+    /Polar reported that this subscription has already expired/i.test(
       normalized,
     )
   ) {
@@ -188,7 +188,7 @@ export function toUserFacingErrorMessage(
   }
 
   if (
-    /No active Lemon Squeezy subscription is linked to this workspace/i.test(
+    /No active Polar subscription is linked to this workspace/i.test(
       normalized,
     )
   ) {

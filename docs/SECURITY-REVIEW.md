@@ -29,7 +29,7 @@ Ready. Authorization, SQL parameterisation, webhook signature handling and outpu
 | 11 | Low | Telegram `@username` linking trusts handshake rows (no proof the user owns the username) | Accepted risk (decision recorded) |
 | 12 | Low | Runtime `CREATE TABLE IF NOT EXISTS` for Telegram tables outside migrations | Accepted (no security impact; deferred) |
 | 13 | Low | Webhook and bot secrets stored in plaintext in `config_json` | Accepted risk (decision recorded) |
-| 14 | Low | Lemon Squeezy webhook reads an unbounded body before signature check | Fixed |
+| 14 | Low | Polar webhook reads an unbounded body before signature check | Fixed |
 | 15 | Low | Slack mrkdwn built from competitor page text is not escaped | Not a finding (already escaped) |
 | 16 | Low | 2FA email code search space is limited per IP only (lockout exists) | Info |
 | 17 | Info | Error sanitiser is a deny-list | Info |
@@ -73,7 +73,7 @@ Decisions made in the follow-up pass, in finding order:
 - **11 Telegram username linking (accepted).** Alerts only go to a chat that has started the bot, workspace admins choose the destination, and forged handshakes are blocked now that the webhook requires its secret.
 - **12 Runtime DDL (accepted).** Idempotent `CREATE TABLE IF NOT EXISTS`; moving it to a migration has no security effect and adds a production migration step, so it is deferred.
 - **13 Plaintext channel secrets (accepted).** Encrypting `config_json` needs a new key and a data migration. The values are never returned to the client. Revisit with the better-auth migration.
-- **14 Webhook body (fixed).** Bodies over 1 MiB are rejected with 413 before signature verification, by `Content-Length` and by a bounded read. Test: `tests/lemonsqueezy-webhook-limits.test.mjs` (2 of 3 fail without the fix).
+- **14 Webhook body (fixed).** Bodies over 1 MiB are rejected with 413 before signature verification, by `Content-Length` and by a bounded read. Test: `tests/polar-webhook-limits.test.mjs` (2 of 3 fail without the fix).
 - **15 Slack escaping (not a finding).** `escapeSlackMrkdwn` already escapes `&`, `<` and `>` on every page-derived field in `worker/external-delivery.ts`.
 
 The sections below keep the original analysis for reference.
@@ -117,7 +117,7 @@ Where: `lib/telegram-bot.ts:266,284` run `CREATE TABLE IF NOT EXISTS` on request
 Where: `external_notification_channels.config_json` holds webhook signing secrets and bot tokens (`lib/notification-settings.ts`). A D1 export or a SQL injection would expose them. Fix: encrypt with a key from a Worker secret, or at minimum never return them to the client (they currently are not).
 
 ### [Low] 14. Webhook body size
-Where: `lib/lemonsqueezy.ts:3059` `await request.text()` before the signature check. Fix: reject bodies over about 1 MB using `Content-Length` and a bounded read, before hashing. The signature check itself is correct (HMAC-SHA256 over the raw body, constant-time compare, store ID check, delivery key replay protection).
+Where: `lib/polar.ts` `await request.text()` before the signature check. Fix: reject bodies over about 1 MB using `Content-Length` and a bounded read, before hashing. The signature check itself is correct (HMAC-SHA256 over the raw body, constant-time compare, store ID check, delivery key replay protection).
 
 ### [Info] 16. Two-factor brute force
 `twoFactor` uses 6-digit emailed codes, 5 attempts per code, 3 sends per minute per IP, plus Better Auth's account lockout (10 failures, 15 minutes). An attacker who already knows the password and has many IPs is limited mainly by the lockout, which depends on a `two_factors` row existing for the user. I did not verify that row is created for every account because the 2FA enable endpoint is disabled; check that lockout actually triggers (create a user, fail 10 codes, expect `ACCOUNT_TEMPORARILY_LOCKED`). Rate limiting for the login endpoints is IP based and stored in D1 (read-modify-write), so concurrent bursts can exceed the limit slightly.
@@ -131,9 +131,9 @@ Where: `lib/lemonsqueezy.ts:3059` `await request.text()` before the signature ch
 
 - Authorization: every route handler and server action authenticates inside the handler. `/api/changes/[changeId]/screenshot/[side]` and `/api/snapshots/[snapshotId]/screenshot` join through `competitors.workspace_id` to `workspace_members` for the session user (no IDOR; `side` validated; R2 keys come from the database, not the request). `/api/account` checks Origin equality, JSON content type, a 4 KB limit, a verified session, binds every challenge to user, session and original email, and rate-limits sends and verifications per user. Server actions in competitors, pages, team, billing and notifications use `workspace_members` ownership joins and role helpers (`canEditMonitoring`, `canDeleteMonitoringResources`, `canManageWorkspaceChannels`, `canManageWorkspaceBilling` = owner only). Dashboard pages (changes, pages history/snapshots, competitor pages) 404 unless the user is a member of the workspace.
 - SQL: a script that scans every `.prepare(` call found no user-controlled interpolation. The only `${}` uses are `?` placeholder lists (`placeholders`, `peerPlaceholders`), the constant `CLAIM_MINUTES`, and the fixed condition list in `app/dashboard/changes/page.tsx` (values are bound, LIKE patterns escaped).
-- Webhooks: Lemon Squeezy verifies HMAC-SHA256 over the raw body with `timingSafeEqual`, rejects short or placeholder secrets, checks the store ID, claims each delivery atomically (`billing_webhook_deliveries`, duplicates and stale events ignored), restricts checkout URLs to `lemonsqueezy.com`. Checkout is created server-side; plan and price come from server configuration.
+- Webhooks: Polar (Standard Webhooks) verifies HMAC-SHA256 over `webhook-id.webhook-timestamp.body` with `timingSafeEqual`, rejects stale timestamps and short or placeholder secrets, checks the organization ID, claims each delivery atomically (`billing_webhook_deliveries`, duplicates and stale events ignored), restricts checkout URLs to `lemonsqueezy.com`. Checkout is created server-side; plan and price come from server configuration.
 - Email output: change and digest emails escape all page-derived text with `escapeHtml`; auth codes are validated as six digits before sending.
-- Open redirects: no user-controlled redirect targets; `next.config.ts` redirects are static; the checkout redirect only follows `https://` URLs produced by the server and validated against `lemonsqueezy.com`.
+- Open redirects: no user-controlled redirect targets; `next.config.ts` redirects are static; the checkout redirect only follows `https://` URLs produced by the server and validated against `polar.sh`.
 - CSRF: server actions use vinext's Origin versus Host check and cookies are Better Auth defaults (SameSite Lax); `/api/account` enforces an exact Origin; Better Auth enforces `trustedOrigins` (only the configured origin).
 - Disabled Better Auth endpoints: password change, reset, email change, `update-user`, 2FA enable/disable, backup codes, email-OTP sign-in. The login flow requires password, email verification and an emailed code on every sign-in (`trustDevice` rejected).
 - Secrets: `.env*` and `.dev.vars` are ignored; logs contain IDs and counts, not tokens or message bodies. `NEXT_PUBLIC_*` is not used.

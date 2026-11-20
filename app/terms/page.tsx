@@ -266,7 +266,7 @@ export default function TermsPage() {
           <li>
             <strong>Advance Billing &amp; Payment Processor:</strong> Paid subscriptions are billed
             in advance on a recurring monthly or annual basis. Commercial payments and invoicing are
-            processed via Lemon Squeezy acting as Merchant of Record. By subscribing, you authorize
+            processed via Polar acting as Merchant of Record. By subscribing, you authorize
             recurring charges to your designated payment method until cancelled.
           </li>
           <li>

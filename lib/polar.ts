@@ -34,42 +34,53 @@ import {
 } from "./workspace-billing.ts";
 import { canManageWorkspaceBilling } from "./workspace-roles.ts";
 
-const LEMONSQUEEZY_API_BASE_URL =
-  "https://api.lemonsqueezy.com/v1";
+const POLAR_PRODUCTION_API_BASE_URL = "https://api.polar.sh/v1";
+const POLAR_SANDBOX_API_BASE_URL =
+  "https://sandbox-api.polar.sh/v1";
 const LOCAL_DEFAULT_APP_URL = "http://localhost:3001";
+const WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS = 5 * 60;
 
 type D1PreparedStatementLike = ReturnType<
   D1DatabaseLike["prepare"]
 >;
 
-export interface LemonSqueezyRuntimeEnv {
+export interface PolarRuntimeEnv {
   DB: D1DatabaseLike;
   MORROW_APP_URL?: string;
   BETTER_AUTH_URL?: string;
-  LEMONSQUEEZY_API_KEY?: string;
-  LEMONSQUEEZY_STORE_ID?: string;
-  LEMONSQUEEZY_WEBHOOK_SECRET?: string;
-  LEMONSQUEEZY_PERSONAL_MONTHLY_VARIANT_ID?: string;
-  LEMONSQUEEZY_PERSONAL_ANNUAL_VARIANT_ID?: string;
-  LEMONSQUEEZY_STARTER_MONTHLY_VARIANT_ID?: string;
-  LEMONSQUEEZY_STARTER_ANNUAL_VARIANT_ID?: string;
-  LEMONSQUEEZY_GROWTH_MONTHLY_VARIANT_ID?: string;
-  LEMONSQUEEZY_GROWTH_ANNUAL_VARIANT_ID?: string;
-  LEMONSQUEEZY_SCALE_MONTHLY_VARIANT_ID?: string;
-  LEMONSQUEEZY_SCALE_ANNUAL_VARIANT_ID?: string;
+  /** Organization Access Token created in Polar (Settings -> Developers). */
+  POLAR_ACCESS_TOKEN?: string;
+  /** Polar organization ID (UUID). Used to verify products and webhooks. */
+  POLAR_ORGANIZATION_ID?: string;
+  /** Webhook endpoint secret configured in Polar. */
+  POLAR_WEBHOOK_SECRET?: string;
+  /** "production" (default) or "sandbox". */
+  POLAR_SERVER?: string;
+  /** Optional customer portal URL, e.g. https://polar.sh/<org-slug>/portal */
+  POLAR_CUSTOMER_PORTAL_URL?: string;
+  POLAR_PERSONAL_MONTHLY_PRODUCT_ID?: string;
+  POLAR_PERSONAL_ANNUAL_PRODUCT_ID?: string;
+  POLAR_STARTER_MONTHLY_PRODUCT_ID?: string;
+  POLAR_STARTER_ANNUAL_PRODUCT_ID?: string;
+  POLAR_GROWTH_MONTHLY_PRODUCT_ID?: string;
+  POLAR_GROWTH_ANNUAL_PRODUCT_ID?: string;
+  POLAR_SCALE_MONTHLY_PRODUCT_ID?: string;
+  POLAR_SCALE_ANNUAL_PRODUCT_ID?: string;
 }
 
-export interface LemonSqueezyConfig {
+export interface PolarConfig {
   isConfigured: boolean;
-  apiKey: string | null;
-  storeId: string | null;
+  accessToken: string | null;
+  organizationId: string | null;
   webhookSecret: string | null;
+  apiBaseUrl: string;
+  customerPortalUrl: string | null;
   appOrigin: string;
-  variants: Record<
+  products: Record<
     BillingPlanId,
     Record<BillingInterval, string | null>
   >;
-  variantToPlanMap: Map<
+  productToPlanMap: Map<
     string,
     {
       planId: BillingPlanId;
@@ -78,19 +89,19 @@ export interface LemonSqueezyConfig {
   >;
 }
 
-export class LemonSqueezyWebhookAuthError extends Error {
+export class PolarWebhookAuthError extends Error {
   readonly statusCode = 401;
   constructor(message: string) {
     super(message);
-    this.name = "LemonSqueezyWebhookAuthError";
+    this.name = "PolarWebhookAuthError";
   }
 }
 
-export class LemonSqueezyWebhookValidationError extends Error {
+export class PolarWebhookValidationError extends Error {
   readonly statusCode: number;
   constructor(message: string, statusCode = 400) {
     super(message);
-    this.name = "LemonSqueezyWebhookValidationError";
+    this.name = "PolarWebhookValidationError";
     this.statusCode = statusCode;
   }
 }
@@ -118,8 +129,8 @@ export function isPlaceholderEnvValue(
 }
 
 function readCleanEnvString(
-  runtimeEnv: Partial<LemonSqueezyRuntimeEnv> | undefined,
-  key: keyof Omit<LemonSqueezyRuntimeEnv, "DB">,
+  runtimeEnv: Partial<PolarRuntimeEnv> | undefined,
+  key: keyof Omit<PolarRuntimeEnv, "DB">,
 ): string | null {
   const fromRuntime = runtimeEnv?.[key];
   const fromProcess =
@@ -142,7 +153,11 @@ function readCleanEnvString(
   return trimmed;
 }
 
-function normalizeNumericProviderId(
+/**
+ * Polar identifiers are UUIDs. They are interpolated into API URLs and stored in D1,
+ * so only a conservative character set is accepted.
+ */
+function normalizeProviderId(
   value: string | null,
   fieldName: string,
 ): string | null {
@@ -150,9 +165,9 @@ function normalizeNumericProviderId(
     return null;
   }
 
-  if (!/^[1-9]\d*$/.test(value)) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$/.test(value)) {
     throw new Error(
-      `${fieldName} must be a positive numeric Lemon Squeezy ID.`,
+      `${fieldName} must be a valid Polar ID (UUID).`,
     );
   }
 
@@ -160,7 +175,7 @@ function normalizeNumericProviderId(
 }
 
 function resolveCanonicalAppOrigin(
-  runtimeEnv?: Partial<LemonSqueezyRuntimeEnv>,
+  runtimeEnv?: Partial<PolarRuntimeEnv>,
 ): string {
   const candidate =
     readCleanEnvString(runtimeEnv, "MORROW_APP_URL") ||
@@ -188,104 +203,101 @@ function resolveCanonicalAppOrigin(
   return parsed.origin;
 }
 
-export function resolveLemonSqueezyConfig(
-  runtimeEnv?: Partial<LemonSqueezyRuntimeEnv>,
-): LemonSqueezyConfig {
-  const apiKey = readCleanEnvString(
+function resolveCustomerPortalUrl(
+  runtimeEnv?: Partial<PolarRuntimeEnv>,
+): string | null {
+  const raw = readCleanEnvString(
     runtimeEnv,
-    "LEMONSQUEEZY_API_KEY",
+    "POLAR_CUSTOMER_PORTAL_URL",
   );
-  const storeId = normalizeNumericProviderId(
-    readCleanEnvString(
-      runtimeEnv,
-      "LEMONSQUEEZY_STORE_ID",
-    ),
-    "LEMONSQUEEZY_STORE_ID",
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(raw);
+    const host = parsed.hostname.toLowerCase();
+    if (
+      parsed.protocol === "https:" &&
+      (host === "polar.sh" || host.endsWith(".polar.sh"))
+    ) {
+      return parsed.toString();
+    }
+  } catch {
+    // fall through
+  }
+
+  throw new Error(
+    "POLAR_CUSTOMER_PORTAL_URL must be an https URL on a polar.sh domain.",
+  );
+}
+
+export function resolvePolarConfig(
+  runtimeEnv?: Partial<PolarRuntimeEnv>,
+): PolarConfig {
+  const accessToken = readCleanEnvString(
+    runtimeEnv,
+    "POLAR_ACCESS_TOKEN",
+  );
+  const organizationId = normalizeProviderId(
+    readCleanEnvString(runtimeEnv, "POLAR_ORGANIZATION_ID"),
+    "POLAR_ORGANIZATION_ID",
   );
   const rawWebhookSecret = readCleanEnvString(
     runtimeEnv,
-    "LEMONSQUEEZY_WEBHOOK_SECRET",
+    "POLAR_WEBHOOK_SECRET",
   );
   const webhookSecret =
     rawWebhookSecret && rawWebhookSecret.length >= 16
       ? rawWebhookSecret
       : null;
 
-  const variants: Record<
+  const server = (
+    readCleanEnvString(runtimeEnv, "POLAR_SERVER") ??
+    "production"
+  ).toLowerCase();
+  if (server !== "production" && server !== "sandbox") {
+    throw new Error(
+      'POLAR_SERVER must be either "production" or "sandbox".',
+    );
+  }
+
+  const productIdFor = (
+    plan: "PERSONAL" | "STARTER" | "GROWTH" | "SCALE",
+    interval: "MONTHLY" | "ANNUAL",
+  ): string | null => {
+    const key =
+      `POLAR_${plan}_${interval}_PRODUCT_ID` as const;
+    return normalizeProviderId(
+      readCleanEnvString(runtimeEnv, key),
+      key,
+    );
+  };
+
+  const products: Record<
     BillingPlanId,
     Record<BillingInterval, string | null>
   > = {
-    free: {
-      monthly: null,
-      annual: null,
-    },
+    free: { monthly: null, annual: null },
     personal: {
-      monthly: normalizeNumericProviderId(
-        readCleanEnvString(
-          runtimeEnv,
-          "LEMONSQUEEZY_PERSONAL_MONTHLY_VARIANT_ID",
-        ),
-        "LEMONSQUEEZY_PERSONAL_MONTHLY_VARIANT_ID",
-      ),
-      annual: normalizeNumericProviderId(
-        readCleanEnvString(
-          runtimeEnv,
-          "LEMONSQUEEZY_PERSONAL_ANNUAL_VARIANT_ID",
-        ),
-        "LEMONSQUEEZY_PERSONAL_ANNUAL_VARIANT_ID",
-      ),
+      monthly: productIdFor("PERSONAL", "MONTHLY"),
+      annual: productIdFor("PERSONAL", "ANNUAL"),
     },
     starter: {
-      monthly: normalizeNumericProviderId(
-        readCleanEnvString(
-          runtimeEnv,
-          "LEMONSQUEEZY_STARTER_MONTHLY_VARIANT_ID",
-        ),
-        "LEMONSQUEEZY_STARTER_MONTHLY_VARIANT_ID",
-      ),
-      annual: normalizeNumericProviderId(
-        readCleanEnvString(
-          runtimeEnv,
-          "LEMONSQUEEZY_STARTER_ANNUAL_VARIANT_ID",
-        ),
-        "LEMONSQUEEZY_STARTER_ANNUAL_VARIANT_ID",
-      ),
+      monthly: productIdFor("STARTER", "MONTHLY"),
+      annual: productIdFor("STARTER", "ANNUAL"),
     },
     growth: {
-      monthly: normalizeNumericProviderId(
-        readCleanEnvString(
-          runtimeEnv,
-          "LEMONSQUEEZY_GROWTH_MONTHLY_VARIANT_ID",
-        ),
-        "LEMONSQUEEZY_GROWTH_MONTHLY_VARIANT_ID",
-      ),
-      annual: normalizeNumericProviderId(
-        readCleanEnvString(
-          runtimeEnv,
-          "LEMONSQUEEZY_GROWTH_ANNUAL_VARIANT_ID",
-        ),
-        "LEMONSQUEEZY_GROWTH_ANNUAL_VARIANT_ID",
-      ),
+      monthly: productIdFor("GROWTH", "MONTHLY"),
+      annual: productIdFor("GROWTH", "ANNUAL"),
     },
     scale: {
-      monthly: normalizeNumericProviderId(
-        readCleanEnvString(
-          runtimeEnv,
-          "LEMONSQUEEZY_SCALE_MONTHLY_VARIANT_ID",
-        ),
-        "LEMONSQUEEZY_SCALE_MONTHLY_VARIANT_ID",
-      ),
-      annual: normalizeNumericProviderId(
-        readCleanEnvString(
-          runtimeEnv,
-          "LEMONSQUEEZY_SCALE_ANNUAL_VARIANT_ID",
-        ),
-        "LEMONSQUEEZY_SCALE_ANNUAL_VARIANT_ID",
-      ),
+      monthly: productIdFor("SCALE", "MONTHLY"),
+      annual: productIdFor("SCALE", "ANNUAL"),
     },
   };
 
-  const variantToPlanMap = new Map<
+  const productToPlanMap = new Map<
     string,
     {
       planId: BillingPlanId;
@@ -295,90 +307,110 @@ export function resolveLemonSqueezyConfig(
 
   for (const planId of BILLING_PLAN_IDS) {
     for (const billingInterval of BILLING_INTERVALS) {
-      const variantId = variants[planId][billingInterval];
-      if (!variantId) {
+      const productId = products[planId][billingInterval];
+      if (!productId) {
         continue;
       }
 
-      const existing = variantToPlanMap.get(variantId);
+      const existing = productToPlanMap.get(productId);
       if (existing) {
         throw new Error(
-          `Duplicate Lemon Squeezy variant ID (${variantId}) configured for both ${existing.planId}/${existing.billingInterval} and ${planId}/${billingInterval}. Each plan and billing interval must map to a unique variant ID.`,
+          `Duplicate Polar product ID (${productId}) configured for both ${existing.planId}/${existing.billingInterval} and ${planId}/${billingInterval}. Each plan and billing interval must map to a unique product ID.`,
         );
       }
 
-      variantToPlanMap.set(variantId, {
+      productToPlanMap.set(productId, {
         planId,
         billingInterval,
       });
     }
   }
 
-  const hasPaidVariants = Boolean(
-    variants.growth.monthly &&
-      variants.growth.annual &&
-      variants.scale.monthly &&
-      variants.scale.annual,
+  const hasPaidProducts = Boolean(
+    products.growth.monthly &&
+      products.growth.annual &&
+      products.scale.monthly &&
+      products.scale.annual,
   );
 
   const isConfigured = Boolean(
-    apiKey && storeId && webhookSecret && hasPaidVariants,
+    accessToken &&
+      organizationId &&
+      webhookSecret &&
+      hasPaidProducts,
   );
 
   return {
     isConfigured,
-    apiKey,
-    storeId,
+    accessToken,
+    organizationId,
     webhookSecret,
+    apiBaseUrl:
+      server === "sandbox"
+        ? POLAR_SANDBOX_API_BASE_URL
+        : POLAR_PRODUCTION_API_BASE_URL,
+    customerPortalUrl: resolveCustomerPortalUrl(runtimeEnv),
     appOrigin: resolveCanonicalAppOrigin(runtimeEnv),
-    variants,
-    variantToPlanMap,
+    products,
+    productToPlanMap,
   };
 }
 
-export function getVariantIdForPlan(
-  config: LemonSqueezyConfig,
+export function getProductIdForPlan(
+  config: PolarConfig,
   planId: BillingPlanId,
   billingInterval: BillingInterval,
 ): string | null {
-  return config.variants[planId]?.[billingInterval] ?? null;
+  return config.products[planId]?.[billingInterval] ?? null;
 }
 
-export function resolvePlanFromVariantId(
-  config: LemonSqueezyConfig,
-  variantId: unknown,
+export function resolvePlanFromProductId(
+  config: PolarConfig,
+  productId: unknown,
 ): {
   planId: BillingPlanId;
   billingInterval: BillingInterval;
 } | null {
-  if (
-    typeof variantId !== "string" &&
-    typeof variantId !== "number"
-  ) {
+  if (typeof productId !== "string") {
     return null;
   }
 
-  const normalized = String(variantId).trim();
+  const normalized = productId.trim();
   if (!normalized) {
     return null;
   }
 
-  return config.variantToPlanMap.get(normalized) ?? null;
+  return config.productToPlanMap.get(normalized) ?? null;
 }
 
-export function computeLemonSqueezySignature(
+/**
+ * Polar webhooks follow the Standard Webhooks specification:
+ * signature = base64(HMAC-SHA256(secret, `${webhook-id}.${webhook-timestamp}.${body}`)).
+ * Polar uses the UTF-8 bytes of the endpoint secret as the HMAC key.
+ * Returns the header form (`v1,<base64>`).
+ */
+export function computePolarSignature(
   rawBody: string,
   webhookSecret: string,
+  webhookId: string,
+  webhookTimestamp: string,
 ): string {
-  return createHmac("sha256", webhookSecret)
-    .update(rawBody, "utf8")
-    .digest("hex");
+  const digest = createHmac(
+    "sha256",
+    Buffer.from(webhookSecret, "utf8"),
+  )
+    .update(`${webhookId}.${webhookTimestamp}.${rawBody}`, "utf8")
+    .digest("base64");
+  return `v1,${digest}`;
 }
 
-export function verifyLemonSqueezyWebhookSignature(input: {
+export function verifyPolarWebhookSignature(input: {
   rawBody: string;
+  webhookId: string | null | undefined;
+  webhookTimestamp: string | null | undefined;
   signatureHeader: string | null | undefined;
   webhookSecret: string | null | undefined;
+  referenceDate?: Date;
 }): boolean {
   const secret = input.webhookSecret?.trim() ?? "";
   if (
@@ -396,69 +428,99 @@ export function verifyLemonSqueezyWebhookSignature(input: {
     return false;
   }
 
-  const signature = input.signatureHeader?.trim() ?? "";
-  if (!/^[0-9a-f]{64}$/i.test(signature)) {
+  const webhookId = input.webhookId?.trim() ?? "";
+  const webhookTimestamp = input.webhookTimestamp?.trim() ?? "";
+  if (!webhookId || !/^\d{1,12}$/.test(webhookTimestamp)) {
     return false;
   }
 
-  const expectedHex = computeLemonSqueezySignature(
-    input.rawBody,
-    secret,
+  const nowSeconds = Math.floor(
+    (input.referenceDate ?? new Date()).getTime() / 1000,
   );
-  const expectedBuffer = Buffer.from(expectedHex, "hex");
-  const actualBuffer = Buffer.from(
-    signature.toLowerCase(),
-    "hex",
-  );
-
   if (
-    expectedBuffer.length !== 32 ||
-    actualBuffer.length !== 32
+    Math.abs(nowSeconds - Number(webhookTimestamp)) >
+    WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS
   ) {
     return false;
   }
 
-  return timingSafeEqual(expectedBuffer, actualBuffer);
+  const header = input.signatureHeader?.trim() ?? "";
+  if (!header) {
+    return false;
+  }
+
+  const expected = Buffer.from(
+    computePolarSignature(
+      input.rawBody,
+      secret,
+      webhookId,
+      webhookTimestamp,
+    ).slice(3),
+    "base64",
+  );
+
+  // The header may carry several space-delimited signatures (e.g. `v1,<sig> v1,<sig>`).
+  for (const candidate of header.split(/\s+/)) {
+    const separator = candidate.indexOf(",");
+    if (separator <= 0) {
+      continue;
+    }
+    if (candidate.slice(0, separator) !== "v1") {
+      continue;
+    }
+
+    const actual = Buffer.from(
+      candidate.slice(separator + 1),
+      "base64",
+    );
+    if (
+      actual.length === expected.length &&
+      timingSafeEqual(actual, expected)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
-function validateLemonSqueezyCheckoutUrl(
-  rawUrl: unknown,
-): string {
+function validatePolarCheckoutUrl(rawUrl: unknown): string {
   if (typeof rawUrl !== "string" || !rawUrl.trim()) {
-    throw new Error(
-      "Lemon Squeezy did not return a checkout URL.",
-    );
+    throw new Error("Polar did not return a checkout URL.");
   }
 
   let parsed: URL;
   try {
     parsed = new URL(rawUrl.trim());
   } catch {
-    throw new Error(
-      "Lemon Squeezy returned an invalid checkout URL.",
-    );
+    throw new Error("Polar returned an invalid checkout URL.");
   }
 
   if (parsed.protocol !== "https:") {
-    throw new Error(
-      "Lemon Squeezy checkout URL must use HTTPS.",
-    );
+    throw new Error("Polar checkout URL must use HTTPS.");
   }
 
   const hostname = parsed.hostname.toLowerCase();
   if (
-    hostname !== "lemonsqueezy.com" &&
-    !hostname.endsWith(".lemonsqueezy.com")
+    hostname !== "polar.sh" &&
+    !hostname.endsWith(".polar.sh")
   ) {
     throw new Error(
-      "Lemon Squeezy checkout URL must point to an official lemonsqueezy.com domain.",
+      "Polar checkout URL must point to an official polar.sh domain.",
     );
   }
 
   return parsed.toString();
 }
 
-export function mapLemonSqueezySubscriptionState(input: {
+/**
+ * Maps a Polar subscription to Morrow's internal subscription state.
+ *
+ * Polar statuses: incomplete, incomplete_expired, trialing, active, past_due, canceled, unpaid.
+ * A subscription scheduled to cancel keeps `status: "active"` with `cancel_at_period_end: true`
+ * until the period ends, when it becomes `canceled` (revoked).
+ */
+export function mapPolarSubscriptionState(input: {
   providerStatus: unknown;
   cancelledFlag?: unknown;
   endsAt?: string | null;
@@ -489,19 +551,17 @@ export function mapLemonSqueezySubscriptionState(input: {
   const endMs = parseBillingTimestampMs(candidateEndIso);
 
   if (
-    rawStatus === "expired" ||
-    rawStatus === "unpaid" ||
-    input.eventName === "subscription_expired"
+    rawStatus === "incomplete_expired" ||
+    input.eventName === "subscription.revoked"
   ) {
     return {
       status: "canceled",
       cancelAtPeriodEnd: false,
-      effectivePeriodEnd:
-        input.endsAt || now.toISOString(),
+      effectivePeriodEnd: input.endsAt || now.toISOString(),
     };
   }
 
-  if (rawStatus === "cancelled") {
+  if (rawStatus === "canceled") {
     if (endMs !== null && endMs > nowMs) {
       return {
         status: "active",
@@ -513,15 +573,14 @@ export function mapLemonSqueezySubscriptionState(input: {
     return {
       status: "canceled",
       cancelAtPeriodEnd: false,
-      effectivePeriodEnd:
-        input.endsAt || now.toISOString(),
+      effectivePeriodEnd: input.endsAt || now.toISOString(),
     };
   }
 
   if (
     rawStatus === "past_due" ||
-    rawStatus === "paused" ||
-    input.eventName === "subscription_payment_failed"
+    rawStatus === "unpaid" ||
+    input.eventName === "subscription.past_due"
   ) {
     return {
       status: "past_due",
@@ -530,7 +589,7 @@ export function mapLemonSqueezySubscriptionState(input: {
     };
   }
 
-  if (rawStatus === "on_trial") {
+  if (rawStatus === "trialing") {
     if (endMs !== null && endMs <= nowMs) {
       return {
         status: "canceled",
@@ -542,17 +601,12 @@ export function mapLemonSqueezySubscriptionState(input: {
     return {
       status: "trialing",
       cancelAtPeriodEnd: isCancelledFlag,
-      effectivePeriodEnd:
-        input.trialEndsAt || candidateEndIso,
+      effectivePeriodEnd: input.trialEndsAt || candidateEndIso,
     };
   }
 
   if (rawStatus === "active") {
-    if (
-      isCancelledFlag &&
-      endMs !== null &&
-      endMs <= nowMs
-    ) {
+    if (isCancelledFlag && endMs !== null && endMs <= nowMs) {
       return {
         status: "canceled",
         cancelAtPeriodEnd: false,
@@ -568,17 +622,18 @@ export function mapLemonSqueezySubscriptionState(input: {
   }
 
   throw new Error(
-    `Unrecognized Lemon Squeezy subscription status: ${String(input.providerStatus)}`,
+    `Unrecognized Polar subscription status: ${String(input.providerStatus)}`,
   );
 }
 
-export interface LemonSqueezyRemoteSubscription {
+export interface PolarRemoteSubscription {
   id: string;
-  storeId: string;
+  organizationId: string | null;
   customerId: string | null;
   orderId: string | null;
-  variantId: string;
+  productId: string;
   providerStatus: string;
+  /** True when the subscription is scheduled to cancel at the end of the period. */
   cancelled: boolean;
   renewsAt: string | null;
   endsAt: string | null;
@@ -589,106 +644,122 @@ export interface LemonSqueezyRemoteSubscription {
   updatePaymentMethodUrl: string | null;
 }
 
-function parseLemonSqueezySubscriptionPayload(
+function asIsoString(value: unknown): string | null {
+  return typeof value === "string" && value.trim()
+    ? value
+    : null;
+}
+
+function readPolarErrorDetail(
   payload: unknown,
-): LemonSqueezyRemoteSubscription {
+  fallback: string,
+): string {
+  const detail = (payload as { detail?: unknown } | null)
+    ?.detail;
+  if (typeof detail === "string" && detail.trim()) {
+    return detail;
+  }
+  if (Array.isArray(detail)) {
+    const first = detail[0] as { msg?: unknown } | undefined;
+    if (typeof first?.msg === "string" && first.msg.trim()) {
+      return first.msg;
+    }
+  }
+  const error = (payload as { error?: unknown } | null)
+    ?.error;
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+  return fallback;
+}
+
+function parsePolarSubscriptionPayload(
+  payload: unknown,
+  customerPortalUrl: string | null,
+): PolarRemoteSubscription {
   if (typeof payload !== "object" || payload === null) {
     throw new Error(
-      "Invalid Lemon Squeezy subscription response payload.",
+      "Invalid Polar subscription response payload.",
     );
   }
 
-  const data = (payload as { data?: unknown }).data;
-  if (typeof data !== "object" || data === null) {
+  const data = payload as Record<string, unknown>;
+  const id = String(data.id ?? "").trim();
+  if (!id || typeof data.status !== "string") {
     throw new Error(
-      "Lemon Squeezy response is missing subscription data.",
+      "Polar subscription response is missing id or status.",
     );
   }
 
-  const id = String(
-    (data as { id?: unknown }).id ?? "",
-  ).trim();
-  const attributes = (
-    data as { attributes?: Record<string, unknown> }
-  ).attributes;
-
-  if (!id || !attributes || typeof attributes !== "object") {
-    throw new Error(
-      "Lemon Squeezy subscription response is missing id or attributes.",
-    );
-  }
-
-  const urls =
-    typeof attributes.urls === "object" &&
-    attributes.urls !== null
-      ? (attributes.urls as Record<string, unknown>)
-      : {};
-
-  const firstItem =
-    typeof attributes.first_subscription_item ===
-      "object" &&
-    attributes.first_subscription_item !== null
-      ? (attributes.first_subscription_item as Record<
-          string,
-          unknown
-        >)
+  const product =
+    typeof data.product === "object" && data.product !== null
+      ? (data.product as Record<string, unknown>)
       : null;
 
-  const variantId = String(
-    attributes.variant_id ?? firstItem?.variant_id ?? "",
+  const productId = String(
+    data.product_id ?? product?.id ?? "",
   ).trim();
+
+  const organizationId =
+    typeof product?.organization_id === "string"
+      ? product.organization_id
+      : null;
 
   return {
     id,
-    storeId: String(attributes.store_id ?? "").trim(),
+    organizationId,
     customerId:
-      attributes.customer_id !== undefined &&
-      attributes.customer_id !== null
-        ? String(attributes.customer_id)
+      data.customer_id !== undefined &&
+      data.customer_id !== null
+        ? String(data.customer_id)
         : null,
-    orderId:
-      attributes.order_id !== undefined &&
-      attributes.order_id !== null
-        ? String(attributes.order_id)
-        : null,
-    variantId,
-    providerStatus: String(
-      attributes.status ?? "",
-    ).trim(),
-    cancelled: Boolean(attributes.cancelled),
-    renewsAt:
-      typeof attributes.renews_at === "string"
-        ? attributes.renews_at
-        : null,
+    orderId: null,
+    productId,
+    providerStatus: data.status.trim(),
+    cancelled: Boolean(data.cancel_at_period_end),
+    renewsAt: asIsoString(data.current_period_end),
     endsAt:
-      typeof attributes.ends_at === "string"
-        ? attributes.ends_at
-        : null,
-    trialEndsAt:
-      typeof attributes.trial_ends_at === "string"
-        ? attributes.trial_ends_at
-        : null,
-    createdAt:
-      typeof attributes.created_at === "string"
-        ? attributes.created_at
-        : null,
+      asIsoString(data.ended_at) ?? asIsoString(data.ends_at),
+    trialEndsAt: asIsoString(data.trial_end),
+    createdAt: asIsoString(data.created_at),
     updatedAt:
-      typeof attributes.updated_at === "string"
-        ? attributes.updated_at
-        : null,
-    customerPortalUrl:
-      typeof urls.customer_portal === "string"
-        ? urls.customer_portal
-        : null,
-    updatePaymentMethodUrl:
-      typeof urls.update_payment_method === "string"
-        ? urls.update_payment_method
-        : null,
+      asIsoString(data.modified_at) ??
+      asIsoString(data.created_at),
+    customerPortalUrl,
+    updatePaymentMethodUrl: null,
   };
 }
 
-export async function createLemonSqueezyCheckout(
-  config: LemonSqueezyConfig,
+function assertSameOrganization(
+  config: PolarConfig,
+  remote: PolarRemoteSubscription,
+): void {
+  if (
+    remote.organizationId !== null &&
+    config.organizationId !== null &&
+    remote.organizationId !== config.organizationId
+  ) {
+    throw new Error(
+      "Polar subscription organization ID does not match the configured organization.",
+    );
+  }
+}
+
+function polarHeaders(
+  config: PolarConfig,
+  withBody: boolean,
+): Record<string, string> {
+  return {
+    Accept: "application/json",
+    ...(withBody
+      ? { "Content-Type": "application/json" }
+      : {}),
+    Authorization: `Bearer ${config.accessToken}`,
+  };
+}
+
+export async function createPolarCheckout(
+  config: PolarConfig,
   input: {
     workspaceId: string;
     actorUserId: string;
@@ -697,7 +768,7 @@ export async function createLemonSqueezyCheckout(
     checkoutSessionId: string;
     targetPlanId: BillingPlanId;
     billingInterval: BillingInterval;
-    variantId: string;
+    productId: string;
     expiresAtIso: string;
   },
   fetcher: typeof fetch = fetch,
@@ -705,72 +776,37 @@ export async function createLemonSqueezyCheckout(
   providerCheckoutId: string;
   checkoutUrl: string;
 }> {
-  if (!config.apiKey || !config.storeId) {
+  if (!config.accessToken || !config.organizationId) {
     throw new Error(
-      "Lemon Squeezy payment configuration is incomplete. Set LEMONSQUEEZY_API_KEY and LEMONSQUEEZY_STORE_ID in .env.local.",
+      "Polar payment configuration is incomplete. Set POLAR_ACCESS_TOKEN and POLAR_ORGANIZATION_ID in .env.local.",
     );
   }
 
-  const redirectUrl = `${config.appOrigin}/dashboard/billing?checkout=completed`;
-  const receiptLinkUrl = `${config.appOrigin}/dashboard/billing`;
-
   const requestBody = {
-    data: {
-      type: "checkouts",
-      attributes: {
-        checkout_data: {
-          ...(input.actorEmail
-            ? { email: input.actorEmail }
-            : {}),
-          ...(input.actorName
-            ? { name: input.actorName }
-            : {}),
-          custom: {
-            workspace_id: input.workspaceId,
-            actor_user_id: input.actorUserId,
-            checkout_session_id: input.checkoutSessionId,
-            target_plan_id: input.targetPlanId,
-            billing_interval: input.billingInterval,
-          },
-        },
-        checkout_options: {
-          embed: false,
-          media: false,
-          logo: true,
-        },
-        product_options: {
-          redirect_url: redirectUrl,
-          receipt_button_text: "Return to Morrow Billing",
-          receipt_link_url: receiptLinkUrl,
-        },
-        expires_at: input.expiresAtIso,
-      },
-      relationships: {
-        store: {
-          data: {
-            type: "stores",
-            id: config.storeId,
-          },
-        },
-        variant: {
-          data: {
-            type: "variants",
-            id: input.variantId,
-          },
-        },
-      },
+    products: [input.productId],
+    success_url: `${config.appOrigin}/dashboard/billing?checkout=completed`,
+    ...(input.actorEmail
+      ? { customer_email: input.actorEmail }
+      : {}),
+    ...(input.actorName
+      ? { customer_name: input.actorName }
+      : {}),
+    // Polar copies checkout metadata onto the resulting subscription,
+    // which is how webhooks are linked back to a workspace.
+    metadata: {
+      workspace_id: input.workspaceId,
+      actor_user_id: input.actorUserId,
+      checkout_session_id: input.checkoutSessionId,
+      target_plan_id: input.targetPlanId,
+      billing_interval: input.billingInterval,
     },
   };
 
   const response = await fetcher(
-    `${LEMONSQUEEZY_API_BASE_URL}/checkouts`,
+    `${config.apiBaseUrl}/checkouts/`,
     {
       method: "POST",
-      headers: {
-        Accept: "application/vnd.api+json",
-        "Content-Type": "application/vnd.api+json",
-        Authorization: `Bearer ${config.apiKey}`,
-      },
+      headers: polarHeaders(config, true),
       body: JSON.stringify(requestBody),
     },
   );
@@ -778,54 +814,39 @@ export async function createLemonSqueezyCheckout(
   const payload = (await response
     .json()
     .catch(() => null)) as {
-    data?: {
-      id?: unknown;
-      attributes?: { url?: unknown };
-    };
-    errors?: Array<{ detail?: string; title?: string }>;
+    id?: unknown;
+    url?: unknown;
   } | null;
 
   if (!response.ok) {
-    const providerDetail =
-      payload?.errors?.[0]?.detail ||
-      payload?.errors?.[0]?.title ||
-      `HTTP ${response.status}`;
     throw new Error(
-      `Lemon Squeezy checkout creation failed: ${providerDetail}`,
+      `Polar checkout creation failed: ${readPolarErrorDetail(payload, `HTTP ${response.status}`)}`,
     );
   }
 
-  const providerCheckoutId = String(
-    payload?.data?.id ?? "",
-  ).trim();
+  const providerCheckoutId = String(payload?.id ?? "").trim();
   if (!providerCheckoutId) {
     throw new Error(
-      "Lemon Squeezy checkout response did not include a checkout ID.",
+      "Polar checkout response did not include a checkout ID.",
     );
   }
-
-  const checkoutUrl = validateLemonSqueezyCheckoutUrl(
-    payload?.data?.attributes?.url,
-  );
 
   return {
     providerCheckoutId,
-    checkoutUrl,
+    checkoutUrl: validatePolarCheckoutUrl(payload?.url),
   };
 }
 
-export async function getLemonSqueezySubscription(
-  config: LemonSqueezyConfig,
+export async function getPolarSubscription(
+  config: PolarConfig,
   subscriptionId: string,
   fetcher: typeof fetch = fetch,
-): Promise<LemonSqueezyRemoteSubscription> {
-  if (!config.apiKey || !config.storeId) {
-    throw new Error(
-      "Lemon Squeezy API configuration is missing.",
-    );
+): Promise<PolarRemoteSubscription> {
+  if (!config.accessToken || !config.organizationId) {
+    throw new Error("Polar API configuration is missing.");
   }
 
-  const normalizedId = normalizeNumericProviderId(
+  const normalizedId = normalizeProviderId(
     subscriptionId.trim(),
     "subscriptionId",
   );
@@ -834,60 +855,78 @@ export async function getLemonSqueezySubscription(
   }
 
   const response = await fetcher(
-    `${LEMONSQUEEZY_API_BASE_URL}/subscriptions/${encodeURIComponent(normalizedId)}`,
+    `${config.apiBaseUrl}/subscriptions/${encodeURIComponent(normalizedId)}`,
     {
       method: "GET",
-      headers: {
-        Accept: "application/vnd.api+json",
-        Authorization: `Bearer ${config.apiKey}`,
-      },
+      headers: polarHeaders(config, false),
     },
   );
 
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    const providerDetail =
-      (
-        payload as {
-          errors?: Array<{
-            detail?: string;
-            title?: string;
-          }>;
-        } | null
-      )?.errors?.[0]?.detail || `HTTP ${response.status}`;
     throw new Error(
-      `Failed to verify subscription with Lemon Squeezy: ${providerDetail}`,
+      `Failed to verify subscription with Polar: ${readPolarErrorDetail(payload, `HTTP ${response.status}`)}`,
     );
   }
 
-  const remote =
-    parseLemonSqueezySubscriptionPayload(payload);
-  if (remote.storeId !== config.storeId) {
-    throw new Error(
-      "Lemon Squeezy subscription store ID does not match the configured store.",
-    );
-  }
-
+  const remote = parsePolarSubscriptionPayload(
+    payload,
+    config.customerPortalUrl,
+  );
+  assertSameOrganization(config, remote);
   return remote;
 }
 
-export async function updateLemonSqueezySubscription(
-  config: LemonSqueezyConfig,
+async function patchPolarSubscription(
+  config: PolarConfig,
+  subscriptionId: string,
+  body: Record<string, unknown>,
+  fetcher: typeof fetch,
+): Promise<PolarRemoteSubscription> {
+  const response = await fetcher(
+    `${config.apiBaseUrl}/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    {
+      method: "PATCH",
+      headers: polarHeaders(config, true),
+      body: JSON.stringify(body),
+    },
+  );
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(
+      `Polar subscription update failed: ${readPolarErrorDetail(payload, `HTTP ${response.status}`)}`,
+    );
+  }
+
+  const remote = parsePolarSubscriptionPayload(
+    payload,
+    config.customerPortalUrl,
+  );
+  assertSameOrganization(config, remote);
+  return remote;
+}
+
+/**
+ * Polar accepts exactly one kind of change per PATCH, so a product change and a
+ * cancellation toggle are sent as separate requests. Resuming (`cancelled: false`) is
+ * sent first so the product change is applied to a live subscription.
+ */
+export async function updatePolarSubscription(
+  config: PolarConfig,
   input: {
     subscriptionId: string;
-    variantId?: string;
+    productId?: string;
     cancelled?: boolean;
     invoiceImmediately?: boolean;
   },
   fetcher: typeof fetch = fetch,
-): Promise<LemonSqueezyRemoteSubscription> {
-  if (!config.apiKey || !config.storeId) {
-    throw new Error(
-      "Lemon Squeezy API configuration is missing.",
-    );
+): Promise<PolarRemoteSubscription> {
+  if (!config.accessToken || !config.organizationId) {
+    throw new Error("Polar API configuration is missing.");
   }
 
-  const normalizedId = normalizeNumericProviderId(
+  const normalizedId = normalizeProviderId(
     input.subscriptionId.trim(),
     "subscriptionId",
   );
@@ -895,66 +934,53 @@ export async function updateLemonSqueezySubscription(
     throw new Error("Subscription ID is required.");
   }
 
-  const attributes: Record<string, unknown> = {};
-  if (input.variantId !== undefined) {
-    const normalizedVariant = normalizeNumericProviderId(
-      input.variantId.trim(),
-      "variantId",
+  let normalizedProduct: string | null = null;
+  if (input.productId !== undefined) {
+    normalizedProduct = normalizeProviderId(
+      input.productId.trim(),
+      "productId",
     );
-    if (!normalizedVariant) {
-      throw new Error("Valid variant ID is required.");
-    }
-    attributes.variant_id = Number(normalizedVariant);
-    if (input.invoiceImmediately) {
-      attributes.invoice_immediately = true;
+    if (!normalizedProduct) {
+      throw new Error("Valid product ID is required.");
     }
   }
+
+  let remote: PolarRemoteSubscription | null = null;
 
   if (input.cancelled !== undefined) {
-    attributes.cancelled = input.cancelled;
+    const current = await getPolarSubscription(
+      config,
+      normalizedId,
+      fetcher,
+    );
+    remote = current;
+    if (current.cancelled !== input.cancelled) {
+      remote = await patchPolarSubscription(
+        config,
+        normalizedId,
+        { cancel_at_period_end: input.cancelled },
+        fetcher,
+      );
+    }
   }
 
-  const response = await fetcher(
-    `${LEMONSQUEEZY_API_BASE_URL}/subscriptions/${encodeURIComponent(normalizedId)}`,
-    {
-      method: "PATCH",
-      headers: {
-        Accept: "application/vnd.api+json",
-        "Content-Type": "application/vnd.api+json",
-        Authorization: `Bearer ${config.apiKey}`,
+  if (normalizedProduct !== null) {
+    remote = await patchPolarSubscription(
+      config,
+      normalizedId,
+      {
+        product_id: normalizedProduct,
+        // Upgrades are invoiced right away; downgrades are prorated into a credit.
+        proration_behavior: input.invoiceImmediately
+          ? "invoice"
+          : "prorate",
       },
-      body: JSON.stringify({
-        data: {
-          type: "subscriptions",
-          id: normalizedId,
-          attributes,
-        },
-      }),
-    },
-  );
-
-  const payload = await response.json().catch(() => null);
-  if (!response.ok) {
-    const providerDetail =
-      (
-        payload as {
-          errors?: Array<{
-            detail?: string;
-            title?: string;
-          }>;
-        } | null
-      )?.errors?.[0]?.detail || `HTTP ${response.status}`;
-    throw new Error(
-      `Lemon Squeezy subscription update failed: ${providerDetail}`,
+      fetcher,
     );
   }
 
-  const remote =
-    parseLemonSqueezySubscriptionPayload(payload);
-  if (remote.storeId !== config.storeId) {
-    throw new Error(
-      "Lemon Squeezy subscription store ID does not match the configured store.",
-    );
+  if (!remote) {
+    throw new Error("No subscription change was requested.");
   }
 
   return remote;
@@ -1025,7 +1051,7 @@ export type PlanChangeExecutionResult =
     };
 
 export async function initiateOrUpdateWorkspaceSubscription(
-  runtimeEnv: LemonSqueezyRuntimeEnv,
+  runtimeEnv: PolarRuntimeEnv,
   input: {
     actorUserId: string;
     actorEmail?: string | null;
@@ -1070,13 +1096,13 @@ export async function initiateOrUpdateWorkspaceSubscription(
     );
   }
 
-  const config = resolveLemonSqueezyConfig(runtimeEnv);
+  const config = resolvePolarConfig(runtimeEnv);
   if (
     targetPlanId !== "free" &&
-    (!config.apiKey || !config.storeId)
+    (!config.accessToken || !config.organizationId)
   ) {
     throw new Error(
-      "Lemon Squeezy payment integration is not configured yet. Replace the placeholder LEMONSQUEEZY_* values in .env.local to enable live checkouts and plan changes.",
+      "Polar payment integration is not configured yet. Replace the placeholder POLAR_* values in .env.local to enable live checkouts and plan changes.",
     );
   }
 
@@ -1181,14 +1207,14 @@ export async function initiateOrUpdateWorkspaceSubscription(
       // Switching to the $0 Free plan:
       if (targetPlanId === "free") {
         if (hasActiveProviderSubscription) {
-          if (!config.apiKey || !config.storeId) {
+          if (!config.accessToken || !config.organizationId) {
             throw new Error(
-              "Lemon Squeezy payment integration is not configured yet. Replace the placeholder LEMONSQUEEZY_* values in .env.local.",
+              "Polar payment integration is not configured yet. Replace the placeholder POLAR_* values in .env.local.",
             );
           }
 
           const remoteUpdated =
-            await updateLemonSqueezySubscription(
+            await updatePolarSubscription(
               config,
               {
                 subscriptionId:
@@ -1199,7 +1225,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
             );
 
           const mappedState =
-            mapLemonSqueezySubscriptionState({
+            mapPolarSubscriptionState({
               providerStatus: remoteUpdated.providerStatus,
               cancelledFlag: remoteUpdated.cancelled,
               endsAt: remoteUpdated.endsAt,
@@ -1460,19 +1486,19 @@ export async function initiateOrUpdateWorkspaceSubscription(
         };
       }
 
-      const targetVariantId = getVariantIdForPlan(
+      const targetProductId = getProductIdForPlan(
         config,
         targetPlanId,
         nextBillingInterval,
       );
 
-      if (!targetVariantId) {
+      if (!targetProductId) {
         throw new Error(
-          `Lemon Squeezy variant ID is not configured for the ${targetPlan.name} (${nextBillingInterval}) plan. Set LEMONSQUEEZY_${targetPlanId.toUpperCase()}_${nextBillingInterval.toUpperCase()}_VARIANT_ID in .env.local.`,
+          `Polar product ID is not configured for the ${targetPlan.name} (${nextBillingInterval}) plan. Set POLAR_${targetPlanId.toUpperCase()}_${nextBillingInterval.toUpperCase()}_PRODUCT_ID in .env.local.`,
         );
       }
 
-      // CASE 1: No active Lemon Squeezy subscription -> MUST go through hosted Lemon Squeezy Checkout.
+      // CASE 1: No active Polar subscription -> MUST go through hosted Polar Checkout.
       // Never upgrade D1 directly without a verified payment!
       if (!hasActiveProviderSubscription) {
         const now = new Date();
@@ -1505,7 +1531,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
             input.actorUserId,
             targetPlanId,
             nextBillingInterval,
-            targetVariantId,
+            targetProductId,
             nowIso,
             nowIso,
           )
@@ -1532,7 +1558,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
         ).toISOString();
 
         const createdCheckout =
-          await createLemonSqueezyCheckout(
+          await createPolarCheckout(
             config,
             {
               workspaceId,
@@ -1542,7 +1568,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
               checkoutSessionId,
               targetPlanId,
               billingInterval: nextBillingInterval,
-              variantId: targetVariantId,
+              productId: targetProductId,
               expiresAtIso,
             },
             fetcher,
@@ -1590,8 +1616,8 @@ export async function initiateOrUpdateWorkspaceSubscription(
               input.actorUserId,
               targetPlanId,
               nextBillingInterval,
-              config.storeId!,
-              targetVariantId,
+              config.organizationId!,
+              targetProductId,
               createdCheckout.providerCheckoutId,
               createdCheckout.checkoutUrl,
               expiresAtIso,
@@ -1635,7 +1661,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
                 checkoutSessionId,
                 providerCheckoutId:
                   createdCheckout.providerCheckoutId,
-                variantId: targetVariantId,
+                productId: targetProductId,
               }),
             ),
         ]);
@@ -1649,20 +1675,20 @@ export async function initiateOrUpdateWorkspaceSubscription(
         };
       }
 
-      // CASE 2: Workspace already has an active Lemon Squeezy subscription.
-      // Verify remote subscription state and update via Lemon Squeezy Subscriptions API.
+      // CASE 2: Workspace already has an active Polar subscription.
+      // Verify remote subscription state and update via Polar Subscriptions API.
       const providerSubscriptionId =
         currentSubscription.providerSubscriptionId!;
 
       const remoteBefore =
-        await getLemonSqueezySubscription(
+        await getPolarSubscription(
           config,
           providerSubscriptionId,
           fetcher,
         );
 
       const remoteBeforeMapped =
-        mapLemonSqueezySubscriptionState({
+        mapPolarSubscriptionState({
           providerStatus: remoteBefore.providerStatus,
           cancelledFlag: remoteBefore.cancelled,
           endsAt: remoteBefore.endsAt,
@@ -1672,7 +1698,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
 
       if (remoteBeforeMapped.status === "canceled") {
         throw new Error(
-          "Your Lemon Squeezy subscription has expired. Please start a new checkout to subscribe.",
+          "Your Polar subscription has expired. Please start a new checkout to subscribe.",
         );
       }
 
@@ -1690,11 +1716,11 @@ export async function initiateOrUpdateWorkspaceSubscription(
         nextBillingInterval === "annual";
 
       const remoteUpdated =
-        await updateLemonSqueezySubscription(
+        await updatePolarSubscription(
           config,
           {
             subscriptionId: providerSubscriptionId,
-            variantId: targetVariantId,
+            productId: targetProductId,
             cancelled: false,
             invoiceImmediately:
               evaluation.direction === "upgrade" ||
@@ -1704,9 +1730,9 @@ export async function initiateOrUpdateWorkspaceSubscription(
         );
 
       const resolvedPlanFromRemote =
-        resolvePlanFromVariantId(
+        resolvePlanFromProductId(
           config,
-          remoteUpdated.variantId,
+          remoteUpdated.productId,
         );
       if (
         !resolvedPlanFromRemote ||
@@ -1715,12 +1741,12 @@ export async function initiateOrUpdateWorkspaceSubscription(
           nextBillingInterval
       ) {
         throw new Error(
-          "Lemon Squeezy did not confirm the requested plan variant change.",
+          "Polar did not confirm the requested plan product change.",
         );
       }
 
       const remoteAfterMapped =
-        mapLemonSqueezySubscriptionState({
+        mapPolarSubscriptionState({
           providerStatus: remoteUpdated.providerStatus,
           cancelledFlag: remoteUpdated.cancelled,
           endsAt: remoteUpdated.endsAt,
@@ -1734,7 +1760,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
         remoteAfterMapped.status !== "trialing"
       ) {
         throw new Error(
-          `Lemon Squeezy subscription could not be upgraded because its status is ${remoteUpdated.providerStatus}.`,
+          `Polar subscription could not be upgraded because its status is ${remoteUpdated.providerStatus}.`,
         );
       }
 
@@ -1780,7 +1806,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
             remoteAfterMapped.cancelAtPeriodEnd ? 1 : 0,
             remoteAfterMapped.effectivePeriodEnd,
             remoteUpdated.customerId,
-            remoteUpdated.variantId,
+            remoteUpdated.productId,
             remoteUpdated.orderId,
             remoteUpdated.providerStatus,
             remoteUpdated.customerPortalUrl,
@@ -1892,7 +1918,7 @@ export async function initiateOrUpdateWorkspaceSubscription(
                 evaluation.pagesRequiringFrequencyAdjustment,
               adjustedSelectorPages,
               providerSubscriptionId,
-              providerVariantId: remoteUpdated.variantId,
+              providerVariantId: remoteUpdated.productId,
             }),
           ),
       );
@@ -1925,8 +1951,8 @@ export async function initiateOrUpdateWorkspaceSubscription(
   );
 }
 
-export async function updateWorkspaceSubscriptionCancellationWithLemonSqueezy(
-  runtimeEnv: LemonSqueezyRuntimeEnv,
+export async function updateWorkspaceSubscriptionCancellationWithPolar(
+  runtimeEnv: PolarRuntimeEnv,
   input: {
     actorUserId: string;
     workspaceId: string;
@@ -1960,10 +1986,10 @@ export async function updateWorkspaceSubscriptionCancellationWithLemonSqueezy(
     );
   }
 
-  const config = resolveLemonSqueezyConfig(runtimeEnv);
-  if (!config.apiKey || !config.storeId) {
+  const config = resolvePolarConfig(runtimeEnv);
+  if (!config.accessToken || !config.organizationId) {
     throw new Error(
-      "Lemon Squeezy payment integration is not configured yet. Replace the placeholder LEMONSQUEEZY_* values in .env.local.",
+      "Polar payment integration is not configured yet. Replace the placeholder POLAR_* values in .env.local.",
     );
   }
 
@@ -1979,7 +2005,7 @@ export async function updateWorkspaceSubscriptionCancellationWithLemonSqueezy(
 
       if (!currentSubscription.providerSubscriptionId) {
         throw new Error(
-          "No active Lemon Squeezy subscription is linked to this workspace.",
+          "No active Polar subscription is linked to this workspace.",
         );
       }
 
@@ -1998,7 +2024,7 @@ export async function updateWorkspaceSubscriptionCancellationWithLemonSqueezy(
       }
 
       const remoteUpdated =
-        await updateLemonSqueezySubscription(
+        await updatePolarSubscription(
           config,
           {
             subscriptionId:
@@ -2008,7 +2034,7 @@ export async function updateWorkspaceSubscriptionCancellationWithLemonSqueezy(
           fetcher,
         );
 
-      const mappedState = mapLemonSqueezySubscriptionState({
+      const mappedState = mapPolarSubscriptionState({
         providerStatus: remoteUpdated.providerStatus,
         cancelledFlag: remoteUpdated.cancelled,
         endsAt: remoteUpdated.endsAt,
@@ -2021,7 +2047,7 @@ export async function updateWorkspaceSubscriptionCancellationWithLemonSqueezy(
         mappedState.status === "canceled"
       ) {
         throw new Error(
-          "Lemon Squeezy reported that this subscription has already expired and cannot be resumed.",
+          "Polar reported that this subscription has already expired and cannot be resumed.",
         );
       }
 
@@ -2132,7 +2158,7 @@ export async function updateWorkspaceSubscriptionCancellationWithLemonSqueezy(
   );
 }
 
-export interface LemonSqueezyWebhookResult {
+export interface PolarWebhookResult {
   outcome:
     | "processed"
     | "duplicate"
@@ -2146,16 +2172,13 @@ export interface LemonSqueezyWebhookResult {
 }
 
 const SUPPORTED_SUBSCRIPTION_WEBHOOK_EVENTS = new Set([
-  "subscription_created",
-  "subscription_updated",
-  "subscription_cancelled",
-  "subscription_resumed",
-  "subscription_expired",
-  "subscription_paused",
-  "subscription_unpaused",
-  "subscription_payment_success",
-  "subscription_payment_failed",
-  "subscription_payment_recovered",
+  "subscription.created",
+  "subscription.updated",
+  "subscription.active",
+  "subscription.canceled",
+  "subscription.uncanceled",
+  "subscription.revoked",
+  "subscription.past_due",
 ]);
 
 function computeWebhookDeliveryKey(
@@ -2168,32 +2191,36 @@ function computeWebhookDeliveryKey(
     .digest("hex");
 }
 
-export async function processLemonSqueezyWebhook(
-  runtimeEnv: LemonSqueezyRuntimeEnv,
+export async function processPolarWebhook(
+  runtimeEnv: PolarRuntimeEnv,
   input: {
     rawBody: string;
+    webhookId: string | null | undefined;
+    webhookTimestamp: string | null | undefined;
     signatureHeader: string | null | undefined;
     referenceDate?: Date;
   },
-): Promise<LemonSqueezyWebhookResult> {
-  const config = resolveLemonSqueezyConfig(runtimeEnv);
+): Promise<PolarWebhookResult> {
+  const config = resolvePolarConfig(runtimeEnv);
 
-  if (!config.webhookSecret || !config.storeId) {
-    throw new LemonSqueezyWebhookAuthError(
-      "Lemon Squeezy webhook secret or store ID is not configured.",
+  if (!config.webhookSecret || !config.organizationId) {
+    throw new PolarWebhookAuthError(
+      "Polar webhook secret or organization ID is not configured.",
     );
   }
 
-  const isSignatureValid =
-    verifyLemonSqueezyWebhookSignature({
-      rawBody: input.rawBody,
-      signatureHeader: input.signatureHeader,
-      webhookSecret: config.webhookSecret,
-    });
+  const isSignatureValid = verifyPolarWebhookSignature({
+    rawBody: input.rawBody,
+    webhookId: input.webhookId,
+    webhookTimestamp: input.webhookTimestamp,
+    signatureHeader: input.signatureHeader,
+    webhookSecret: config.webhookSecret,
+    referenceDate: input.referenceDate,
+  });
 
   if (!isSignatureValid) {
-    throw new LemonSqueezyWebhookAuthError(
-      "Invalid Lemon Squeezy webhook signature.",
+    throw new PolarWebhookAuthError(
+      "Invalid Polar webhook signature.",
     );
   }
 
@@ -2201,7 +2228,7 @@ export async function processLemonSqueezyWebhook(
   try {
     parsedBody = JSON.parse(input.rawBody);
   } catch {
-    throw new LemonSqueezyWebhookValidationError(
+    throw new PolarWebhookValidationError(
       "Webhook request body is not valid JSON.",
       400,
     );
@@ -2211,28 +2238,21 @@ export async function processLemonSqueezyWebhook(
     typeof parsedBody !== "object" ||
     parsedBody === null
   ) {
-    throw new LemonSqueezyWebhookValidationError(
+    throw new PolarWebhookValidationError(
       "Webhook payload must be a JSON object.",
       400,
     );
   }
 
-  const meta = (
-    parsedBody as {
-      meta?: {
-        event_name?: unknown;
-        custom_data?: Record<string, unknown>;
-      };
-    }
-  ).meta;
   const eventName =
-    typeof meta?.event_name === "string"
-      ? meta.event_name.trim()
+    typeof (parsedBody as { type?: unknown }).type ===
+    "string"
+      ? (parsedBody as { type: string }).type.trim()
       : "";
 
   if (!eventName) {
-    throw new LemonSqueezyWebhookValidationError(
-      "Webhook payload is missing meta.event_name.",
+    throw new PolarWebhookValidationError(
+      "Webhook payload is missing type.",
       400,
     );
   }
@@ -2250,48 +2270,72 @@ export async function processLemonSqueezyWebhook(
     };
   }
 
-  const data = (
-    parsedBody as {
-      data?: {
-        id?: unknown;
-        type?: unknown;
-        attributes?: Record<string, unknown>;
-      };
-    }
+  const subscriptionData = (
+    parsedBody as { data?: unknown }
   ).data;
-
-  const attributes = data?.attributes;
-  if (!data || !attributes || typeof attributes !== "object") {
-    throw new LemonSqueezyWebhookValidationError(
-      "Webhook payload is missing data.attributes.",
+  if (
+    typeof subscriptionData !== "object" ||
+    subscriptionData === null
+  ) {
+    throw new PolarWebhookValidationError(
+      "Webhook payload is missing data.",
       400,
     );
   }
 
-  // For subscription_payment_* events, Lemon Squeezy sends a `subscription-invoices` resource
-  // containing `subscription_id` in attributes, or for `subscription_*` events it sends `subscriptions`.
-  const dataType = String(data.type ?? "").trim();
-  const providerSubscriptionId =
-    dataType === "subscription-invoices"
-      ? String(attributes.subscription_id ?? "").trim()
-      : String(data.id ?? "").trim();
+  // For subscription.* events `data` is the Polar Subscription object.
+  const attributes = subscriptionData as Record<
+    string,
+    unknown
+  >;
+
+  const providerSubscriptionId = String(
+    attributes.id ?? "",
+  ).trim();
 
   if (
     !providerSubscriptionId ||
-    !/^[1-9]\d*$/.test(providerSubscriptionId)
+    !/^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$/.test(
+      providerSubscriptionId,
+    )
   ) {
-    throw new LemonSqueezyWebhookValidationError(
-      "Webhook payload is missing a valid numeric subscription ID.",
+    throw new PolarWebhookValidationError(
+      "Webhook payload is missing a valid subscription ID.",
       400,
     );
   }
 
-  const storeId = String(attributes.store_id ?? "").trim();
-  if (storeId !== config.storeId) {
-    throw new LemonSqueezyWebhookValidationError(
-      "Webhook store_id does not match the configured Lemon Squeezy store.",
+  const subscriptionProduct =
+    typeof attributes.product === "object" &&
+    attributes.product !== null
+      ? (attributes.product as Record<string, unknown>)
+      : null;
+  if (
+    typeof subscriptionProduct?.organization_id ===
+      "string" &&
+    subscriptionProduct.organization_id !==
+      config.organizationId
+  ) {
+    throw new PolarWebhookValidationError(
+      "Webhook organization ID does not match the configured Polar organization.",
       400,
     );
+  }
+
+  // Subscriptions that have not been paid yet carry no entitlements.
+  if (
+    String(attributes.status ?? "")
+      .trim()
+      .toLowerCase() === "incomplete"
+  ) {
+    return {
+      outcome: "ignored_event",
+      eventName,
+      workspaceId: null,
+      providerSubscriptionId,
+      planId: null,
+      status: null,
+    };
   }
 
   const db = runtimeEnv.DB;
@@ -2359,7 +2403,7 @@ export async function processLemonSqueezyWebhook(
     }
 
     if (existingDelivery?.status === "processing") {
-      throw new LemonSqueezyWebhookValidationError(
+      throw new PolarWebhookValidationError(
         "Webhook delivery is currently being processed by another worker.",
         409,
       );
@@ -2394,10 +2438,11 @@ export async function processLemonSqueezyWebhook(
   }
 
   try {
-    const customData =
-      typeof meta?.custom_data === "object" &&
-      meta.custom_data !== null
-        ? meta.custom_data
+    // Polar copies the checkout `metadata` onto the subscription it creates.
+    const customData: Record<string, unknown> =
+      typeof attributes.metadata === "object" &&
+      attributes.metadata !== null
+        ? (attributes.metadata as Record<string, unknown>)
         : {};
     const customWorkspaceId =
       typeof customData.workspace_id === "string"
@@ -2438,7 +2483,7 @@ export async function processLemonSqueezyWebhook(
       if (
         !boundPeerWorkspaceIds.includes(customWorkspaceId)
       ) {
-        throw new LemonSqueezyWebhookValidationError(
+        throw new PolarWebhookValidationError(
           "Subscription is already bound to a different workspace.",
           409,
         );
@@ -2479,7 +2524,7 @@ export async function processLemonSqueezyWebhook(
         }>();
 
       if (!checkoutSessionRow) {
-        throw new LemonSqueezyWebhookValidationError(
+        throw new PolarWebhookValidationError(
           "Referenced checkout_session_id does not exist.",
           400,
         );
@@ -2490,18 +2535,18 @@ export async function processLemonSqueezyWebhook(
         checkoutSessionRow.workspace_id !==
           customWorkspaceId
       ) {
-        throw new LemonSqueezyWebhookValidationError(
-          "Webhook custom_data.workspace_id does not match the server checkout session.",
+        throw new PolarWebhookValidationError(
+          "Webhook metadata.workspace_id does not match the server checkout session.",
           400,
         );
       }
 
       if (
         checkoutSessionRow.provider_store_id !==
-        config.storeId
+        config.organizationId
       ) {
-        throw new LemonSqueezyWebhookValidationError(
-          "Checkout session store ID mismatch.",
+        throw new PolarWebhookValidationError(
+          "Checkout session organization ID mismatch.",
           400,
         );
       }
@@ -2513,7 +2558,7 @@ export async function processLemonSqueezyWebhook(
       customWorkspaceId;
 
     if (!workspaceId) {
-      throw new LemonSqueezyWebhookValidationError(
+      throw new PolarWebhookValidationError(
         "Webhook could not be linked to a workspace_id.",
         400,
       );
@@ -2532,7 +2577,7 @@ export async function processLemonSqueezyWebhook(
       .first<{ id: string }>();
 
     if (!workspaceRow) {
-      throw new LemonSqueezyWebhookValidationError(
+      throw new PolarWebhookValidationError(
         "Target workspace does not exist.",
         404,
       );
@@ -2552,7 +2597,8 @@ export async function processLemonSqueezyWebhook(
       currentSubscription.status !== "canceled"
     ) {
       const incomingUpdatedAtMs = parseBillingTimestampMs(
-        attributes.updated_at,
+        asIsoString(attributes.modified_at) ??
+          asIsoString(attributes.created_at),
       );
       const existingUpdatedAtMs = parseBillingTimestampMs(
         currentSubscription.providerUpdatedAt,
@@ -2590,10 +2636,10 @@ export async function processLemonSqueezyWebhook(
 
     // Out-of-order race condition guard for the same subscription:
     // If we already processed a webhook with a newer `updated_at` timestamp, ignore this stale event.
-    const incomingUpdatedAt =
-      typeof attributes.updated_at === "string"
-        ? attributes.updated_at.trim()
-        : null;
+    const incomingUpdatedAt = (
+      asIsoString(attributes.modified_at) ??
+      asIsoString(attributes.created_at)
+    )?.trim() ?? null;
     const incomingUpdatedAtMs = parseBillingTimestampMs(
       incomingUpdatedAt,
     );
@@ -2632,32 +2678,23 @@ export async function processLemonSqueezyWebhook(
       };
     }
 
-    // Resolve plan & billing interval strictly from `variant_id` (or existing subscription for invoice events).
-    // NEVER trust custom_data.target_plan_id to grant entitlements!
-    const firstItem =
-      typeof attributes.first_subscription_item ===
-        "object" &&
-      attributes.first_subscription_item !== null
-        ? (attributes.first_subscription_item as Record<
-            string,
-            unknown
-          >)
-        : null;
-    const rawVariantId = String(
-      attributes.variant_id ??
-        firstItem?.variant_id ??
+    // Resolve plan & billing interval strictly from the Polar `product_id`.
+    // NEVER trust metadata.target_plan_id to grant entitlements!
+    const rawProductId = String(
+      attributes.product_id ??
+        subscriptionProduct?.id ??
         currentSubscription.providerVariantId ??
         "",
     ).trim();
 
-    const resolvedVariantPlan = resolvePlanFromVariantId(
+    const resolvedProductPlan = resolvePlanFromProductId(
       config,
-      rawVariantId,
+      rawProductId,
     );
 
-    if (!resolvedVariantPlan) {
-      throw new LemonSqueezyWebhookValidationError(
-        `Unrecognized Lemon Squeezy variant_id (${rawVariantId}). Verify LEMONSQUEEZY_*_VARIANT_ID settings.`,
+    if (!resolvedProductPlan) {
+      throw new PolarWebhookValidationError(
+        `Unrecognized Polar product_id (${rawProductId}). Verify POLAR_*_PRODUCT_ID settings.`,
         400,
       );
     }
@@ -2666,62 +2703,26 @@ export async function processLemonSqueezyWebhook(
       attributes.status ?? "active",
     ).trim();
 
-    // For subscription-invoices (`subscription_payment_success` / `subscription_payment_failed`),
-    // `attributes.status` is the invoice status (`paid`, `pending`, `void`, `refunded`).
-    const mappedState =
-      dataType === "subscription-invoices"
-        ? (() => {
-            if (
-              eventName ===
-                "subscription_payment_failed" ||
-              providerStatus === "void" ||
-              providerStatus === "pending"
-            ) {
-              return {
-                status:
-                  "past_due" as BillingSubscriptionStatus,
-                cancelAtPeriodEnd:
-                  currentSubscription.cancelAtPeriodEnd,
-                effectivePeriodEnd:
-                  currentSubscription.currentPeriodEnd,
-              };
-            }
-            return {
-              status:
-                "active" as BillingSubscriptionStatus,
-              cancelAtPeriodEnd:
-                currentSubscription.cancelAtPeriodEnd,
-              effectivePeriodEnd:
-                currentSubscription.currentPeriodEnd,
-            };
-          })()
-        : mapLemonSqueezySubscriptionState({
-            providerStatus,
-            cancelledFlag: attributes.cancelled,
-            endsAt:
-              typeof attributes.ends_at === "string"
-                ? attributes.ends_at
-                : null,
-            renewsAt:
-              typeof attributes.renews_at === "string"
-                ? attributes.renews_at
-                : null,
-            trialEndsAt:
-              typeof attributes.trial_ends_at === "string"
-                ? attributes.trial_ends_at
-                : null,
-            eventName,
-            referenceDate: input.referenceDate,
-          });
+    const mappedState = mapPolarSubscriptionState({
+      providerStatus,
+      cancelledFlag: attributes.cancel_at_period_end,
+      endsAt:
+        asIsoString(attributes.ended_at) ??
+        asIsoString(attributes.ends_at),
+      renewsAt: asIsoString(attributes.current_period_end),
+      trialEndsAt: asIsoString(attributes.trial_end),
+      eventName,
+      referenceDate: input.referenceDate,
+    });
 
     // When a subscription expires or is canceled immediately, reset stored plan_id to 'free'
     // so dormant paid plan IDs can never be reactivated without payment.
     const nextPlanId: BillingPlanId =
       mappedState.status === "canceled"
         ? "free"
-        : resolvedVariantPlan.planId;
+        : resolvedProductPlan.planId;
     const nextBillingInterval: BillingInterval =
-      resolvedVariantPlan.billingInterval;
+      resolvedProductPlan.billingInterval;
 
     const effectiveEntitlements =
       resolveWorkspaceEntitlements({
@@ -2742,29 +2743,14 @@ export async function processLemonSqueezyWebhook(
         minFreq,
       );
 
-    const urls =
-      typeof attributes.urls === "object" &&
-      attributes.urls !== null
-        ? (attributes.urls as Record<string, unknown>)
-        : {};
-    const customerPortalUrl =
-      typeof urls.customer_portal === "string"
-        ? urls.customer_portal
-        : null;
-    const updatePaymentUrl =
-      typeof urls.update_payment_method === "string"
-        ? urls.update_payment_method
-        : null;
+    const customerPortalUrl = config.customerPortalUrl;
+    const updatePaymentUrl: string | null = null;
     const customerId =
       attributes.customer_id !== undefined &&
       attributes.customer_id !== null
         ? String(attributes.customer_id)
         : null;
-    const orderId =
-      attributes.order_id !== undefined &&
-      attributes.order_id !== null
-        ? String(attributes.order_id)
-        : null;
+    const orderId: string | null = null;
 
     const currentRank =
       BILLING_PLAN_CATALOG[currentSubscription.planId]
@@ -2773,27 +2759,25 @@ export async function processLemonSqueezyWebhook(
       BILLING_PLAN_CATALOG[nextPlanId].tierRank;
 
     const billingEventType: WorkspaceBillingEventType =
-      eventName === "subscription_payment_failed"
+      eventName === "subscription.past_due" ||
+      mappedState.status === "past_due"
         ? "payment_failed"
-        : eventName === "subscription_payment_success" ||
-            eventName === "subscription_payment_recovered"
-          ? "payment_succeeded"
-          : mappedState.status === "canceled"
-            ? "subscription_canceled"
-            : eventName === "subscription_cancelled" ||
-                (mappedState.cancelAtPeriodEnd &&
-                  !currentSubscription.cancelAtPeriodEnd)
-              ? "cancellation_scheduled"
-              : eventName === "subscription_resumed"
-                ? "subscription_reactivated"
-                : nextRank > currentRank
-                  ? "plan_upgraded"
-                  : nextRank < currentRank
-                    ? "plan_downgraded"
-                    : nextBillingInterval !==
-                        currentSubscription.billingInterval
-                      ? "billing_interval_changed"
-                      : "payment_succeeded";
+        : mappedState.status === "canceled"
+          ? "subscription_canceled"
+          : eventName === "subscription.canceled" ||
+              (mappedState.cancelAtPeriodEnd &&
+                !currentSubscription.cancelAtPeriodEnd)
+            ? "cancellation_scheduled"
+            : eventName === "subscription.uncanceled"
+              ? "subscription_reactivated"
+              : nextRank > currentRank
+                ? "plan_upgraded"
+                : nextRank < currentRank
+                  ? "plan_downgraded"
+                  : nextBillingInterval !==
+                      currentSubscription.billingInterval
+                    ? "billing_interval_changed"
+                    : "payment_succeeded";
 
     const actorUserId =
       checkoutSessionRow?.actor_user_id ||
@@ -2846,7 +2830,7 @@ export async function processLemonSqueezyWebhook(
           mappedState.effectivePeriodEnd,
           customerId,
           providerSubscriptionId,
-          rawVariantId,
+          rawProductId,
           orderId,
           providerStatus,
           customerPortalUrl,
@@ -2992,7 +2976,7 @@ export async function processLemonSqueezyWebhook(
           JSON.stringify({
             webhookEventName: eventName,
             providerSubscriptionId,
-            providerVariantId: rawVariantId,
+            providerVariantId: rawProductId,
             providerStatus,
             adjustedPageFrequencies: fasterPagesCount,
           }),
@@ -3049,10 +3033,10 @@ export async function processLemonSqueezyWebhook(
   }
 }
 
-const MAX_LEMON_SQUEEZY_WEBHOOK_BYTES = 1024 * 1024;
+const MAX_POLAR_WEBHOOK_BYTES = 1024 * 1024;
 
-export function createLemonSqueezyWebhookHandler(
-  runtimeEnv: LemonSqueezyRuntimeEnv,
+export function createPolarWebhookHandler(
+  runtimeEnv: PolarRuntimeEnv,
 ) {
   return async function POST(
     request: Request,
@@ -3063,7 +3047,7 @@ export function createLemonSqueezyWebhookHandler(
       const declaredLength = Number(
         request.headers.get("content-length") ?? 0,
       );
-      if (declaredLength > MAX_LEMON_SQUEEZY_WEBHOOK_BYTES) {
+      if (declaredLength > MAX_POLAR_WEBHOOK_BYTES) {
         return Response.json(
           { ok: false, error: "Webhook payload is too large." },
           { status: 413 },
@@ -3072,7 +3056,7 @@ export function createLemonSqueezyWebhookHandler(
       const rawBody = await request.text();
       if (
         new TextEncoder().encode(rawBody).length >
-        MAX_LEMON_SQUEEZY_WEBHOOK_BYTES
+        MAX_POLAR_WEBHOOK_BYTES
       ) {
         return Response.json(
           { ok: false, error: "Webhook payload is too large." },
@@ -3080,13 +3064,18 @@ export function createLemonSqueezyWebhookHandler(
         );
       }
       const signatureHeader =
-        request.headers.get("X-Signature") ??
-        request.headers.get("x-signature");
+        request.headers.get("webhook-signature");
+      const webhookId = request.headers.get("webhook-id");
+      const webhookTimestamp = request.headers.get(
+        "webhook-timestamp",
+      );
 
-      const result = await processLemonSqueezyWebhook(
+      const result = await processPolarWebhook(
         runtimeEnv,
         {
           rawBody,
+          webhookId,
+          webhookTimestamp,
           signatureHeader,
         },
       );
@@ -3099,7 +3088,7 @@ export function createLemonSqueezyWebhookHandler(
         { status: 200 },
       );
     } catch (error) {
-      if (error instanceof LemonSqueezyWebhookAuthError) {
+      if (error instanceof PolarWebhookAuthError) {
         return Response.json(
           {
             ok: false,
@@ -3110,7 +3099,7 @@ export function createLemonSqueezyWebhookHandler(
       }
 
       if (
-        error instanceof LemonSqueezyWebhookValidationError
+        error instanceof PolarWebhookValidationError
       ) {
         return Response.json(
           {
@@ -3125,7 +3114,7 @@ export function createLemonSqueezyWebhookHandler(
         {
           ok: false,
           error:
-            "Failed to process Lemon Squeezy webhook.",
+            "Failed to process Polar webhook.",
         },
         { status: 500 },
       );

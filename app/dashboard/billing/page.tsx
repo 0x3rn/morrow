@@ -98,13 +98,13 @@ function formatBillingEventDescription(input: {
   switch (input.eventType) {
     case "checkout_initiated":
       return {
-        title: `Started Lemon Squeezy checkout for ${newPlan.name}`,
+        title: `Started Polar checkout for ${newPlan.name}`,
         detail: `Checkout session created for ${newPlan.name} on ${intervalLabel}. Plan activates once payment is confirmed.`,
       };
 
     case "payment_succeeded":
       return {
-        title: `Confirmed Lemon Squeezy payment for ${newPlan.name}`,
+        title: `Confirmed Polar payment for ${newPlan.name}`,
         detail: `Subscription verified on ${intervalLabel}.`,
       };
 
@@ -112,7 +112,7 @@ function formatBillingEventDescription(input: {
       return {
         title: `Payment failed for ${newPlan.name}`,
         detail:
-          "Lemon Squeezy reported a failed renewal charge. Update your payment method to avoid interruption.",
+          "Polar reported a failed renewal charge. Update your payment method to avoid interruption.",
       };
 
     case "plan_upgraded":

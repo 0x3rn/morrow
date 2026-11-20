@@ -71,7 +71,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Billing &amp; Transaction Metadata:</strong> Subscription plan identifier,
-            billing frequency (monthly or annual), subscription status, Lemon Squeezy customer and
+            billing frequency (monthly or annual), subscription status, Polar customer and
             subscription reference keys, and invoice history. Morrow does not store full credit card
             numbers, expiration dates, or security codes (CVVs).
           </li>
@@ -147,7 +147,7 @@ export default function PrivacyPage() {
                 <td>Global Edge / EU &amp; North America</td>
               </tr>
               <tr>
-                <td><strong>Lemon Squeezy, LLC</strong></td>
+                <td><strong>Polar Software Inc.</strong></td>
                 <td>Merchant of Record, payment gateway, subscription management, tax compliance</td>
                 <td>Customer email, billing address, payment instrument tokenization</td>
                 <td>United States / International</td>
@@ -236,7 +236,7 @@ export default function PrivacyPage() {
               </tr>
               <tr>
                 <td><strong>Commercial Invoices &amp; Transactions</strong></td>
-                <td>Lemon Squeezy &amp; D1 Billing table</td>
+                <td>Polar &amp; D1 Billing table</td>
                 <td>7 statutory financial years</td>
                 <td>Retained for tax and audit compliance</td>
               </tr>

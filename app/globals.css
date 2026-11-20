@@ -25,6 +25,8 @@
   /* Lines */
   --border: #E4E4E0;               /* cards, dividers, header/footer rules */
   --input: #8F8F89;                /* form control outline (3:1 against white) */
+
+  --button-border: #CFCFC9;          /* soft outline on secondary buttons (muted, not stark) */
   --ring: #B5442A;                 /* focus ring */
   --grid-line: rgba(0, 0, 0, 0.04);/* faint dashboard background grid */
 
@@ -113,6 +115,8 @@
   /* Lines */
   --border: #2A2A2A;
   --input: #6B6B6B;                /* form control outline (3:1 on cards) */
+
+  --button-border: #3A3A3A;          /* soft outline on secondary buttons (muted, not stark) */
   --ring: #EE9A84;
   --grid-line: rgba(255, 255, 255, 0.04);
 
@@ -172,6 +176,8 @@
     --text-disabled: #9A9E99;
     --border: #E4E4E0;
     --input: #8F8F89;
+
+    --button-border: #CFCFC9;          /* soft outline on secondary buttons (muted, not stark) */
     --ring: #B5442A;
     --grid-line: rgba(0, 0, 0, 0.04);
     --primary: #FF8B73;
@@ -219,6 +225,7 @@
   --color-disabled: var(--text-disabled);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-button-border: var(--button-border);
   --color-ring: var(--ring);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);

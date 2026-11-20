@@ -24,7 +24,7 @@ const REVIEWED_ROUTES = [
   "api/changes/[changeId]/screenshot/[side]/route.ts",
   "api/snapshots/[snapshotId]/screenshot/route.ts",
   "api/telegram/link/route.ts",
-  "api/webhooks/lemonsqueezy/route.ts",
+  "api/webhooks/polar/route.ts",
   "api/webhooks/telegram/route.ts",
 ];
 

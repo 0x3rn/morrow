@@ -124,7 +124,7 @@ export default function RefundPolicyPage() {
         <h2>4. System Billing Errors &amp; Duplicate Charges</h2>
         <p className={styles.bodyText}>
           In the event of a verified technical billing error, system malfunction, or duplicate charge
-          processed by our Merchant of Record (Lemon Squeezy), Corstack will immediately authorize and
+          processed by our Merchant of Record (Polar), Corstack will immediately authorize and
           issue a full refund of the erroneous amount upon notification and internal verification.
         </p>
       </section>
@@ -189,7 +189,7 @@ export default function RefundPolicyPage() {
       <section id="disbursement-method" className={styles.section}>
         <h2>7. Payment Method &amp; Banking Timelines</h2>
         <p className={styles.bodyText}>
-          All approved refunds are submitted through our Merchant of Record, Lemon Squeezy, directly
+          All approved refunds are submitted through our Merchant of Record, Polar, directly
           to the original payment instrument utilized at checkout:
         </p>
         <ul className={styles.bulletList}>
@@ -203,7 +203,7 @@ export default function RefundPolicyPage() {
             to reflect on your statement.
           </li>
           <li>
-            An electronic refund receipt is issued via email by Lemon Squeezy upon transaction
+            An electronic refund receipt is issued via email by Polar upon transaction
             execution.
           </li>
         </ul>

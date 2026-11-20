@@ -3,8 +3,8 @@
 import { auth } from "@/lib/auth";
 import {
   initiateOrUpdateWorkspaceSubscription,
-  updateWorkspaceSubscriptionCancellationWithLemonSqueezy,
-} from "@/lib/lemonsqueezy";
+  updateWorkspaceSubscriptionCancellationWithPolar,
+} from "@/lib/polar";
 import { requireActiveWorkspaceMembership } from "@/lib/team-workspaces";
 import {
   toUserFacingErrorMessage,
@@ -115,8 +115,8 @@ export async function updateBillingIntervalAction(
         activeWorkspace.id,
       );
 
-    // If the workspace has an active Lemon Squeezy subscription, switching billing interval
-    // must update the variant on Lemon Squeezy first.
+    // If the workspace has an active Polar subscription, switching billing interval
+    // must update the variant on Polar first.
     if (
       currentSubscription.providerSubscriptionId &&
       currentSubscription.status !== "canceled"
@@ -172,7 +172,7 @@ export async function toggleSubscriptionCancellationAction(
       formData.get("mode") ?? "schedule_cancel",
     ).trim();
 
-    await updateWorkspaceSubscriptionCancellationWithLemonSqueezy(
+    await updateWorkspaceSubscriptionCancellationWithPolar(
       env,
       {
         actorUserId: user.id,

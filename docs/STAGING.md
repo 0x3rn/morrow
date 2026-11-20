@@ -44,7 +44,7 @@ Set with `npx wrangler secret put <NAME> --name morrow-staging`.
 | `BETTER_AUTH_SECRET` | Random value, different from prod (set) |
 | `MORROW_APP_URL` | The staging URL above (set) |
 | `RESEND_API_KEY` | Staging-only key; without it signup and login codes return 503 |
-| `LEMONSQUEEZY_*` | Test-mode store keys only, never live keys |
+| `POLAR_*` | Polar sandbox credentials only (`POLAR_SERVER=sandbox`), never production keys |
 | `MORROW_TELEGRAM_BOT_TOKEN`, `MORROW_TELEGRAM_WEBHOOK_SECRET` | A separate staging bot |
 
 Do **not** set `BETTER_AUTH_URL` on staging. With it set, `/login` and `/register`

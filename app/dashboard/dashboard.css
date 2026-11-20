@@ -126,7 +126,7 @@
 .morrow-dashboard a svg { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .morrow-dashboard :is(button, summary, a[class*="min-h-"]) { min-height: 44px; }
 .workspace-primary, .workspace-panel-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 10px 16px; border: 1px solid var(--primary-border); border-radius: 8px; background: var(--primary); color: var(--primary-foreground); font-size: 14px; font-weight: 600; white-space: nowrap; flex-shrink: 0; cursor: pointer; }
-.workspace-panel-secondary { background: transparent; border-color: var(--input); color: var(--foreground); font-weight: 500; }
+.workspace-panel-secondary { background: transparent; border-color: var(--button-border); color: var(--foreground); font-weight: 500; }
 .workspace-primary:hover, .workspace-panel-trigger:not(.workspace-panel-secondary):hover { background: var(--primary-hover); }
 .workspace-primary:active, .workspace-panel-trigger:not(.workspace-panel-secondary):active { background: var(--primary-active); }
 .workspace-panel-secondary:hover { background: var(--muted); }
@@ -219,7 +219,7 @@ body:has(.billing-plan-dialog[open]), body:has(.workspace-switcher-dialog[open])
 .morrow-dashboard :is([class~="rounded-3xl"], [class~="rounded-2xl"], [class~="rounded-xl"], [class~="rounded-lg"]) { border-radius: 8px; }
 .morrow-dashboard [class~="shadow-sm"] { box-shadow: var(--shadow-card); }
 /* Secondary buttons built from utility classes share the stronger control outline used by the panel buttons. */
-.morrow-dashboard :is(a, button)[class~="bg-card"][class~="border-border"] { border-color: var(--input); }
+.morrow-dashboard :is(a, button)[class~="bg-card"][class~="border-border"] { border-color: var(--button-border); }
 .morrow-dashboard [class~="text-xs"] { font-size: 13px; line-height: 1.45; }
 .morrow-dashboard [class~="text-sm"] { font-size: 14px; }
 .morrow-dashboard .uppercase { font-family: var(--font-geist-mono), monospace; font-size: 12px; letter-spacing: .08em; }

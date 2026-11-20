@@ -77,7 +77,7 @@
 	// binding is repeated here and points at STAGING-ONLY resources. Never put the
 	// production database/KV/bucket ids in this block.
 	// Secrets (BETTER_AUTH_SECRET, BETTER_AUTH_URL, MORROW_APP_URL, RESEND_API_KEY,
-	// LEMONSQUEEZY_*, MORROW_TELEGRAM_*) are set per environment with:
+	// POLAR_*, MORROW_TELEGRAM_*) are set per environment with:
 	//   npx wrangler secret put <NAME> --env staging
 	"env": {
 		"staging": {
