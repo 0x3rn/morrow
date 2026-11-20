@@ -22,7 +22,7 @@
 }
 .morrow-dashboard *, .morrow-dashboard *::before, .morrow-dashboard *::after { box-sizing: border-box; }
 .morrow-dashboard :is(main, section, article, aside, header, footer, form, div, dl, dd) { min-width: 0; }
-.workspace-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 30; width: 208px; display: flex; flex-direction: column; padding: 28px 16px 20px; border-right: 1px solid var(--border); background: var(--surface-bar); }
+.workspace-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 30; width: 208px; display: flex; flex-direction: column; padding: 28px 16px 20px; border-right: 1px solid var(--border); background: var(--surface-bar); overflow-y: auto; overscroll-behavior: contain; }
 .workspace-label, .workspace-eyebrow { color: var(--muted-foreground); font: 600 12px/1.5 var(--font-geist-mono), monospace; letter-spacing: .08em; text-transform: uppercase; }
 .workspace-label { padding: 0 12px; }
 .workspace-nav { display: grid; gap: 4px; margin-top: 28px; }
@@ -329,7 +329,7 @@ body:has(.billing-plan-dialog[open]), body:has(.workspace-switcher-dialog[open])
 }
 @media (max-width: 767px) {
   .morrow-dashboard { font-size: 15px; }
-  .workspace-sidebar { position: sticky; inset: auto; top: 0; flex-direction: row; align-items: center; justify-content: space-between; width: 100%; min-height: 60px; padding: 8px 16px; border-right: 0; border-bottom: 1px solid var(--border); background: var(--surface-bar); }
+  .workspace-sidebar { overflow: visible; position: sticky; inset: auto; top: 0; flex-direction: row; align-items: center; justify-content: space-between; width: 100%; min-height: 60px; padding: 8px 16px; border-right: 0; border-bottom: 1px solid var(--border); background: var(--surface-bar); }
   .workspace-label { flex: 1 1 auto; min-width: 0; padding: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
   .workspace-account { flex: 0 0 auto; }
   .workspace-account summary { white-space: nowrap; }
